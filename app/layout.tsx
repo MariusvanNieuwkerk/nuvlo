@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -19,6 +19,16 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: "Nuvlo",
   description: "Bouw samen met je held een avondverhaal — lezen is de sleutel.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    title: "Nuvlo",
+    capable: true,
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#e8924a",
 };
 
 export default function RootLayout({

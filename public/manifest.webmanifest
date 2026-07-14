@@ -1,0 +1,23 @@
+{
+  "name": "Nuvlo",
+  "short_name": "Nuvlo",
+  "description": "Avond-leesapp voor kinderen",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf1e0",
+  "theme_color": "#e8924a",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
