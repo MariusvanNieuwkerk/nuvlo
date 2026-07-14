@@ -453,13 +453,15 @@ export async function updateStoryIfLastChapterOpen(
 
   // Atomaire conditionele UPDATE: alleen schrijven als het laatste hoofdstuk intussen
   // nog steeds geen chosen heeft (i.e. niemand anders was ons voor).
-  const newChaptersJson = JSON.stringify(mutated.chapters);
+  // Let: de RPC-parameter is jsonb, dus we geven de objecten direct mee — NIET stringified.
+  // JSON.stringify hier zou de waarde dubbel-encoderen (de RPC krijgt dan een jsonb-string
+  // i.p.v. een jsonb-array, en .map crasht bij het lezen).
   const { data, error } = await client().rpc("append_chapter_atomic", {
     p_story_id: id,
     p_from_chapter_n: fromChapterN,
-    p_chapters: newChaptersJson as unknown,
-    p_character: JSON.stringify(mutated.character) as unknown,
-    p_bible: JSON.stringify(mutated.bible) as unknown,
+    p_chapters: mutated.chapters,
+    p_character: mutated.character,
+    p_bible: mutated.bible,
     p_summary: mutated.summary,
     p_status: mutated.status,
     p_cover_url: mutated.coverUrl,
@@ -479,9 +481,9 @@ export async function updateStoryIfLastChapterOpen(
     return { story: fresh, updated: false };
   }
 
-  // RPC geeft de verse rij terug als jsonb; mappen naar Story.
-  const row = (data as { row: StoryRow }[])[0]?.row ?? (data as StoryRow[])[0];
-  if (row) return { story: rowToStory(row), updated: true };
+  // RPC geeft TABLE(out_row jsonb) terug — data[0].out_row is de verse rij als jsonb.
+  const outRow = (data as { out_row: StoryRow }[])[0]?.out_row;
+  if (outRow) return { story: rowToStory(outRow), updated: true };
   // Onverwachte vorm: herlees.
   const fresh = await getStory(id);
   return { story: fresh, updated: true };
@@ -506,8 +508,8 @@ export async function updateChapterImageAtomic(
     // Of de RPC faalde, of 0 rijen (al niet meer pending). Herlees de huidige staat.
     return await getStory(id);
   }
-  const row = (data as { row: StoryRow }[])[0]?.row ?? (data as StoryRow[])[0];
-  if (row) return rowToStory(row);
+  const outRow = (data as { out_row: StoryRow }[])[0]?.out_row;
+  if (outRow) return rowToStory(outRow);
   return await getStory(id);
 }
 
