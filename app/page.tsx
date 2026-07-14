@@ -37,11 +37,14 @@ export default async function HomePage() {
       </div>
 
       {(heroes.length > 0 || sideCharacters.length > 0) && (
-        <section className="flex flex-col gap-3 sm:gap-4">
+        <section className="flex flex-col gap-2 sm:gap-2.5">
           <h2 className="font-heading text-sm font-bold tracking-wide text-foreground/50 uppercase sm:text-base">
             Mijn personages
           </h2>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fit,minmax(140px,1fr))] sm:gap-4">
+          {/* Compacte cirkel-rij: alleen een portret-cirkel met de naam eronder, netjes
+              naast elkaar (geen brede dozen met lege ruimte). Helden zijn klikbaar (start
+              een nieuw verhaal met die held vooringevuld); bijfiguren tonen puur informatief. */}
+          <div className="flex flex-wrap gap-2.5 sm:gap-3">
             {heroes.map((c) => (
               <HeroCharacterTile key={c.id} character={c} />
             ))}
@@ -76,15 +79,17 @@ export default async function HomePage() {
   );
 }
 
-// Compacte portret-tegel voor een opgeslagen held. Klikken start een nieuw verhaal met die
-// held vooringevuld — de nieuw-verhaal-pagina leest het ?held=ID uit (zie HeroForm).
+// Compact cirkel-item voor een opgeslagen held. Klikken start een nieuw verhaal met die held
+// vooringevuld — de nieuw-verhaal-pagina leest het ?held=ID uit (zie HeroForm). Bewust klein:
+// alleen een portret-cirkel + naam, geen brede doos eromheen.
 function HeroCharacterTile({ character }: { character: SavedCharacter }) {
   return (
     <Link
       href={`/nieuw-verhaal?held=${character.id}`}
-      className="group flex flex-col items-center gap-2 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-1 hover:border-amber-400/80 hover:shadow-md dark:bg-white/10"
+      title={character.seriesNote ? `${character.name} — ${character.seriesNote}` : character.name}
+      className="group flex w-16 flex-col items-center gap-1.5 sm:w-20"
     >
-      <span className="relative size-16 shrink-0 overflow-hidden rounded-full ring-2 ring-amber-300/40 bg-foreground/5 sm:size-20">
+      <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-amber-300/50 transition-all group-hover:-translate-y-0.5 group-hover:ring-amber-400/80 sm:size-20">
         {character.portraitUrl ? (
           <Image
             src={character.portraitUrl}
@@ -99,30 +104,25 @@ function HeroCharacterTile({ character }: { character: SavedCharacter }) {
           </span>
         )}
       </span>
-      <span className="text-center text-sm font-bold text-foreground sm:text-base">
+      <span className="line-clamp-1 w-full text-center text-xs font-bold text-foreground sm:text-sm">
         {character.name}
       </span>
-      {character.seriesNote && (
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-400/20 dark:text-amber-200 sm:text-xs">
-          {character.seriesNote}
-        </span>
-      )}
     </Link>
   );
 }
 
-// Informatieve tegel voor een bijfiguur. Voor nu NIET klikbaar: een bijfiguur start nog
-// geen nieuw verhaal (dat is een latere stap). Wel tonen we naam + portret/placeholder en
-// een klein "bijfiguur"-labeltje plus het aantal boeken waarin hij voorkomt (uit
-// sourceStoryIds), zodat terugkerende figuren zichtbaar en herkenbaar zijn op de plank.
+// Compact cirkel-item voor een bijfiguur. Niet klikbaar (start nog geen nieuw verhaal), maar
+// wel zichtbaar als terugkerend figuur — dezelfde compacte vorm als een held, alleen met een
+// gedemptere ring en het "bijfiguur / N boeken"-labeltje in de tooltip.
 function SideCharacterTile({ character }: { character: SavedCharacter }) {
   const bookCount = character.sourceStoryIds.length;
+  const title = `Bijfiguur — komt terug in ${bookCount === 1 ? "1 boek" : `${bookCount} boeken`}`;
   return (
     <div
-      className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-amber-300/50 bg-white/70 p-3 shadow-sm dark:bg-white/5"
-      title="Bijfiguur — komt terug in je boeken"
+      className="flex w-16 flex-col items-center gap-1.5 sm:w-20"
+      title={bookCount > 0 ? title : "Bijfiguur"}
     >
-      <span className="relative size-16 shrink-0 overflow-hidden rounded-full ring-2 ring-foreground/10 bg-foreground/5 sm:size-20">
+      <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-foreground/10 sm:size-20">
         {character.portraitUrl ? (
           <Image
             src={character.portraitUrl}
@@ -137,11 +137,8 @@ function SideCharacterTile({ character }: { character: SavedCharacter }) {
           </span>
         )}
       </span>
-      <span className="text-center text-sm font-bold text-foreground sm:text-base">
+      <span className="line-clamp-1 w-full text-center text-xs font-bold text-foreground/70 sm:text-sm">
         {character.name}
-      </span>
-      <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-[10px] font-semibold text-foreground/60 dark:bg-white/10 dark:text-foreground/70 sm:text-xs">
-        bijfiguur{bookCount > 0 ? ` · ${bookCount} boek${bookCount === 1 ? "" : "en"}` : ""}
       </span>
     </div>
   );
