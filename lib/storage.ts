@@ -414,7 +414,7 @@ export async function setStoryFavorite(id: string, favorite: boolean): Promise<S
 export async function updateStoryIfLastChapterOpen(
   id: string,
   fromChapterN: number | null,
-  mutator: (current: Story) => Story,
+  mutator: (current: Story) => Story | Promise<Story>,
 ): Promise<{ story: Story | null; updated: boolean }> {
   // Lees de verse staat voor de mutator (de mutator kan zware AI-logica bevatten en moet
   // op de Èchte laatste staat werken, niet op een verouderde kopie).
@@ -429,7 +429,7 @@ export async function updateStoryIfLastChapterOpen(
     return { story: current, updated: false };
   }
 
-  const mutated = mutator(current);
+  const mutated = await mutator(current);
 
   // Atomaire conditionele UPDATE: alleen schrijven als het laatste hoofdstuk intussen
   // nog steeds geen chosen heeft (i.e. niemand anders was ons voor).

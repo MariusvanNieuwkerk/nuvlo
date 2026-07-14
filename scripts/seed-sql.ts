@@ -1,4 +1,7 @@
-// Eenmalig seed-script: leest data/stories.json + data/characters.json + data/image-usage.json\n// en print INSERT-SQL die we via de Supabase MCP execute_sql kunnen uitvoeren. Niet onderdeel\n// van de runtime app — alleen gebruikt tijdens de migratie van lokale files naar Supabase.\nimport fs from "node:fs/promises";
+// Eenmalig seed-script: leest data/stories.json + data/characters.json + data/image-usage.json
+// en print INSERT-SQL die we via de Supabase MCP execute_sql kunnen uitvoeren. Niet onderdeel
+// van de runtime app — alleen gebruikt tijdens de migratie van lokale files naar Supabase.
+import fs from "node:fs/promises";
 import path from "node:path";
 
 async function main() {
