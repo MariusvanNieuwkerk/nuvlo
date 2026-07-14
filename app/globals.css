@@ -16,15 +16,21 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Expliciete generieke fallback (", sans-serif") aan het eind van de stack: mocht het
-     ingebedde Fredoka/Nunito-lettertype (om wat voor reden dan ook, bv. een geblokkeerde
-     font-file) niet laden, dan valt de browser terug op een schreefloos systeemfont in
-     plaats van zijn eigen — vaak schreef-achtige — standaardlettertype. Zonder dit kon het
-     hele lettertype er per ongeluk uitzien als een deftig schreeflettertype i.p.v. speels. */
-  --font-sans: var(--font-body), ui-sans-serif, sans-serif;
+  /* --font-heading-raw/--font-body-raw komen rechtstreeks van next/font (zie app/layout.tsx) en
+     bevatten alleen de eigenlijke fontnaam + de door next/font gegenereerde metric-fallback.
+     Hier bouwen we ONDER EEN ANDERE NAAM (--font-heading/--font-body, zonder "-raw") een
+     stack met een expliciete generieke fallback (", sans-serif") erachter: mocht het lettertype
+     onverwacht niet laden, dan valt de browser terug op een schreefloos systeemfont in plaats
+     van zijn eigen — vaak schreef-achtige — standaardlettertype.
+     BELANGRIJK: dit MOET een andere naam zijn dan de bron-variabele. "--font-heading:
+     var(--font-heading), ..." (zelfde naam) is een CIRKELVERWIJZING — CSS verklaart die dan
+     ongeldig, en de hele site valt terug op het browser-standaardfont (vaak een schreeflettertype).
+     Dat was exact de bug die het lettertype steeds "saai" liet lijken, ondanks dat Fredoka prima
+     correct werd geladen. */
+  --font-sans: var(--font-body-raw), ui-sans-serif, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-heading), ui-rounded, ui-sans-serif, sans-serif;
-  --font-body: var(--font-body), ui-sans-serif, sans-serif;
+  --font-heading: var(--font-heading-raw), ui-rounded, ui-sans-serif, sans-serif;
+  --font-body: var(--font-body-raw), ui-sans-serif, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -218,7 +224,7 @@
   h2,
   h3,
   h4 {
-    font-family: var(--font-heading), ui-rounded, ui-sans-serif, sans-serif;
+    font-family: var(--font-heading-raw), ui-rounded, ui-sans-serif, sans-serif;
   }
 }
 
