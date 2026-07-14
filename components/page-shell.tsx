@@ -6,7 +6,9 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const MAX_WIDTH = {
   narrow: "max-w-md sm:max-w-xl md:max-w-2xl",
-  wide: "max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-6xl",
+  // Base en sm: breed genoeg om iPad-landscape (met Safari-zijbalk ~600-900px) te vullen;
+  // pas op groot desktop-liggend scherm (lg+) cap je de leesbreedte.
+  wide: "max-w-2xl sm:max-w-4xl md:max-w-5xl lg:max-w-6xl",
 } as const;
 
 export function PageShell({

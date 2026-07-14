@@ -43,6 +43,23 @@ function client(): SupabaseClient {
 // vorm weer in de DB).
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Supabase geeft jsonb-kolommen normaal gesproken terug als geparseerde JS-waarden
+// (object/array). Maar als een rij ooit via een pad is opgeslagen waarbij de waarde
+// dubbel ge-JSON-stringified is (bv. een buggy seed-script), dan staat in de jsonb-
+// kolom een *string* die zelf JSON bevat — en daar kan de app niet mee overweg.
+// Deze helper unpackt zoiets: als de waarde een string is, parse hem dan als JSON.
+function unpackJsonb<T>(value: unknown, fallback: T): T {
+  if (value == null) return fallback;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
+  return value as T;
+}
+
 function normalizeChapter(chapter: Chapter): Chapter {
   const pages = Array.isArray(chapter.pages)
     ? chapter.pages.filter((p): p is string => typeof p === "string" && p.trim().length > 0).map((p) => p.trim())
@@ -63,19 +80,22 @@ function normalizeChapter(chapter: Chapter): Chapter {
 }
 
 function normalizeStory(story: Story): Story {
+  const chapters = Array.isArray(story.chapters) ? story.chapters : [];
+  const character = story.character && typeof story.character === "object" ? story.character : ({} as Story["character"]);
+  const bible = story.bible && typeof story.bible === "object" ? story.bible : ({} as Story["bible"]);
   return {
     ...story,
-    chapters: (story.chapters ?? []).map(normalizeChapter),
+    chapters: chapters.map(normalizeChapter),
     character: {
-      ...story.character,
-      appearance: cleanCharacterAppearance(story.character.appearance, ""),
-      items: Array.isArray(story.character.items) ? story.character.items : [],
+      ...character,
+      appearance: cleanCharacterAppearance(character.appearance, ""),
+      items: Array.isArray(character.items) ? character.items : [],
     },
     bible: {
-      ...story.bible,
-      worldAppearance: cleanWorldAppearance(story.bible.worldAppearance, ""),
-      worldReferenceImageUrl: story.bible.worldReferenceImageUrl ?? null,
-      sideCharacters: (story.bible.sideCharacters ?? []).map((c) => ({
+      ...bible,
+      worldAppearance: cleanWorldAppearance(bible.worldAppearance, ""),
+      worldReferenceImageUrl: bible.worldReferenceImageUrl ?? null,
+      sideCharacters: (Array.isArray(bible.sideCharacters) ? bible.sideCharacters : []).map((c) => ({
         name: c.name,
         appearance: cleanSideCharacterAppearance(c.appearance, ""),
         referenceImageUrl: c.referenceImageUrl ?? null,
@@ -144,12 +164,12 @@ function rowToStory(row: StoryRow): Story {
     id: row.id,
     childId: row.child_id,
     title: row.title,
-    hero: row.hero as Story["hero"],
-    character: row.character as Story["character"],
-    bible: row.bible as Story["bible"],
+    hero: unpackJsonb<Story["hero"]>(row.hero, {} as Story["hero"]),
+    character: unpackJsonb<Story["character"]>(row.character, {} as Story["character"]),
+    bible: unpackJsonb<Story["bible"]>(row.bible, {} as Story["bible"]),
     summary: row.summary ?? "",
     status: row.status as Story["status"],
-    chapters: (row.chapters as Chapter[]) ?? [],
+    chapters: unpackJsonb<Chapter[]>(row.chapters, []),
     coverUrl: row.cover_url ?? null,
     favorite: row.favorite ?? false,
     createdAt: row.created_at,
@@ -194,7 +214,7 @@ function rowToCharacter(row: CharacterRow): SavedCharacter {
     childId: row.child_id,
     name: row.name,
     kind: row.kind,
-    appearance: row.appearance,
+    appearance: unpackJsonb<unknown>(row.appearance, {}),
     imageStyleHint: row.image_style_hint,
     portraitUrl: row.portrait_url,
     sourceStoryIds: row.source_story_ids ?? [],
