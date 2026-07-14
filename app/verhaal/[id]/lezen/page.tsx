@@ -1,11 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { BookPager } from "@/components/book-pager";
 import { HeroPanel } from "@/components/hero-panel";
-import { SaveCharacterButton } from "@/components/save-character-button";
+import { SideCharacterSaver } from "@/components/side-character-saver";
 import { getStory } from "@/lib/storage";
 
 // Altijd vers renderen: het verhaal groeit met elke keuze, dus nooit uit de cache tonen.
@@ -39,11 +37,15 @@ export default async function LezenPage({
         hasUnseenPortrait={Boolean(story.character.hasUnseenPortrait)}
       />
 
-      {/* Bekende nevenpersonages — elk met een kleine "Sla op als personage"-knop. Het kind
-          kan zo een leuk bijfiguur oppakken voor hergebruik in een nieuw boek. */}
-      {story.bible.sideCharacters.length > 0 && (
-        <SideCharacterSaver storyId={story.id} sideCharacters={story.bible.sideCharacters} />
-      )}
+      {/* Bekende nevenpersonages — elk met een kleine "Sla op als personage"-knop plus een
+          wegdruk-kruisje. Weggedrukte personages tonen we hier niet meer (maar ze blijven wel
+          in de illustraties van het verhaal). */}
+      {(() => {
+        const suggesties = story.bible.sideCharacters.filter((c) => !c.dismissed);
+        return suggesties.length > 0 ? (
+          <SideCharacterSaver storyId={story.id} sideCharacters={suggesties} />
+        ) : null;
+      })()}
 
       {/* Begint altijd op de laatste (levende) pagina, maar het kind kan met
           vorige/volgende terugbladeren naar wat het al gelezen heeft. Keuzes maken kan
@@ -65,64 +67,5 @@ export default async function LezenPage({
         Bekijk mijn boek tot nu toe
       </Link>
     </PageShell>
-  );
-}
-
-// Server-side presentatie-component dat de lijst bekende nevenpersonages toont, elk met een
-// portret (als er al een referenceImageUrl is) en de "Sla op als personage"-knop. De knop
-// zelf is client (zie save-character-button.tsx); deze wrapper mag server blijven.
-function SideCharacterSaver({
-  storyId,
-  sideCharacters,
-}: {
-  storyId: string;
-  sideCharacters: { name: string; appearance: unknown; referenceImageUrl: string | null }[];
-}) {
-  return (
-    <section className="flex flex-col gap-2 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-white/10">
-      <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-foreground/50 sm:text-sm">
-        <Sparkles className="size-3.5" />
-        Bekende nevenpersonages
-      </p>
-      <ul className="flex flex-col gap-2">
-        {sideCharacters.map((c) => (
-          <li
-            key={c.name}
-            className="flex items-center gap-3 rounded-xl bg-foreground/5 p-2 sm:p-2.5"
-          >
-            <span className="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/10 bg-foreground/5 sm:size-12">
-              {c.referenceImageUrl ? (
-                <Image
-                  src={c.referenceImageUrl}
-                  alt={c.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 40px, 48px"
-                />
-              ) : (
-                <span className="flex size-full items-center justify-center">
-                  <Sparkles className="size-4 text-foreground/40" />
-                </span>
-              )}
-            </span>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <p className="truncate text-sm font-bold text-foreground sm:text-base">{c.name}</p>
-              {typeof c.appearance === "object" && c.appearance !== null && "freeform" in (c.appearance as Record<string, unknown>) && (
-                <p className="truncate text-xs text-foreground/60 sm:text-sm">
-                  {String((c.appearance as Record<string, unknown>).freeform)}
-                </p>
-              )}
-            </div>
-            <SaveCharacterButton
-              storyId={storyId}
-              kind="side"
-              name={c.name}
-              appearance={c.appearance}
-              portraitUrl={c.referenceImageUrl}
-            />
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

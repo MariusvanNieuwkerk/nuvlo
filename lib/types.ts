@@ -63,6 +63,11 @@ export type SideCharacter = {
   // de eerste keer dat dit personage in een scène verschijnt (zie lib/side-character-images.ts).
   // null zolang dat nog niet gebeurd is (en voor oudere verhalen zonder dit veld).
   referenceImageUrl: string | null;
+  // De ouder/het kind heeft dit nevenpersonage weggedrukt uit de "Sla op als personage"-
+  // suggestielijst. Dit verbergt ALLEEN die suggestie — het personage blijft gewoon in het
+  // verhaal en in de illustraties (die gebruiken de volledige sideCharacters-lijst). Optioneel/
+  // afwezig = niet weggedrukt (ook zo voor oudere verhalen zonder dit veld).
+  dismissed?: boolean;
 };
 
 // GEHEIM: nooit tonen aan het kind.

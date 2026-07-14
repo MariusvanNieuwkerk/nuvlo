@@ -99,6 +99,7 @@ function normalizeStory(story: Story): Story {
         name: c.name,
         appearance: cleanSideCharacterAppearance(c.appearance, ""),
         referenceImageUrl: c.referenceImageUrl ?? null,
+        dismissed: c.dismissed ?? false,
       })),
     },
   };
@@ -363,6 +364,14 @@ export async function getStory(id: string): Promise<Story | null> {
 export async function markPortraitSeen(id: string): Promise<void> {
   // Eén atomair jsonb_set op hasUnseenPortrait=false. Idempotent.
   await client().rpc("mark_portrait_seen", { p_story_id: id });
+}
+
+// Drukt één nevenpersonage weg uit de "Sla op als personage"-suggestielijst (zet dismissed=true
+// op het juiste element in bible.sideCharacters). Eén atomair jsonb_set op het element met de
+// gegeven naam; verandert NIETS aan de rest van het verhaal, en het personage blijft in de
+// illustraties (die lezen de volledige lijst). Idempotent — meermaals wegdrukken kan geen kwaad.
+export async function dismissSideCharacter(id: string, name: string): Promise<void> {
+  await client().rpc("dismiss_side_character", { p_story_id: id, p_name: name });
 }
 
 export async function createStory(
