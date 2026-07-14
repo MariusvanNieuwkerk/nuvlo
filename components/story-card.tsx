@@ -61,7 +61,7 @@ export function StoryCard({ story }: { story: Story }) {
           {story.title}
         </p>
         <p className="truncate text-sm text-foreground/60">
-          {story.hero.name} · {story.hero.world}
+          Auteur: {story.hero.name}
         </p>
         <div className="mt-auto flex flex-col gap-1.5 pt-2">
           <div className="flex items-center gap-1.5 text-sm text-foreground/50">

@@ -26,7 +26,7 @@ export default async function HomePage() {
     <PageShell showHomeLink={false} size="wide">
       <div className="flex flex-col gap-1 pt-1 sm:gap-2 sm:pt-2">
         <h1 className="font-heading text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">
-          Welkom terug 👋
+          Welkom terug
         </h1>
         <p className="text-base text-foreground/60 sm:text-lg">Tijd voor een avondavontuur.</p>
       </div>

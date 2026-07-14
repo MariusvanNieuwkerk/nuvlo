@@ -215,14 +215,29 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-8 sm:gap-10">
-      {/* ────────── Stap 0: kies een begin ────────── */}
-      <section className="flex flex-col gap-3 sm:gap-4">
-        <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-          Kies een held
+      {/* ────────── Vooraf: leeftijd van het kind (geen stap — gaat over het kind, niet over
+          de held). Compact bovenaan, daarna beginnen de genummerde stappen pas. ────────── */}
+      <section className="flex flex-col gap-2.5 sm:gap-3">
+        <h2 className="font-heading text-lg font-bold text-foreground/80 sm:text-xl">
+          Voor welk kind is het boek?
         </h2>
         <p className="text-sm text-foreground/60 sm:text-base">
-          Neem je een held mee uit je personages, of verzin een nieuwe?
+          Zo weten we hoe moeilijk de zinnen moeten zijn.
         </p>
+        <Field label="Leeftijd van het kind">
+          <Input
+            type="number"
+            min={4}
+            max={14}
+            value={form.age}
+            onChange={(e) => update("age", e.target.value)}
+            className={cn("h-12 w-24 rounded-xl text-center text-base sm:h-14 sm:w-28 sm:text-lg", INPUT_CARD)}
+          />
+        </Field>
+      </section>
+
+      {/* ────────── Stap 1 · Kies een begin ────────── */}
+      <StepSection badge={1} title="Kies een begin" subtitle="Neem je een held mee uit je personages, of verzin een nieuwe?">
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           <ModeButton
             active={mode === "existing"}
@@ -300,139 +315,77 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
             )}
           </div>
         )}
-      </section>
+      </StepSection>
 
-      {/* ────────── Stap 1: wie ben jij + wie is je held ────────── */}
-      {/* Leeftijd gaat over het KIND (en dus over hoe moeilijk de zinnen moeten zijn), niet
-          over de held. Beide delen staan bewust dicht bij elkaar met een duidelijke tussenkop
-          — het verschil kind vs. held blijft zichtbaar, zonder een omhullende kaart die het
-          formulier zwaar maakt. De invoer-vakken (pillen) dragen zelf al de visuele rust. */}
-      <section className="flex flex-col gap-5 sm:gap-6">
-        {/* 1a — wie is het kind (leesniveau) */}
-        <div className="flex flex-col gap-2.5 sm:gap-3">
-          <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-            Wie ben jij?
-          </h2>
-          <p className="text-sm text-foreground/60 sm:text-base">
-            Zo weten we hoe moeilijk de zinnen moeten zijn.
-          </p>
-          <Field label="Jouw leeftijd">
+      {/* ────────── Stap 2 · Wie is je held? (naam, wereld, kracht, zwakte, tegenstander) ────────── */}
+      <StepSection
+        badge={2}
+        title="Wie is je held?"
+        subtitle={mode === "existing"
+          ? "De naam komt uit je personages. De wereld, kracht, zwakte en tegenstander kies je per verhaal."
+          : "Verzin samen een naam en een wereld. Kracht, zwakte en tegenstander maken het verhaal spannend."}
+      >
+        <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+          <Field label="Naam van je held">
             <Input
-              type="number"
-              min={4}
-              max={14}
-              value={form.age}
-              onChange={(e) => update("age", e.target.value)}
-              className={cn("h-12 w-24 rounded-xl text-center text-base sm:h-14 sm:w-28 sm:text-lg", INPUT_CARD)}
+              value={form.name}
+              onChange={(e) => update("name", e.target.value)}
+              placeholder="Bijv. Finn"
+              maxLength={30}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+
+          <Field label="In welke wereld speelt het verhaal?">
+            <Input
+              value={form.world}
+              onChange={(e) => update("world", e.target.value)}
+              placeholder="Bijv. Sterrenwoud"
+              maxLength={40}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+
+          <Field label="Superkracht">
+            <Input
+              value={form.power}
+              onChange={(e) => update("power", e.target.value)}
+              placeholder="Bijv. praten met dieren"
+              maxLength={40}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+
+          <Field label="Zwakte">
+            <Input
+              value={form.weakness}
+              onChange={(e) => update("weakness", e.target.value)}
+              placeholder="Bijv. bang in het donker"
+              maxLength={40}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+
+          <Field label="Tegenstander">
+            <Input
+              value={form.enemy}
+              onChange={(e) => update("enemy", e.target.value)}
+              placeholder="Bijv. de Schaduwwolf"
+              maxLength={40}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
             />
           </Field>
         </div>
+      </StepSection>
 
-        {/* Dunne streep als visuele scheiding tussen kind en held. */}
-        <div className="h-px w-full bg-amber-300/40" />
-
-        {/* 1b — wie is de held (velden) */}
-        <div className="flex flex-col gap-4 sm:gap-5">
-          <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-            Wie is je held?
-          </h2>
-
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
-            <Field label="Naam van je held">
-              <Input
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-                placeholder="Bijv. Finn"
-                maxLength={30}
-                className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
-              />
-            </Field>
-
-            <Field label="In welke wereld speelt het verhaal?">
-              <Input
-                value={form.world}
-                onChange={(e) => update("world", e.target.value)}
-                placeholder="Bijv. Sterrenwoud"
-                maxLength={40}
-                className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
-              />
-            </Field>
-
-            <Field label="Superkracht">
-              <Input
-                value={form.power}
-                onChange={(e) => update("power", e.target.value)}
-                placeholder="Bijv. praten met dieren"
-                maxLength={40}
-                className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
-              />
-            </Field>
-
-            <Field label="Zwakte">
-              <Input
-                value={form.weakness}
-                onChange={(e) => update("weakness", e.target.value)}
-                placeholder="Bijv. bang in het donker"
-                maxLength={40}
-                className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
-              />
-            </Field>
-
-            <Field label="Tegenstander">
-              <Input
-                value={form.enemy}
-                onChange={(e) => update("enemy", e.target.value)}
-                placeholder="Bijv. de Schaduwwolf"
-                maxLength={40}
-                className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
-              />
-            </Field>
-          </div>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3 sm:gap-4">
-        <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-          Welk genre?
-        </h2>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
-          {Object.entries(GENRE_LABELS).map(([value, label]) => {
-            const Icon = GENRE_ICON[value as Genre];
-            const selected = form.genre === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => update("genre", value as Genre)}
-                className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-4 text-sm font-bold transition-all active:scale-[0.97] sm:gap-2 sm:py-5 sm:text-base",
-                  "bg-white/85 dark:bg-white/10 shadow-sm",
-                  selected
-                    ? "border-amber-500 bg-amber-50/90 dark:bg-amber-400/15 text-amber-700 dark:text-amber-200 shadow-md -translate-y-0.5"
-                    : "border-amber-300/60 text-foreground/80 hover:border-amber-400/80 hover:shadow-md",
-                )}
-              >
-                <Icon className="size-7 sm:size-8" strokeWidth={2.5} />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex items-center gap-2.5">
-          <StepBadge>1</StepBadge>
-          <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-            {mode === "existing" ? "Uiterlijk van je held" : "Verzin je held"}
-          </h2>
-        </div>
-        <p className="text-sm text-foreground/60 sm:text-base">
-          {mode === "existing"
-            ? "Dit uiterlijk komt uit je personages — je kunt het hier nog aanpassen voor dit verhaal."
-            : "Hoe ziet je held eruit? Verzin het helemaal zelf — haar, kleuren, kleding, alles mag. Later, als je verder komt in het verhaal, unlock je nog nieuwe items voor je held."}
-        </p>
-
+      {/* ────────── Stap 3 · Hoe ziet je held eruit? (appearance textarea) ────────── */}
+      <StepSection
+        badge={3}
+        title="Hoe ziet je held eruit?"
+        subtitle={mode === "existing"
+          ? "Dit uiterlijk komt uit je personages — je kunt het hier nog aanpassen voor dit verhaal."
+          : "Verzin het helemaal zelf — haar, kleuren, kleding, alles mag. Later, als je verder komt in het verhaal, unlock je nog nieuwe items voor je held."}
+      >
         <Textarea
           value={form.appearance}
           onChange={(e) => update("appearance", e.target.value)}
@@ -440,19 +393,14 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
           maxLength={250}
           className={cn("min-h-[100px] rounded-xl text-base sm:min-h-[120px] sm:text-lg", INPUT_CARD)}
         />
-      </section>
+      </StepSection>
 
-      <section className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex items-center gap-2.5">
-          <StepBadge>2</StepBadge>
-          <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-            Kies een tekenstijl
-          </h2>
-        </div>
-        <p className="text-sm text-foreground/60 sm:text-base">
-          In welke stijl moeten de plaatjes van je held getekend worden?
-        </p>
-
+      {/* ────────── Stap 4 · Kies een tekenstijl ────────── */}
+      <StepSection
+        badge={4}
+        title="Kies een tekenstijl"
+        subtitle="In welke stijl moeten de plaatjes van je held getekend worden?"
+      >
         <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
           {IMAGE_STYLES.map((style) => {
             const Icon = style.icon;
@@ -484,7 +432,38 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
             );
           })}
         </div>
-      </section>
+      </StepSection>
+
+      {/* ────────── Stap 5 · Welk genre? ────────── */}
+      <StepSection
+        badge={5}
+        title="Welk genre?"
+        subtitle="Het genre bepaalt de sfeer van het hele boek."
+      >
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+          {Object.entries(GENRE_LABELS).map(([value, label]) => {
+            const Icon = GENRE_ICON[value as Genre];
+            const selected = form.genre === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => update("genre", value as Genre)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-4 text-sm font-bold transition-all active:scale-[0.97] sm:gap-2 sm:py-5 sm:text-base",
+                  "bg-white/85 dark:bg-white/10 shadow-sm",
+                  selected
+                    ? "border-amber-500 bg-amber-50/90 dark:bg-amber-400/15 text-amber-700 dark:text-amber-200 shadow-md -translate-y-0.5"
+                    : "border-amber-300/60 text-foreground/80 hover:border-amber-400/80 hover:shadow-md",
+                )}
+              >
+                <Icon className="size-7 sm:size-8" strokeWidth={2.5} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </StepSection>
 
       {error && (
         <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{error}</p>
@@ -538,6 +517,33 @@ function StepBadge({ children }: { children: React.ReactNode }) {
     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm font-extrabold text-amber-950 sm:h-7 sm:w-7 sm:text-base">
       {children}
     </span>
+  );
+}
+
+function StepSection({
+  badge,
+  title,
+  subtitle,
+  children,
+}: {
+  badge: number;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3 sm:gap-4">
+      <div className="flex items-start gap-2.5">
+        <StepBadge>{badge}</StepBadge>
+        <div className="flex flex-col gap-1">
+          <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">{title}</h2>
+          {subtitle && (
+            <p className="text-sm text-foreground/60 sm:text-base">{subtitle}</p>
+          )}
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }
 
