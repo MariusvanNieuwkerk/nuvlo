@@ -142,6 +142,63 @@
   --lamp: oklch(0.78 0.14 70);
 }
 
+/*
+  sRGB-terugval voor oude WebKit (o.a. oudere iPads). De thema-kleuren hierboven staan in
+  oklch(); Safari ouder dan 15.4 kent oklch niet, waardoor tekst/achtergrond onzichtbaar
+  zouden worden. Custom properties valideren hun waarde niet bij het declareren, dus de
+  klassieke "twee keer declareren"-truc werkt hier NIET — daarom zetten we de terugval in
+  een @supports-blok dat alleen aanslaat als oklch NIET ondersteund wordt. Moderne browsers
+  negeren dit blok volledig en houden exact dezelfde kleuren als voorheen.
+*/
+@supports not (color: oklch(0 0 0)) {
+  :root {
+    --background: #f7f1e5;
+    --foreground: #3a2312;
+    --card: #fffbf4;
+    --card-foreground: #3a2312;
+    --popover: #fffbf4;
+    --popover-foreground: #3a2312;
+    --primary: #e36927;
+    --primary-foreground: #fdfcf8;
+    --secondary: #efe3d3;
+    --secondary-foreground: #3a2312;
+    --muted: #efe7d9;
+    --muted-foreground: #705848;
+    --accent: #ead7c2;
+    --accent-foreground: #3a2312;
+    --destructive: #db2b33;
+    --border: rgba(89, 66, 51, 0.14);
+    --input: rgba(89, 66, 51, 0.1);
+    --ring: #e36927;
+    --book: #fbf4e6;
+    --book-foreground: #372414;
+    --lamp: rgba(242, 209, 173, 0.4);
+  }
+  .dark {
+    --background: #091025;
+    --foreground: #f8f1e3;
+    --card: #151e37;
+    --card-foreground: #f8f1e3;
+    --popover: #111932;
+    --popover-foreground: #f8f1e3;
+    --primary: #f68c36;
+    --primary-foreground: #0c142d;
+    --secondary: #263151;
+    --secondary-foreground: #f8f1e3;
+    --muted: #1e2842;
+    --muted-foreground: #c3b69b;
+    --accent: #354573;
+    --accent-foreground: #f8f1e3;
+    --destructive: #f14d4c;
+    --border: rgba(255, 255, 255, 0.12);
+    --input: rgba(255, 255, 255, 0.14);
+    --ring: #f68c36;
+    --book: #f4ead5;
+    --book-foreground: #372414;
+    --lamp: #f0a646;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
