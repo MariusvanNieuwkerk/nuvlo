@@ -7,6 +7,11 @@ import { NewStoryTile } from "@/components/new-story-tile";
 import { listCharacters, listStories } from "@/lib/storage";
 import type { SavedCharacter } from "@/lib/types";
 
+// Altijd vers renderen: de boekenplank leest live uit Supabase. Zonder dit prerendert
+// Next de pagina bij de build, waardoor verwijderde/nieuwe boeken pas na een redeploy
+// zichtbaar worden (verwijderen "werkt" dan schijnbaar niet).
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const [stories, characters] = await Promise.all([
     listStories(),

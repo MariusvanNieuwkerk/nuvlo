@@ -8,6 +8,9 @@ import { HeroPanel } from "@/components/hero-panel";
 import { SaveCharacterButton } from "@/components/save-character-button";
 import { getStory } from "@/lib/storage";
 
+// Altijd vers renderen: het verhaal groeit met elke keuze, dus nooit uit de cache tonen.
+export const dynamic = "force-dynamic";
+
 export default async function LezenPage({
   params,
 }: {
