@@ -7,6 +7,11 @@ import {
 } from "@/lib/story-director";
 import { appendAccessory } from "@/lib/appearance";
 
+// Fase A genereert de nieuwe hoofdstuktekst met het taalmodel (Anthropic). Dat kan 10–20s duren;
+// zonder deze regel kapt Vercel de functie na de lage standaardlimiet (~10s) af en mislukt de
+// keuze. Beeldwerk gebeurt apart in fase B (zie chapters/[n]/image). 60s = max op het Hobby-plan.
+export const maxDuration = 60;
+
 // Fout met HTTP-statuscode, gegooid vanuit de mutator in updateStoryIfLastChapterOpen.
 // Scheidt "logic-fout" (400) van "AI-fout" (502) van "duplicaat" (geen fout, updated=false).
 class HttpError extends Error {

@@ -12,6 +12,12 @@ import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { getImageStyle } from "@/lib/image-styles";
 import type { Genre, Hero } from "@/lib/types";
 
+// Een nieuw verhaal aanmaken doet het meeste AI-werk in één request: tekst-generatie én
+// meerdere fal.ai-beeldcalls (held-portret, omslag én de eerste scène-illustratie). Dat duurt
+// makkelijk tientallen seconden; zonder deze regel kapt Vercel de functie na ~10s af en mislukt
+// het aanmaken. 60s is het maximum op het Hobby-plan.
+export const maxDuration = 60;
+
 const VALID_GENRES: Genre[] = [
   "avontuur",
   "fantasie",

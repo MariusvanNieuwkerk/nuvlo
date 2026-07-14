@@ -3,6 +3,13 @@ import { getDefaultChild, getStory, updateChapterImageAtomic } from "@/lib/stora
 import { generateSceneImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 
+// Het tekenmodel (fal.ai / nano-banana-2) doet vaak 20–60s over één illustratie. Zonder deze
+// regel kapt Vercel de functie al na de lage standaardlimiet (~10s) af: de fal-call is dan nog
+// niet klaar, er wordt niets teruggeschreven en het hoofdstuk blijft eeuwig op imagePending=true
+// hangen ("De tekening wordt gemaakt…" die nooit verschijnt). 60s is het maximum op het
+// Hobby-plan en ruim genoeg voor één illustratie.
+export const maxDuration = 60;
+
 // FASE B van de gesplitste choice-flow: het beeldwerk voor één hoofdstuk. De client roept dit
 // endpoint aan direct nadat fase A (de choice-route) de nieuwe tekst heeft opgeslagen, zodat het
 // plaatje op de achtergrond ontstaat terwijl het kind al leest.
