@@ -1,0 +1,356 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Nuvlo heeft twee sferen:
+  - Licht (":root"): een zacht, warm daglicht-thema — prettig leesbaar overdag.
+  - Donker (".dark"): het "avondritueel"-thema met sterren en lamplicht — de standaard
+    sfeer bij het openen van de app, want 's avonds lezen is waar Nuvlo om draait.
+  De ThemeToggle-knop wisselt tussen beide door de klasse "dark" op <html> te zetten;
+  de keuze wordt onthouden in de browser (localStorage).
+*/
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-book: var(--book);
+  --color-book-foreground: var(--book-foreground);
+  --color-lamp: var(--lamp);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Licht thema (standaard-selector, geen klasse nodig). */
+:root {
+  --background: oklch(0.96 0.018 85);
+  --foreground: oklch(0.28 0.045 55);
+  --card: oklch(0.99 0.01 85);
+  --card-foreground: oklch(0.28 0.045 55);
+  --popover: oklch(0.99 0.01 85);
+  --popover-foreground: oklch(0.28 0.045 55);
+  --primary: oklch(0.66 0.17 45);
+  --primary-foreground: oklch(0.99 0.005 85);
+  --secondary: oklch(0.92 0.025 75);
+  --secondary-foreground: oklch(0.28 0.045 55);
+  --muted: oklch(0.93 0.02 80);
+  --muted-foreground: oklch(0.48 0.04 55);
+  --accent: oklch(0.89 0.035 70);
+  --accent-foreground: oklch(0.28 0.045 55);
+  --destructive: oklch(0.58 0.21 25);
+  --border: oklch(0.4 0.04 55 / 14%);
+  --input: oklch(0.4 0.04 55 / 10%);
+  --ring: oklch(0.66 0.17 45);
+  --chart-1: oklch(0.66 0.17 45);
+  --chart-2: oklch(0.55 0.12 200);
+  --chart-3: oklch(0.55 0.14 140);
+  --chart-4: oklch(0.55 0.14 320);
+  --chart-5: oklch(0.6 0.15 30);
+  --radius: 1.1rem;
+  --sidebar: oklch(0.93 0.02 80);
+  --sidebar-foreground: oklch(0.28 0.045 55);
+  --sidebar-primary: oklch(0.66 0.17 45);
+  --sidebar-primary-foreground: oklch(0.99 0.005 85);
+  --sidebar-accent: oklch(0.89 0.035 70);
+  --sidebar-accent-foreground: oklch(0.28 0.045 55);
+  --sidebar-border: oklch(0.4 0.04 55 / 12%);
+  --sidebar-ring: oklch(0.66 0.17 45);
+
+  /* Boekpagina + zachte gloed */
+  --book: oklch(0.97 0.02 85);
+  --book-foreground: oklch(0.28 0.04 60);
+  --lamp: oklch(0.88 0.06 70 / 40%);
+}
+
+/* Donker "avondritueel"-thema — standaard sfeer, geactiveerd via de klasse "dark". */
+.dark {
+  --background: oklch(0.18 0.045 268);
+  --foreground: oklch(0.96 0.02 85);
+  --card: oklch(0.24 0.05 268);
+  --card-foreground: oklch(0.96 0.02 85);
+  --popover: oklch(0.22 0.05 268);
+  --popover-foreground: oklch(0.96 0.02 85);
+  --primary: oklch(0.74 0.16 55);
+  --primary-foreground: oklch(0.2 0.05 268);
+  --secondary: oklch(0.32 0.06 268);
+  --secondary-foreground: oklch(0.96 0.02 85);
+  --muted: oklch(0.28 0.05 268);
+  --muted-foreground: oklch(0.78 0.04 85);
+  --accent: oklch(0.4 0.08 268);
+  --accent-foreground: oklch(0.96 0.02 85);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.74 0.16 55);
+  --chart-1: oklch(0.74 0.16 55);
+  --chart-2: oklch(0.6 0.12 200);
+  --chart-3: oklch(0.65 0.14 140);
+  --chart-4: oklch(0.6 0.14 320);
+  --chart-5: oklch(0.7 0.15 30);
+  --sidebar: oklch(0.2 0.05 268);
+  --sidebar-foreground: oklch(0.96 0.02 85);
+  --sidebar-primary: oklch(0.74 0.16 55);
+  --sidebar-primary-foreground: oklch(0.2 0.05 268);
+  --sidebar-accent: oklch(0.3 0.06 268);
+  --sidebar-accent-foreground: oklch(0.96 0.02 85);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.74 0.16 55);
+
+  /* Boekpagina + lamplicht */
+  --book: oklch(0.94 0.03 85);
+  --book-foreground: oklch(0.28 0.04 60);
+  --lamp: oklch(0.78 0.14 70);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+  }
+}
+
+/* Achtergrond voor de hele app. Licht = zachte, zonnige ochtendlucht.
+   Donker (".dark") = nachtelijke hemel met sterren en maanschijn.
+   Gebruikt bg-fixed zodat de achtergrond niet meescrollt — voelt rustiger op een groot scherm. */
+.night-sky {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 55% 40% at 18% 8%, oklch(0.94 0.08 95 / 70%), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 90% 90%, oklch(0.85 0.08 55 / 35%), transparent 70%),
+    linear-gradient(to bottom, oklch(0.94 0.03 90), oklch(0.95 0.025 85) 50%, oklch(0.93 0.03 70) 100%);
+  background-attachment: fixed;
+  background-size: cover;
+  position: relative;
+  isolation: isolate;
+  transition: background-color 0.3s ease;
+}
+
+.dark .night-sky {
+  background-image:
+    radial-gradient(1.8px 1.8px at 8% 12%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1.2px 1.2px at 22% 38%, rgba(255, 255, 255, 0.65), transparent),
+    radial-gradient(1.8px 1.8px at 38% 8%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(1.2px 1.2px at 52% 55%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(2.2px 2.2px at 68% 20%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1.2px 1.2px at 82% 46%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.8px 1.8px at 94% 14%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(1.2px 1.2px at 14% 76%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1.8px 1.8px at 30% 92%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.2px 1.2px at 47% 68%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.8px 1.8px at 62% 88%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(1.2px 1.2px at 76% 66%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1.8px 1.8px at 90% 82%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.2px 1.2px at 5% 55%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(ellipse 60% 40% at 82% 6%, oklch(0.85 0.09 75 / 35%), transparent 70%),
+    linear-gradient(to bottom, oklch(0.15 0.045 268), oklch(0.2 0.05 265) 45%, oklch(0.26 0.07 25) 100%);
+}
+
+.night-sky::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 18% 22%, white, transparent),
+    radial-gradient(1.4px 1.4px at 44% 48%, white, transparent),
+    radial-gradient(1.4px 1.4px at 72% 30%, white, transparent),
+    radial-gradient(1.4px 1.4px at 88% 60%, white, transparent),
+    radial-gradient(1.4px 1.4px at 25% 85%, white, transparent),
+    radial-gradient(1.4px 1.4px at 58% 78%, white, transparent);
+}
+
+.dark .night-sky::before {
+  animation: twinkle 4.5s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.float-soft {
+  animation: float-soft 3.5s ease-in-out infinite;
+}
+
+/* De illustratie is de "beloning" van een hoofdstuk: hij verschijnt niet stil naast de tekst,
+   maar wordt bij het binnenkomen van een hoofdstuk ONTHULD met een rustige fade + een lichte
+   schaal-in, gevolgd door één zachte glans die eroverheen veegt. Bewust kalm en niet flitsend —
+   passend bij de avond/bedtijd-sfeer waar Nuvlo om draait. */
+@keyframes reward-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.965) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.reward-reveal {
+  position: relative;
+  animation: reward-reveal 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Zachte glans die één keer over de plaat veegt op het moment van onthullen. */
+.reward-reveal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-3xl);
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.4) 50%, transparent 65%);
+  background-size: 220% 100%;
+  animation: reward-shimmer 1500ms ease-out 240ms both;
+}
+
+@keyframes reward-shimmer {
+  0% {
+    background-position: 150% 0;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    background-position: -70% 0;
+    opacity: 0;
+  }
+}
+
+/* Respecteer kinderen/ouders die bewegingsbeperking hebben ingesteld: dan geen animatie,
+   de illustratie staat er gewoon meteen. */
+@media (prefers-reduced-motion: reduce) {
+  .reward-reveal,
+  .reward-reveal::after {
+    animation: none;
+  }
+}
+
+/* Een "boekpagina": crème papier, met een warme gloed erboven (lamplicht 's avonds,
+   een zachte glans overdag). */
+.book-page {
+  background-color: var(--book);
+  background-image: linear-gradient(
+    135deg,
+    oklch(0.96 0.025 85) 0%,
+    var(--book) 45%,
+    oklch(0.92 0.035 80) 100%
+  );
+  color: var(--book-foreground);
+  border-radius: var(--radius-2xl);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 18px 40px -18px rgba(0, 0, 0, 0.25),
+    0 0 60px -15px var(--lamp);
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+
+.dark .book-page {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 24px 55px -18px rgba(0, 0, 0, 0.5),
+    0 0 110px -10px var(--lamp);
+}
+
+.book-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, oklch(0.85 0.1 70 / 45%), transparent 70%);
+  pointer-events: none;
+}
+
+/* De "vouw" tussen twee open boekpagina's, voor de spread-layout op grote schermen. */
+.book-spine {
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0 0 0 / 18%) 45%,
+    oklch(0 0 0 / 18%) 55%,
+    transparent
+  );
+}
+
+/* Losse selectors (met hogere specificiteit dan .book-page) zodat de hoeken van een
+   opengeslagen boek-spread netjes recht tegen elkaar aan sluiten. */
+@media (min-width: 1024px) {
+  .book-page.spread-left {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .book-page.spread-right {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+}
