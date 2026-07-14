@@ -1,13 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Nunito } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { themeInitScript } from "@/lib/theme-script";
 
-const balooTwo = Baloo_2({
+// Fredoka: rond, dik, speels — precies het "kinderboek"-gevoel dat Baloo 2 net miste.
+// Google levert Fredoka tot en met gewicht 700 (geen 800), wat prima samengaat met de
+// bestaande font-extrabold-koppen: de browser pakt dan gewoon het dichtstbijzijnde (700).
+const fredoka = Fredoka({
   variable: "--font-heading",
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const nunito = Nunito({
@@ -40,7 +43,7 @@ export default function RootLayout({
     <html
       lang="nl"
       suppressHydrationWarning
-      className={`${balooTwo.variable} ${nunito.variable} h-full antialiased`}
+      className={`${fredoka.variable} ${nunito.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col night-sky font-body text-foreground">
         <Script id="theme-init" strategy="beforeInteractive">

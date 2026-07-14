@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Sparkles, Users } from "lucide-react";
+import { BookOpen, Sparkles, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { StoryCard } from "@/components/story-card";
 import { NewStoryTile } from "@/components/new-story-tile";
@@ -42,8 +42,8 @@ export default async function HomePage() {
           held vooringevuld via ?held=ID); bijfiguren puur informatief. */}
       {hasCharacters && (
         <section className="flex flex-col items-center gap-3">
-          <h2 className="flex items-center gap-1.5 font-heading text-xs font-bold uppercase tracking-wide text-foreground/50 sm:text-sm">
-            <Sparkles className="size-3.5" />
+          <h2 className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3.5 py-1 font-heading text-sm font-semibold text-amber-800 sm:text-base dark:bg-amber-300/10 dark:text-amber-200">
+            <Sparkles className="size-4" />
             Mijn personages
           </h2>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
@@ -60,7 +60,8 @@ export default async function HomePage() {
       {/* Boekenplank — schoon sectie-header + grid dat de breedte netjes vult. De
           "Nieuw verhaal"-tegel is de énige plek om een nieuw boek te beginnen. */}
       <section className="flex flex-col gap-3 sm:gap-4">
-        <h2 className="text-center font-heading text-sm font-bold uppercase tracking-wide text-foreground/50 sm:text-base">
+        <h2 className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-teal-400/15 px-3.5 py-1 font-heading text-sm font-semibold text-teal-800 sm:text-base dark:bg-teal-300/10 dark:text-teal-200">
+          <BookOpen className="size-4" />
           Mijn boekenplank
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
