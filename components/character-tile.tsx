@@ -81,8 +81,8 @@ export function CharacterTile({ character }: { character: SavedCharacter }) {
     <span
       className={
         isHero
-          ? "line-clamp-1 w-full text-center text-xs font-bold text-foreground sm:text-sm"
-          : "line-clamp-1 w-full text-center text-xs font-bold text-foreground/70 sm:text-sm"
+          ? "line-clamp-1 w-full text-center font-heading text-xs font-bold text-foreground sm:text-sm"
+          : "line-clamp-1 w-full text-center font-heading text-xs font-bold text-foreground/70 sm:text-sm"
       }
     >
       {character.name}

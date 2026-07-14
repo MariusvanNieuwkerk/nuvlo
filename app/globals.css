@@ -16,10 +16,15 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-body);
+  /* Expliciete generieke fallback (", sans-serif") aan het eind van de stack: mocht het
+     ingebedde Fredoka/Nunito-lettertype (om wat voor reden dan ook, bv. een geblokkeerde
+     font-file) niet laden, dan valt de browser terug op een schreefloos systeemfont in
+     plaats van zijn eigen — vaak schreef-achtige — standaardlettertype. Zonder dit kon het
+     hele lettertype er per ongeluk uitzien als een deftig schreeflettertype i.p.v. speels. */
+  --font-sans: var(--font-body), ui-sans-serif, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-heading);
-  --font-body: var(--font-body);
+  --font-heading: var(--font-heading), ui-rounded, ui-sans-serif, sans-serif;
+  --font-body: var(--font-body), ui-sans-serif, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -213,7 +218,7 @@
   h2,
   h3,
   h4 {
-    font-family: var(--font-heading);
+    font-family: var(--font-heading), ui-rounded, ui-sans-serif, sans-serif;
   }
 }
 

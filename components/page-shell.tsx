@@ -47,7 +47,7 @@ export function PageShell({
           {showHomeLink && (
             <Link
               href="/"
-              className="rounded-full bg-foreground/10 px-3.5 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/20 sm:px-4 sm:text-base"
+              className="rounded-full bg-foreground/10 px-3.5 py-2 font-heading text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/20 sm:px-4 sm:text-base"
             >
               Home
             </Link>

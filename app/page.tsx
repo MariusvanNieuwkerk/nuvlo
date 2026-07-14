@@ -35,38 +35,48 @@ export default async function HomePage() {
         </p>
       </section>
 
-      {/* Personages — hoofd- en nevenpersonages staan nu in APARTE rijen met elk hun eigen
-          label, in plaats van door elkaar in dezelfde rij (dat was verwarrend: leek één
-          groep, terwijl held vs. bijfiguur functioneel heel verschillend is — alleen een
-          held kan je meteen als basis voor een nieuw boek kiezen). Elke tegel heeft een
-          eigen wegdruk-kruisje (zie components/character-tile.tsx) om dat personage
-          permanent te verwijderen. */}
-      {heroes.length > 0 && (
-        <section className="flex flex-col items-center gap-3">
-          <h2 className="inline-flex items-center gap-2 rounded-full bg-amber-400/15 px-4 py-1.5 font-heading text-base font-semibold text-amber-800 sm:text-lg dark:bg-amber-300/10 dark:text-amber-200">
-            <Sparkles className="size-4 sm:size-5" />
-            Mijn hoofdpersonages
-          </h2>
-          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-            {heroes.map((c) => (
-              <CharacterTile key={c.id} character={c} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Personages — hoofd- en nevenpersonages staan nu naast elkaar in 2 KOLOMMEN i.p.v.
+          onder elkaar (scheelt scrollen, en maakt meteen visueel duidelijk dat het twee
+          verschillende groepen zijn). Staat er maar één groep (bv. nog geen bijfiguren),
+          dan pakt die groep de volle breedte — anders zou een lege kolom raar aanvoelen.
+          Elke tegel heeft een eigen wegdruk-kruisje (zie components/character-tile.tsx) om
+          dat personage permanent te verwijderen. */}
+      {hasCharacters && (
+        <div
+          className={
+            heroes.length > 0 && sideCharacters.length > 0
+              ? "grid grid-cols-2 gap-4 sm:gap-8"
+              : "grid grid-cols-1"
+          }
+        >
+          {heroes.length > 0 && (
+            <section className="flex flex-col items-center gap-3">
+              <h2 className="inline-flex items-center gap-2 rounded-full bg-amber-400/15 px-4 py-1.5 font-heading text-base font-semibold text-amber-800 sm:text-lg dark:bg-amber-300/10 dark:text-amber-200">
+                <Sparkles className="size-4 sm:size-5" />
+                Mijn hoofdpersonages
+              </h2>
+              <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                {heroes.map((c) => (
+                  <CharacterTile key={c.id} character={c} />
+                ))}
+              </div>
+            </section>
+          )}
 
-      {sideCharacters.length > 0 && (
-        <section className="flex flex-col items-center gap-3">
-          <h2 className="inline-flex items-center gap-2 rounded-full bg-foreground/8 px-4 py-1.5 font-heading text-base font-semibold text-foreground/60 sm:text-lg">
-            <Users className="size-4 sm:size-5" />
-            Mijn nevenpersonages
-          </h2>
-          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-            {sideCharacters.map((c) => (
-              <CharacterTile key={c.id} character={c} />
-            ))}
-          </div>
-        </section>
+          {sideCharacters.length > 0 && (
+            <section className="flex flex-col items-center gap-3">
+              <h2 className="inline-flex items-center gap-2 rounded-full bg-foreground/8 px-4 py-1.5 font-heading text-base font-semibold text-foreground/60 sm:text-lg">
+                <Users className="size-4 sm:size-5" />
+                Mijn nevenpersonages
+              </h2>
+              <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                {sideCharacters.map((c) => (
+                  <CharacterTile key={c.id} character={c} />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       )}
 
       {/* Boekenplank — schoon sectie-header + grid dat de breedte netjes vult. De
