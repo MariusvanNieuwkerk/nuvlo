@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Sparkles, Users } from "lucide-react";
+import { Sparkles, Users, Plus, Moon } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { StoryCard } from "@/components/story-card";
 import { NewStoryTile } from "@/components/new-story-tile";
@@ -18,63 +18,95 @@ export default async function HomePage() {
     listCharacters(),
   ]);
 
-  // Helden én bijfiguren tonen op Home — listCharacters sorteert al: helden vóór
-  // bijfiguren, binnen elk op naam. Helden blijven klikbaar (start nieuw verhaal met
-  // die held vooringevuld via ?held=ID). Bijfiguren zijn voor nu puur informatief
-  // (niet-klikbaar) met een klein "komt voor in N boeken"-labeltje: zo zijn ze wel
-  // zichtbaar en herkenbaar als terugkerende figuren, zonder dat we al een nieuwe
-  // flow nodig hebben om een verhaal mét bijfiguur te starten.
   const heroes = characters.filter((c) => c.kind === "hero");
   const sideCharacters = characters.filter((c) => c.kind === "side");
+  const hasCharacters = heroes.length > 0 || sideCharacters.length > 0;
+  const isEmpty = stories.length === 0 && !hasCharacters;
 
   return (
     <PageShell showHomeLink={false} size="wide">
-      <div className="flex flex-col gap-1 pt-1 sm:gap-2 sm:pt-2">
-        <h1 className="font-heading text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">
-          Welkom terug
-        </h1>
-        <p className="text-base text-foreground/60 sm:text-lg">Tijd voor een avondavontuur.</p>
-      </div>
+      {/* Warme welkomstband — de visuele anker bovenaan. Een zachte gradient met een
+          avond-/avontuur-thema (ster + maan), de begroeting prominent, en meteen een
+          duidelijke primaire actie ("Nieuw avontuur"). Vult de volle breedte, zodat de
+          pagina niet meer los en leeg voelt bovenaan. */}
+      <section className="relative overflow-hidden rounded-3xl border border-amber-200/50 bg-gradient-to-br from-amber-50 via-orange-50/70 to-rose-50/50 p-5 shadow-sm sm:p-7 md:p-8 dark:border-amber-400/10 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-rose-950/10">
+          {/* Decoratieve sterren-puntjes rechtsboven — een knipoog naar het avondritueel. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-70 [background-image:radial-gradient(1.5px_1.5px_at_82%_22%,theme(colors.amber.400/60),transparent),radial-gradient(1.2px_1.2px_at_92%_38%,theme(colors.amber.300/50),transparent),radial-gradient(1.5px_1.5px_at_72%_62%,theme(colors.amber.400/40),transparent)]"
+          />
+          <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <span className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/20 text-amber-600 sm:size-12 dark:text-amber-300">
+                <Moon className="size-5 sm:size-6" />
+              </span>
+              <div className="flex flex-col gap-0.5">
+                <h1 className="font-heading text-3xl font-extrabold leading-tight text-foreground sm:text-4xl md:text-5xl">
+                  Welkom terug
+                </h1>
+                <p className="text-base text-foreground/70 sm:text-lg">
+                  Tijd voor een avondavontuur.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/nieuw-verhaal"
+              className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-3 text-base font-bold text-amber-950 shadow-md shadow-amber-500/20 transition-all hover:bg-amber-300 hover:shadow-lg active:scale-[0.98] sm:px-6 sm:py-3.5 sm:text-lg"
+            >
+              <Plus className="size-5" />
+              Nieuw avontuur
+            </Link>
+          </div>
+        </section>
 
-      {(heroes.length > 0 || sideCharacters.length > 0) && (
-        <section className="flex flex-col gap-2 sm:gap-2.5">
-          <h2 className="font-heading text-sm font-bold tracking-wide text-foreground/50 uppercase sm:text-base">
-            Mijn personages
+        {/* Personages — een zachte "tray" die de volle breedte vult, met de label links en de
+            cirkels er rechts los naast. Zo vult de rij de breedte natuurlijk en staan de
+            portretjes niet meer alleen in een lege hoek. Helden klikbaar (start nieuw verhaal
+            met die held vooringevuld); bijfiguren puur informatief. */}
+        {hasCharacters && (
+          <section className="flex flex-col gap-3 rounded-2xl border border-foreground/10 bg-white/50 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5 dark:bg-white/5">
+            <h2 className="flex shrink-0 items-center gap-1.5 font-heading text-xs font-bold uppercase tracking-wide text-foreground/50 sm:text-sm">
+              <Sparkles className="size-3.5" />
+              Mijn personages
+            </h2>
+            <div className="flex flex-wrap gap-3 sm:gap-4">
+              {heroes.map((c) => (
+                <HeroCharacterTile key={c.id} character={c} />
+              ))}
+              {sideCharacters.map((c) => (
+                <SideCharacterTile key={c.id} character={c} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Boekenplank — verfijnde sectie-header met een klein accent-streepje, en een grid
+            dat de breedte netjes vult met goed gevulde kaarten. */}
+        <section className="flex flex-col gap-3 sm:gap-4">
+          <h2 className="flex items-center gap-2 font-heading text-sm font-bold uppercase tracking-wide text-foreground/50 sm:text-base">
+            <span className="h-4 w-1 rounded-full bg-amber-400/70" aria-hidden />
+            Mijn boekenplank
           </h2>
-          {/* Compacte cirkel-rij: alleen een portret-cirkel met de naam eronder, netjes
-              naast elkaar (geen brede dozen met lege ruimte). Helden zijn klikbaar (start
-              een nieuw verhaal met die held vooringevuld); bijfiguren tonen puur informatief. */}
-          <div className="flex flex-wrap gap-2.5 sm:gap-3">
-            {heroes.map((c) => (
-              <HeroCharacterTile key={c.id} character={c} />
-            ))}
-            {sideCharacters.map((c) => (
-              <SideCharacterTile key={c.id} character={c} />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            <NewStoryTile />
+            {stories.map((story) => (
+              <StoryCard key={story.id} story={story} />
             ))}
           </div>
         </section>
-      )}
 
-      <div className="flex flex-col gap-3 sm:gap-4">
-        <h2 className="font-heading text-sm font-bold tracking-wide text-foreground/50 uppercase sm:text-base">
-          Mijn boekenplank
-        </h2>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] sm:gap-4 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-          <NewStoryTile />
-          {stories.map((story) => (
-            <StoryCard key={story.id} story={story} />
-          ))}
-        </div>
-      </div>
-
-      {stories.length === 0 && heroes.length === 0 && sideCharacters.length === 0 && (
-        <Link
-          href="/nieuw-verhaal"
-          className="flex items-center justify-center gap-2 rounded-2xl bg-amber-400 px-5 py-4 text-lg font-bold text-amber-950 shadow-lg shadow-amber-500/20 transition-transform active:scale-[0.98] hover:bg-amber-300 sm:w-fit sm:px-8 sm:py-5 sm:text-xl"
-        >
-          ✨ Begin je eerste avontuur
-        </Link>
-      )}
+        {isEmpty && (
+          <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-amber-300/50 bg-amber-50/50 p-6 text-center sm:p-8 dark:bg-amber-400/5">
+            <span className="text-4xl sm:text-5xl">📖</span>
+            <p className="font-heading text-lg font-bold text-foreground sm:text-xl">
+              Hier komt je eerste boek
+            </p>
+            <p className="max-w-md text-sm text-foreground/60 sm:text-base">
+              Verzin samen een held en begin een avontuur — elk boek dat je maakt
+              verschijnt hier op de plank.
+            </p>
+          </div>
+        )}
     </PageShell>
   );
 }
@@ -89,7 +121,7 @@ function HeroCharacterTile({ character }: { character: SavedCharacter }) {
       title={character.seriesNote ? `${character.name} — ${character.seriesNote}` : character.name}
       className="group flex w-16 flex-col items-center gap-1.5 sm:w-20"
     >
-      <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-amber-300/50 transition-all group-hover:-translate-y-0.5 group-hover:ring-amber-400/80 sm:size-20">
+      <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-amber-300/60 transition-all group-hover:-translate-y-0.5 group-hover:ring-amber-400 group-hover:shadow-md group-hover:shadow-amber-400/20 sm:size-20">
         {character.portraitUrl ? (
           <Image
             src={character.portraitUrl}
