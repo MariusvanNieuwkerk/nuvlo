@@ -189,9 +189,24 @@ export function shouldGenerateFreshImage(
 
 function assertNonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`Claude gaf geen geldige "${label}" terug.`);
+    // Nooit de interne veldnaam aan het kind tonen — vertaal naar een begrijpelijke melding.
+    throw new Error("Het verhaal kon niet goed gemaakt worden. Probeer het nog eens.");
   }
   return value.trim();
+}
+
+// Soms levert Claude een leeg/ontbrekend imagePrompt op (bv. een zeldzame hallucinatie of een
+// antwoord dat nét iets anders indeelt). Dat is géén reden om het hele hoofdstuk te laten
+// falen — imagePrompt gaat alleen over de tekening, niet over de leestekst. In dat geval
+// bouwen we hier een veilige vervangwaarde uit de scène-tekst, zodat het kind gewoon kan
+// doorlezen en er alsnog een (iets generiekere) tekening komt. Liever een goed genoeg plaatje
+// dan het verhaal laten stilvallen.
+function imagePromptOrFallback(imagePrompt: unknown, pages: unknown): string {
+  const direct = typeof imagePrompt === "string" ? imagePrompt.trim() : "";
+  if (direct) return direct;
+  const firstPage = Array.isArray(pages) && typeof pages[0] === "string" ? pages[0].trim() : "";
+  const snippet = firstPage.slice(0, 240).replace(/\s+/g, " ");
+  return `Een vrolijke, spannende kinderboek-illustratie van deze scène: ${snippet || "de held beleeft een nieuw avontuur."}`;
 }
 
 function cleanStringArray(value: unknown): string[] {
@@ -205,7 +220,7 @@ function cleanStringArray(value: unknown): string[] {
 function parsePages(value: unknown): string[] {
   const pages = cleanStringArray(value);
   if (pages.length === 0) {
-    throw new Error('Claude gaf geen geldige "pages" (leesbladzijden) terug.');
+    throw new Error("Het verhaal kon niet goed gemaakt worden. Probeer het nog eens.");
   }
   return pages;
 }
@@ -282,7 +297,7 @@ async function callStoryTool<T>(options: {
   );
 
   if (!toolUse) {
-    throw new Error("Claude gaf geen geldig antwoord terug (geen tool-aanroep gevonden).");
+    throw new Error("Het verhaal kon niet goed gemaakt worden. Probeer het nog eens.");
   }
 
   return toolUse.input as T;
@@ -320,7 +335,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
 
   const choices = cleanStringArray(result.choices);
   if (choices.length < 2) {
-    throw new Error("Claude gaf geen geldige keuzes terug. Probeer het nog eens.");
+    throw new Error("Er ging iets mis bij het bedenken van de keuzes. Probeer het nog eens.");
   }
 
   const chapter: Chapter = {
@@ -328,7 +343,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
     pages: parsePages(result.pages),
     choices,
     chosen: null,
-    imagePrompt: assertNonEmptyString(result.imagePrompt, "imagePrompt"),
+    imagePrompt: imagePromptOrFallback(result.imagePrompt, result.pages),
     imageUrl: null,
   };
 
@@ -434,7 +449,7 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
   const choices = isFinale ? [] : cleanStringArray(result.choices);
 
   if (!isFinale && choices.length < 2) {
-    throw new Error("Claude gaf geen geldige keuzes terug. Probeer het nog eens.");
+    throw new Error("Er ging iets mis bij het bedenken van de keuzes. Probeer het nog eens.");
   }
 
   const chapter: Chapter = {
@@ -442,7 +457,7 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
     pages: parsePages(result.pages),
     choices,
     chosen: null,
-    imagePrompt: assertNonEmptyString(result.imagePrompt, "imagePrompt"),
+    imagePrompt: imagePromptOrFallback(result.imagePrompt, result.pages),
     imageUrl: null,
   };
 
