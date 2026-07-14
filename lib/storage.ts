@@ -148,6 +148,8 @@ type StoryRow = {
   id: string;
   child_id: string;
   title: string;
+  author_name: string | null;
+  author_age: number | null;
   hero: unknown;
   character: unknown;
   bible: unknown;
@@ -165,6 +167,8 @@ function rowToStory(row: StoryRow): Story {
     id: row.id,
     childId: row.child_id,
     title: row.title,
+    authorName: row.author_name ?? null,
+    authorAge: row.author_age ?? null,
     hero: unpackJsonb<Story["hero"]>(row.hero, {} as Story["hero"]),
     character: unpackJsonb<Story["character"]>(row.character, {} as Story["character"]),
     bible: unpackJsonb<Story["bible"]>(row.bible, {} as Story["bible"]),
@@ -184,6 +188,8 @@ function storyToRow(story: Story): Omit<StoryRow, "created_at" | "updated_at"> {
     id: story.id,
     child_id: story.childId,
     title: story.title,
+    author_name: story.authorName ?? null,
+    author_age: story.authorAge ?? null,
     hero: story.hero,
     character: story.character,
     bible: story.bible,
@@ -262,16 +268,21 @@ export async function getDefaultChild(): Promise<Child> {
   return { id: data.id, name: data.name, age: data.age };
 }
 
-export async function updateDefaultChildAge(age: number): Promise<Child> {
+// Werkt de laatst gebruikte naam + leeftijd bij op de ene "default child"-rij. Dit is puur
+// een handig laatst-gebruikt-geheugen (bv. voor een toekomstig voor-ingevuld formulier) —
+// de ECHTE bron van waarheid per boek is nu story.authorName/authorAge (zie createStory),
+// niet meer deze globale rij. Zo werkt het ook goed als er meerdere kinderen om de beurt
+// boeken maken: elk boek onthoudt zijn eigen auteur, ook als deze globale rij overschreven
+// wordt door het volgende kind.
+export async function updateDefaultChild(name: string, age: number): Promise<Child> {
   const sb = client();
-  // Upsert: als de rij nog niet bestaat (oudere DB), maak hem aan met de seed-naam.
   const { data, error } = await sb
     .from("children")
-    .upsert({ id: SEED_CHILD.id, name: SEED_CHILD.name, age }, { onConflict: "id" })
+    .upsert({ id: SEED_CHILD.id, name: name.trim() || SEED_CHILD.name, age }, { onConflict: "id" })
     .select("id, name, age")
     .single();
   if (error || !data) {
-    return { ...SEED_CHILD, age };
+    return { ...SEED_CHILD, name: name.trim() || SEED_CHILD.name, age };
   }
   return { id: data.id, name: data.name, age: data.age };
 }

@@ -28,16 +28,17 @@ export function PageShell({
       )}
     >
       <header className="flex items-center justify-between py-5 sm:py-7">
-        <Link href="/" className="flex items-center gap-2 sm:gap-2.5">
+        {/* Logo was 32-36px — te klein om als "merk" te herkennen. Ruim verdubbeld. */}
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3">
           <Image
             src="/nuvlo-logo.png"
             alt="Nuvlo"
-            width={32}
-            height={32}
-            className="size-8 object-contain sm:size-9"
+            width={56}
+            height={56}
+            className="size-12 object-contain sm:size-14"
             priority
           />
-          <span className="font-heading text-lg font-extrabold text-foreground sm:text-xl">
+          <span className="font-heading text-2xl font-extrabold text-foreground sm:text-3xl">
             Nuvlo
           </span>
         </Link>

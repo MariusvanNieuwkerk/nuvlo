@@ -65,12 +65,17 @@ export async function POST(
         throw new HttpError("Er is nu geen keuze te maken in dit verhaal.", 400);
       }
 
-      const child = await getDefaultChild();
       currentChapter.chosen = choice;
+
+      // Leeftijd van DIT boek (per-boek opgeslagen, zie story.authorAge) — niet de globale
+      // "laatst gebruikte" leeftijd, want dat kan een ander kind zijn als er om de beurt
+      // boeken gemaakt worden. Terugval op de globale rij alleen voor oudere boeken van
+      // vóór authorAge bestond.
+      const readingAge = story.authorAge ?? (await getDefaultChild()).age;
 
       let sceneResult;
       try {
-        sceneResult = await nextScene({ story, choice, age: child.age });
+        sceneResult = await nextScene({ story, choice, age: readingAge });
       } catch (err) {
         console.error(err);
         const message = err instanceof Error ? err.message : "Er ging iets mis bij het verhaal.";

@@ -14,6 +14,8 @@ export const SEED_STORIES: Story[] = [
     id: "voorbeeld-verhaal-1",
     childId: SEED_CHILD.id,
     title: "Finn en het geheim van Sterrenwoud",
+    authorName: SEED_CHILD.name,
+    authorAge: SEED_CHILD.age,
     hero: {
       name: "Finn",
       world: "Sterrenwoud",

@@ -99,9 +99,19 @@ function isNanoBananaModel(model: string): boolean {
   return model.includes("nano-banana");
 }
 
+// De "lite"-varianten (google/nano-banana-lite, google/nano-banana-2-lite en hun /edit-
+// endpoints) hebben GEEN resolution-veld in hun schema — fal.ai wijst het request af als we
+// dat toch meesturen. Alleen de volle nano-banana-modellen (fal-ai/nano-banana-2,
+// fal-ai/nano-banana-pro) ondersteunen resolution.
+function isLiteModel(model: string): boolean {
+  return model.includes("nano-banana") && model.includes("lite");
+}
+
 function buildFormatInput(model: string, aspectRatio: FalAspectRatio): Record<string, unknown> {
   if (isNanoBananaModel(model)) {
-    return { aspect_ratio: aspectRatio, resolution: RESOLUTION, num_images: 1 };
+    return isLiteModel(model)
+      ? { aspect_ratio: aspectRatio, num_images: 1 }
+      : { aspect_ratio: aspectRatio, resolution: RESOLUTION, num_images: 1 };
   }
   return { image_size: IMAGE_SIZE_BY_RATIO[aspectRatio], num_images: 1 };
 }
@@ -126,6 +136,20 @@ function buildStyleBlock(styleHint: string | undefined): { prefix: string; suffi
     prefix: `${NO_PHOTO_RULE} Art style: ${hint}.`,
     suffix: `Remember, the art style MUST be: ${hint}. Follow this style strictly and consistently. Cheerful, warm mood. IMPORTANT: absolutely no text, letters, titles, logos, or writing anywhere in the image, not even small or in the background.`,
   };
+}
+
+// Logt zo veel mogelijk nuttige details van een mislukte fal.ai-aanroep (model-ID, status,
+// response-body) — zonder dit was een verkeerd/niet-bestaand model-ID (bv. een typo in
+// IMAGE_MODEL) alleen te zien als "er komt geen plaatje", met geen enkel spoor WAAROM in de
+// logs. We blijven het verhaal nooit blokkeren op deze fout; dit is puur voor debuggen.
+function logFalError(context: string, model: string, err: unknown): void {
+  const details =
+    err && typeof err === "object" && "body" in err
+      ? JSON.stringify((err as { body?: unknown }).body)
+      : err instanceof Error
+        ? err.message
+        : String(err);
+  console.error(`fal.ai-aanroep mislukt (${context}, model="${model}"):`, details);
 }
 
 let configured = false;
@@ -168,7 +192,7 @@ async function requestImage(
     const url = (result.data as { images?: { url: string }[] })?.images?.[0]?.url;
     return url ?? null;
   } catch (err) {
-    console.error("fal.ai-aanroep mislukt:", err);
+    logFalError("tekst-naar-plaatje", T2I_MODEL, err);
     return null;
   }
 }
@@ -207,7 +231,7 @@ async function requestImageFromReference(
     const url = (result.data as { images?: { url: string }[] })?.images?.[0]?.url;
     return url ?? null;
   } catch (err) {
-    console.error("fal.ai-aanroep (referentiebeeld) mislukt:", err);
+    logFalError("referentiebeeld", EDIT_MODEL, err);
     return null;
   }
 }

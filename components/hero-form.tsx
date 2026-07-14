@@ -39,6 +39,7 @@ const GENRE_ICON: Record<Genre, LucideIcon> = {
 };
 
 type FormState = {
+  authorName: string;
   name: string;
   age: string;
   world: string;
@@ -51,6 +52,7 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
+  authorName: "",
   name: "",
   age: "8",
   world: "",
@@ -102,12 +104,15 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("laden mislukte"))))
       .then((data: { characters: SavedCharacter[] }) => {
         if (cancelled) return;
-        // Alleen hoofdfiguren zijn kandidaat om een nieuw verhaal mee te starten.
-        const heroes = (data.characters ?? []).filter((c) => c.kind === "hero");
-        setCharacters(heroes);
+        // Élk opgeslagen personage (held óf bijfiguur) is kandidaat om een nieuw verhaal mee
+        // te starten — een leuk nevenpersonage uit een vorig boek mag net zo goed de nieuwe
+        // hoofdheld worden. Voorheen werden bijfiguren hier expres weggefilterd, wat de
+        // klacht "ik kan alleen een held kiezen" verklaarde.
+        const options = (data.characters ?? []).slice();
+        setCharacters(options);
         // Eerste keer met initialCharacterId: meteen voorselecteren + formulier invullen.
         if (initialCharacterId && !initialApplied) {
-          const found = heroes.find((c) => c.id === initialCharacterId);
+          const found = options.find((c) => c.id === initialCharacterId);
           if (found) {
             setSelectedCharacterId(found.id);
             setForm((prev) => ({
@@ -152,10 +157,10 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
   function switchMode(next: StartMode) {
     setMode(next);
     if (next === "new") {
-      // Terug naar "verzin zelf" — agenda leegmaken maar leeftijd behouden (dat is geen
-      // held-eigenschap, dat is van het kind zelf).
+      // Terug naar "verzin zelf" — agenda leegmaken maar naam/leeftijd van het kind behouden
+      // (dat zijn geen held-eigenschappen, dat is van het kind zelf).
       setSelectedCharacterId(null);
-      setForm((prev) => ({ ...EMPTY_FORM, age: prev.age }));
+      setForm((prev) => ({ ...EMPTY_FORM, authorName: prev.authorName, age: prev.age }));
     }
   }
 
@@ -163,6 +168,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
   // ingevuld vanuit de bibliotheek en hoeft niet opnieuw getypt. Bij "nieuwe" blijft de
   // appearance een verplicht veld.
   const baseValid =
+    form.authorName.trim() &&
     form.name.trim() &&
     form.world.trim() &&
     form.power.trim() &&
@@ -177,7 +183,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid) {
-      setError("Vul alle velden in en kies een leeftijd tussen 4 en 14.");
+      setError("Vul alle velden in (ook je eigen naam) en kies een leeftijd tussen 4 en 14.");
       return;
     }
     setSubmitting(true);
@@ -187,6 +193,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          authorName: form.authorName.trim(),
           hero: {
             name: form.name.trim(),
             world: form.world.trim(),
@@ -215,25 +222,38 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-8 sm:gap-10">
-      {/* ────────── Vooraf: leeftijd van het kind (geen stap — gaat over het kind, niet over
-          de held). Compact bovenaan, daarna beginnen de genummerde stappen pas. ────────── */}
+      {/* ────────── Vooraf: naam + leeftijd van het kind (geen stap — gaat over het kind, niet
+          over de held). Compact bovenaan, daarna beginnen de genummerde stappen pas. De naam
+          hier is de ECHTE naam van het kind (de "auteur" op de boekenplank) — dat is iets
+          anders dan de naam van de held in stap 2, die mag gewoon verzonnen zijn. ────────── */}
       <section className="flex flex-col gap-2.5 sm:gap-3">
         <h2 className="font-heading text-lg font-bold text-foreground/80 sm:text-xl">
           Voor welk kind is het boek?
         </h2>
         <p className="text-sm text-foreground/60 sm:text-base">
-          Zo weten we hoe moeilijk de zinnen moeten zijn.
+          Zo weten we wie de auteur is, en hoe moeilijk de zinnen moeten zijn.
         </p>
-        <Field label="Leeftijd van het kind">
-          <Input
-            type="number"
-            min={4}
-            max={14}
-            value={form.age}
-            onChange={(e) => update("age", e.target.value)}
-            className={cn("h-12 w-24 rounded-xl text-center text-base sm:h-14 sm:w-28 sm:text-lg", INPUT_CARD)}
-          />
-        </Field>
+        <div className="flex flex-wrap gap-4">
+          <Field label="Naam van het kind">
+            <Input
+              value={form.authorName}
+              onChange={(e) => update("authorName", e.target.value)}
+              placeholder="Bijv. Rens"
+              maxLength={30}
+              className={cn("h-12 w-40 rounded-xl text-base sm:h-14 sm:w-48 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+          <Field label="Leeftijd van het kind">
+            <Input
+              type="number"
+              min={4}
+              max={14}
+              value={form.age}
+              onChange={(e) => update("age", e.target.value)}
+              className={cn("h-12 w-24 rounded-xl text-center text-base sm:h-14 sm:w-28 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+        </div>
       </section>
 
       {/* ────────── Stap 1 · Kies een begin ────────── */}
@@ -243,7 +263,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
             active={mode === "existing"}
             onClick={() => switchMode("existing")}
             icon={Users}
-            label="Bestaande held"
+            label="Bestaand personage"
             hint="Uit mijn personages"
           />
           <ModeButton
@@ -267,8 +287,8 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
             )}
             {!loadingCharacters && !charactersError && characters.length === 0 && (
               <p className="text-sm text-foreground/60">
-                Nog geen opgeslagen helden. Verzin er hieronder zelf één, of sla een held op
-                vanuit een van je boeken (knop &quot;Sla op als personage&quot; naast de held).
+                Nog geen opgeslagen personages. Verzin er hieronder zelf één, of sla een
+                personage op vanuit een van je boeken (knop &quot;Sla op als personage&quot;).
               </p>
             )}
             {characters.length > 0 && (
@@ -303,11 +323,12 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
                         )}
                       </span>
                       <span className="text-xs font-bold text-foreground sm:text-sm">{c.name}</span>
-                      {c.seriesNote && (
-                        <span className="text-[10px] font-semibold text-foreground/50 sm:text-xs">
-                          {c.seriesNote}
-                        </span>
-                      )}
+                      {/* Label zodat duidelijk is dat ook bijfiguren hier gekozen kunnen
+                          worden als nieuwe hoofdheld — anders lijkt deze lijst per ongeluk
+                          nog steeds "alleen helden". */}
+                      <span className="text-[10px] font-semibold text-foreground/50 sm:text-xs">
+                        {c.seriesNote ?? (c.kind === "side" ? "Bijfiguur" : "Held")}
+                      </span>
                     </button>
                   );
                 })}

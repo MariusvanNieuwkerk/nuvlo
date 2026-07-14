@@ -154,7 +154,12 @@ export function isItemUnlockMilestone(chapterN: number, isFinale: boolean): bool
 // Hoeveel hoofdstukken op rij (tellend vanaf het laatste) een hergebruikte illustratie
 // hadden. Een ontbrekend imageReused-veld (oudere hoofdstukken) telt als "vers gegenereerd"
 // — zie Chapter.imageReused — dus die stoppen de telling altijd, ook bij oude data.
-const MAX_CONSECUTIVE_IMAGE_SKIPS = 2;
+// Verlaagd van 2 naar 1: op de goedkopere "lite"-beeldmodellen (zie lib/image.ts) is een
+// extra plaatje nog maar een paar cent, en "de afbeeldingen komen niet overeen met het
+// verhaal" bleek deels hierdoor te komen — Claude's eigen visuallyDistinctFromPrevious-
+// inschatting is niet perfect, dus hoe minder hoofdstukken we op die inschatting laten
+// hergebruiken, hoe kleiner het risico op een duidelijk verkeerd/oud plaatje.
+const MAX_CONSECUTIVE_IMAGE_SKIPS = 1;
 
 function consecutiveImageSkipStreak(chapters: Chapter[]): number {
   let streak = 0;

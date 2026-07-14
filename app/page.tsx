@@ -1,11 +1,9 @@
-import Link from "next/link";
-import Image from "next/image";
 import { BookOpen, Sparkles, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { StoryCard } from "@/components/story-card";
 import { NewStoryTile } from "@/components/new-story-tile";
+import { CharacterTile } from "@/components/character-tile";
 import { listCharacters, listStories } from "@/lib/storage";
-import type { SavedCharacter } from "@/lib/types";
 
 // Altijd vers renderen: de boekenplank leest live uit Supabase. Zonder dit prerendert
 // Next de pagina bij de build, waardoor verwijderde/nieuwe boeken pas na een redeploy
@@ -37,21 +35,35 @@ export default async function HomePage() {
         </p>
       </section>
 
-      {/* Personages — een rustige, gecentreerde rij cirkels. Geen brede tray met lege
-          ruimte; de label compact erboven. Helden klikbaar (start nieuw verhaal met die
-          held vooringevuld via ?held=ID); bijfiguren puur informatief. */}
-      {hasCharacters && (
+      {/* Personages — hoofd- en nevenpersonages staan nu in APARTE rijen met elk hun eigen
+          label, in plaats van door elkaar in dezelfde rij (dat was verwarrend: leek één
+          groep, terwijl held vs. bijfiguur functioneel heel verschillend is — alleen een
+          held kan je meteen als basis voor een nieuw boek kiezen). Elke tegel heeft een
+          eigen wegdruk-kruisje (zie components/character-tile.tsx) om dat personage
+          permanent te verwijderen. */}
+      {heroes.length > 0 && (
         <section className="flex flex-col items-center gap-3">
-          <h2 className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3.5 py-1 font-heading text-sm font-semibold text-amber-800 sm:text-base dark:bg-amber-300/10 dark:text-amber-200">
-            <Sparkles className="size-4" />
-            Mijn personages
+          <h2 className="inline-flex items-center gap-2 rounded-full bg-amber-400/15 px-4 py-1.5 font-heading text-base font-semibold text-amber-800 sm:text-lg dark:bg-amber-300/10 dark:text-amber-200">
+            <Sparkles className="size-4 sm:size-5" />
+            Mijn hoofdpersonages
           </h2>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             {heroes.map((c) => (
-              <HeroCharacterTile key={c.id} character={c} />
+              <CharacterTile key={c.id} character={c} />
             ))}
+          </div>
+        </section>
+      )}
+
+      {sideCharacters.length > 0 && (
+        <section className="flex flex-col items-center gap-3">
+          <h2 className="inline-flex items-center gap-2 rounded-full bg-foreground/8 px-4 py-1.5 font-heading text-base font-semibold text-foreground/60 sm:text-lg">
+            <Users className="size-4 sm:size-5" />
+            Mijn nevenpersonages
+          </h2>
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             {sideCharacters.map((c) => (
-              <SideCharacterTile key={c.id} character={c} />
+              <CharacterTile key={c.id} character={c} />
             ))}
           </div>
         </section>
@@ -60,8 +72,8 @@ export default async function HomePage() {
       {/* Boekenplank — schoon sectie-header + grid dat de breedte netjes vult. De
           "Nieuw verhaal"-tegel is de énige plek om een nieuw boek te beginnen. */}
       <section className="flex flex-col gap-3 sm:gap-4">
-        <h2 className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-teal-400/15 px-3.5 py-1 font-heading text-sm font-semibold text-teal-800 sm:text-base dark:bg-teal-300/10 dark:text-teal-200">
-          <BookOpen className="size-4" />
+        <h2 className="mx-auto inline-flex items-center gap-2 rounded-full bg-teal-400/15 px-4 py-1.5 font-heading text-base font-semibold text-teal-800 sm:text-lg dark:bg-teal-300/10 dark:text-teal-200">
+          <BookOpen className="size-4 sm:size-5" />
           Mijn boekenplank
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
@@ -80,67 +92,5 @@ export default async function HomePage() {
         </p>
       )}
     </PageShell>
-  );
-}
-
-// Compact cirkel-item voor een opgeslagen held. Klikken start een nieuw verhaal met die held
-// vooringevuld — de nieuw-verhaal-pagina leest het ?held=ID uit (zie HeroForm).
-function HeroCharacterTile({ character }: { character: SavedCharacter }) {
-  return (
-    <Link
-      href={`/nieuw-verhaal?held=${character.id}`}
-      title={character.seriesNote ? `${character.name} — ${character.seriesNote}` : character.name}
-      className="group flex w-16 flex-col items-center gap-1.5 sm:w-20"
-    >
-      <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-amber-300/60 transition-all group-hover:-translate-y-0.5 group-hover:ring-amber-400 group-hover:shadow-md group-hover:shadow-amber-400/20 sm:size-20">
-        {character.portraitUrl ? (
-          <Image
-            src={character.portraitUrl}
-            alt={character.name}
-            fill
-            className="object-cover transition-transform duration-200 group-hover:scale-105"
-            sizes="(max-width: 640px) 64px, 80px"
-          />
-        ) : (
-          <span className="flex size-full items-center justify-center">
-            <Sparkles className="size-6 text-foreground/40 sm:size-7" />
-          </span>
-        )}
-      </span>
-      <span className="line-clamp-1 w-full text-center text-xs font-bold text-foreground sm:text-sm">
-        {character.name}
-      </span>
-    </Link>
-  );
-}
-
-// Compact cirkel-item voor een bijfiguur. Niet klikbaar, wel zichtbaar als terugkerend figuur.
-function SideCharacterTile({ character }: { character: SavedCharacter }) {
-  const bookCount = character.sourceStoryIds.length;
-  const title = `Bijfiguur — komt terug in ${bookCount === 1 ? "1 boek" : `${bookCount} boeken`}`;
-  return (
-    <div
-      className="flex w-16 flex-col items-center gap-1.5 sm:w-20"
-      title={bookCount > 0 ? title : "Bijfiguur"}
-    >
-      <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-foreground/10 sm:size-20">
-        {character.portraitUrl ? (
-          <Image
-            src={character.portraitUrl}
-            alt={character.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 64px, 80px"
-          />
-        ) : (
-          <span className="flex size-full items-center justify-center">
-            <Users className="size-6 text-foreground/40 sm:size-7" />
-          </span>
-        )}
-      </span>
-      <span className="line-clamp-1 w-full text-center text-xs font-bold text-foreground/70 sm:text-sm">
-        {character.name}
-      </span>
-    </div>
   );
 }

@@ -132,6 +132,13 @@ export type Story = {
   id: string;
   childId: string;
   title: string;
+  // De ECHTE naam (en leeftijd) van het kind dat dit boek liet maken — apart van hero.name
+  // (de naam van de FANTASIE-held in het verhaal, bv. "Steve"). Deze twee werden eerder
+  // per ongeluk verward: de boekenplank toonde "Auteur: {hero.name}", wat gewoon de
+  // heldennaam was, niet het echte kind. Optioneel/null voor oudere boeken van vóór dit
+  // veld bestond (die tonen dan een neutrale terugval, zie components/story-card.tsx).
+  authorName: string | null;
+  authorAge: number | null;
   hero: Hero;
   character: CharacterSheet;
   bible: StoryBible;

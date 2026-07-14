@@ -4,7 +4,7 @@ import {
   getCharacter,
   getDefaultChild,
   registerStoryForCharacter,
-  updateDefaultChildAge,
+  updateDefaultChild,
 } from "@/lib/storage";
 import { startStory } from "@/lib/story-director";
 import { generateSceneImage, generatePortrait } from "@/lib/image";
@@ -34,9 +34,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
 
-  const { hero, age, appearance, styleId, existingCharacterId } = body as {
+  const { hero, age, authorName, appearance, styleId, existingCharacterId } = body as {
     hero?: Partial<Hero>;
     age?: number;
+    authorName?: string;
     appearance?: string;
     styleId?: string;
     existingCharacterId?: string;
@@ -53,10 +54,11 @@ export async function POST(request: Request) {
     !VALID_GENRES.includes(hero.genre) ||
     typeof age !== "number" ||
     age < 4 ||
-    age > 14
+    age > 14 ||
+    !authorName?.trim()
   ) {
     return NextResponse.json(
-      { error: "Vul alle velden over je held in (leeftijd tussen 4 en 14)." },
+      { error: "Vul de naam en leeftijd van het kind in, en alle velden over je held (leeftijd tussen 4 en 14)." },
       { status: 400 },
     );
   }
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
   };
 
   const child = await getDefaultChild();
-  await updateDefaultChildAge(age);
+  await updateDefaultChild(authorName, age);
 
   // Hergebruik-route: een bestaande held uit de personagens-bibliotheek. We laden het
   // opgeslagen personage en geven appearance + styleHint mee aan startStory — dan verzint
@@ -192,6 +194,8 @@ export async function POST(request: Request) {
   const story = await createStory({
     childId: child.id,
     title: result.title,
+    authorName: authorName.trim(),
+    authorAge: age,
     hero: fullHero,
     character,
     bible,

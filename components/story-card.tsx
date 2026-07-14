@@ -57,11 +57,15 @@ export function StoryCard({ story }: { story: Story }) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-4">
-        <p className="line-clamp-2 font-heading text-base font-bold text-foreground sm:text-lg">
+        <p className="line-clamp-2 font-heading text-lg font-bold text-foreground sm:text-xl">
           {story.title}
         </p>
-        <p className="truncate text-sm text-foreground/60">
-          Auteur: {story.hero.name}
+        <p className="truncate text-sm text-foreground/60 sm:text-base">
+          {/* authorName is de ECHTE naam van het kind (zie lib/types.ts) — hero.name is de
+              naam van de fantasie-held (bv. "Steve"). Oudere boeken van vóór authorName
+              bestond hebben dit veld niet; die tonen dan netjes "Onbekende auteur" i.p.v.
+              stiekem weer de heldennaam (dat was precies de eerdere verwarring). */}
+          Auteur: {story.authorName ?? "Onbekend"}
         </p>
         <div className="mt-auto flex flex-col gap-1.5 pt-2">
           <div className="flex items-center gap-1.5 text-sm text-foreground/50">
