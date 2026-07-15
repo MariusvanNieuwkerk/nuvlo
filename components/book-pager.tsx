@@ -8,6 +8,7 @@ import { BookPage } from "@/components/book-page";
 import { Illustration } from "@/components/illustration";
 import { ChoiceButtons } from "@/components/choice-buttons";
 import { ReadingProgress } from "@/components/reading-progress";
+import { PageScrubber } from "@/components/page-scrubber";
 import type { Chapter } from "@/lib/types";
 
 function clamp(n: number, min: number, max: number): number {
@@ -201,6 +202,20 @@ export function BookPager({
     [maxIndex],
   );
 
+  const seekTo = useCallback(
+    (i: number) => {
+      setIndex(clamp(i, 0, maxIndex));
+    },
+    [maxIndex],
+  );
+
+  // Voor de hoofdstuk-streepjes op de blader-balk (zie PageScrubber) — alleen de bladzijdes
+  // waar een nieuw hoofdstuk begint, als platte index in de hele boek-lange bladzijdenlijst.
+  const chapterStartIndices = useMemo(
+    () => pages.reduce<number[]>((acc, p, i) => (p.isChapterStart ? [...acc, i] : acc), []),
+    [pages],
+  );
+
   // Nadat een keuze is gemaakt, ververst de server-component de data (router.refresh() in
   // ChoiceButtons) — dan komt hier een langere chapters-lijst binnen. We springen dan naar de
   // EERSTE bladzijde van het nieuwe hoofdstuk, zodat de onthulde beloning-illustratie én de
@@ -288,35 +303,45 @@ export function BookPager({
           kunnen raken. Nu blijft hij altijd binnen handbereik terwijl je leest, en blijft hij
           gewoon meescrollen zodra de keuzeknoppen/afrondingstekst in beeld komen (dat is het
           ECHTE einde van de bladzijde, daar hoort niet nog een balk overheen te zweven).
-          "Volgende" is de duidelijke, opvallende hoofdknop; "Vorige" blijft subtieler. */}
+          "Volgende" is de duidelijke, opvallende hoofdknop; "Vorige" blijft subtieler. Bovenaan
+          een sleep-/tikbalk om snel ergens anders in het boek te springen, zoals bij een video. */}
       {pages.length > 1 && (
         <div
-          className="sticky z-20 -mx-1 flex items-center justify-between gap-2 rounded-2xl border border-foreground/10 bg-background/85 p-2 shadow-lg shadow-black/5 backdrop-blur-md sm:gap-3 sm:p-2.5"
+          className="sticky z-20 -mx-1 flex flex-col gap-1.5 rounded-2xl border border-foreground/10 bg-background/85 p-2 shadow-lg shadow-black/5 backdrop-blur-md sm:gap-2 sm:p-2.5"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
         >
-          <button
-            type="button"
-            onClick={() => go(-1)}
-            disabled={isFirst}
-            aria-label="Vorige pagina"
-            className="flex items-center gap-1 rounded-xl bg-foreground/10 px-4 py-3 text-sm font-bold text-foreground/80 transition-all hover:bg-foreground/20 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-1.5 sm:px-5 sm:py-3.5 sm:text-base"
-          >
-            <ChevronLeft className="size-5 sm:size-6" />
-            <span className="hidden sm:inline">Vorige</span>
-          </button>
-          <p className="text-xs font-semibold text-foreground/50 sm:text-sm">
-            Pagina {index + 1} / {pages.length}
-          </p>
-          <button
-            type="button"
-            onClick={() => go(1)}
-            disabled={isLast}
-            aria-label="Volgende pagina"
-            className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-amber-950 transition-all hover:bg-amber-300 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-2 sm:px-6 sm:py-3.5 sm:text-base"
-          >
-            Volgende
-            <ChevronRight className="size-5 sm:size-6" />
-          </button>
+          <PageScrubber
+            current={index}
+            total={pages.length}
+            chapterStartIndices={chapterStartIndices}
+            onSeek={seekTo}
+            className="px-1"
+          />
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              disabled={isFirst}
+              aria-label="Vorige pagina"
+              className="flex items-center gap-1 rounded-xl bg-foreground/10 px-4 py-3 text-sm font-bold text-foreground/80 transition-all hover:bg-foreground/20 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-1.5 sm:px-5 sm:py-3.5 sm:text-base"
+            >
+              <ChevronLeft className="size-5 sm:size-6" />
+              <span className="hidden sm:inline">Vorige</span>
+            </button>
+            <p className="text-xs font-semibold text-foreground/50 sm:text-sm">
+              Pagina {index + 1} / {pages.length}
+            </p>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              disabled={isLast}
+              aria-label="Volgende pagina"
+              className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-amber-950 transition-all hover:bg-amber-300 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-2 sm:px-6 sm:py-3.5 sm:text-base"
+            >
+              Volgende
+              <ChevronRight className="size-5 sm:size-6" />
+            </button>
+          </div>
         </div>
       )}
 
