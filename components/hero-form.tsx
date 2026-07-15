@@ -360,7 +360,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
         </div>
 
         {mode === "existing" && (
-          <div className="flex flex-col gap-2.5 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-white/10">
+          <div className="flex flex-col gap-2.5">
             {renderLoadStatus()}
             {!loadingCharacters && !charactersError && heroCandidates.length === 0 && (
               <p className="text-sm text-foreground/60">

@@ -249,9 +249,23 @@
   position: relative;
   isolation: isolate;
   transition: background-color 0.3s ease;
+  /* 100vh eerst (brede steun), 100dvh erna als progressive enhancement — op browsers die
+     dvh niet kennen wordt die tweede regel simpelweg genegeerd en blijft 100vh gelden. Zonder
+     dit kon <body> soms korter blijven dan het echte, zichtbare iPad-scherm (bv. door het
+     verdwijnen/verschijnen van de Safari-werkbalk), waardoor er onderaan een stukje kale
+     canvaskleur zichtbaar werd in plaats van de achtergrond die doorloopt. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Voorkomt dat de "rubber band"-terugveer bij overscrollen op iOS de browser-eigen
+     achtergrond (niet met CSS te stylen) laat doorschijnen. */
+  overscroll-behavior: none;
 }
 
-.dark .night-sky {
+/* Zowel ".dark .night-sky" (klasse "night-sky" op body, met "dark" op een voorouder-<html>)
+   als ".dark.night-sky" (beide klassen op hetzelfde element — nu ook het geval voor <html>
+   zelf) moeten hier matchen, anders krijgt <html> in donkere modus alsnog de lichte gradient. */
+.dark .night-sky,
+.dark.night-sky {
   background-image:
     radial-gradient(1.8px 1.8px at 8% 12%, rgba(255, 255, 255, 0.9), transparent),
     radial-gradient(1.2px 1.2px at 22% 38%, rgba(255, 255, 255, 0.65), transparent),
@@ -287,7 +301,8 @@
     radial-gradient(1.4px 1.4px at 58% 78%, white, transparent);
 }
 
-.dark .night-sky::before {
+.dark .night-sky::before,
+.dark.night-sky::before {
   animation: twinkle 4.5s ease-in-out infinite;
 }
 

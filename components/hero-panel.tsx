@@ -67,7 +67,9 @@ export function HeroPanel({
         </button>
       )}
 
-      <div className="flex items-center gap-3 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm sm:gap-4 sm:p-4 dark:bg-white/10">
+      {/* Bewust GEEN kaart/kader hier (geen border, geen achtergrondvlak) — puur op de
+          paginakleur, net zoals de rest van de pagina. */}
+      <div className="flex items-center gap-3 sm:gap-4">
         {portraitUrl ? (
           <span className="relative size-12 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/10 sm:size-14">
             <Image src={portraitUrl} alt={heroName} fill className="object-cover" />

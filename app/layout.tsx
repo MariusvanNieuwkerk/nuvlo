@@ -48,9 +48,13 @@ export default function RootLayout({
     <html
       lang="nl"
       suppressHydrationWarning
-      className={`${fredoka.variable} ${nunito.variable} h-full antialiased`}
+      className={`${fredoka.variable} ${nunito.variable} h-full antialiased night-sky`}
     >
-      <body className="min-h-full flex flex-col night-sky font-body text-foreground">
+      {/* .night-sky staat nu op ZOWEL html als body — puur ter verdediging tegen een bekende
+          iOS Safari-bug: is de pagina-inhoud korter dan het scherm, dan liet een los gekleurd
+          vlak (i.p.v. de achtergrond die doorloopt) zich onderaan zien. Nu is welk van de twee
+          er ook "doorschijnt" precies dezelfde achtergrond — er is dus geen naad meer mogelijk. */}
+      <body className="flex flex-col night-sky font-body text-foreground">
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>
