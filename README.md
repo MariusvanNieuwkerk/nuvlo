@@ -1,8 +1,8 @@
 # Nuvlo
 
-Een Nederlandstalige avond-leesapp voor kinderen (6–11 jaar). Kinderen bouwen hun eigen boek:
-ze verzinnen een held, lezen een scène die eindigt op een cliffhanger, en kiezen uit drie
-opties hoe het verhaal verdergaat.
+Een Nederlandstalige lees- en verhaalbouw-app voor kinderen (6–11 jaar). Geen voorleesapp:
+kinderen lezen zelfstandig en bouwen hun eigen boek — ze verzinnen een held, lezen een scène
+die eindigt op een cliffhanger, en kiezen uit drie opties hoe het verhaal verdergaat.
 
 ## Status: Fase 1 — skelet zonder AI
 

@@ -7,20 +7,27 @@
 
 ## 1. Wat is Nuvlo?
 
-Nuvlo is een Nederlandstalige **avond-voorleesapp voor kinderen van 6 tot 11 jaar**. Een kind (of
-ouder samen met het kind) verzint een held, en de app schrijft daar samen met een AI een
-geïllustreerd, interactief verhaal omheen: elke scène eindigt op een cliffhanger, het kind kiest
-uit drie opties hoe het verder gaat, en zo groeit het boek hoofdstuk voor hoofdstuk — tot een
-warm, afgerond einde na ongeveer 14 hoofdstukken.
+Nuvlo is een Nederlandstalige **lees- en verhaalbouw-app voor kinderen van 6 tot 11 jaar**.
+Kinderen lezen **zelfstandig** en bouwen hun eigen geïllustreerde avontuur: ze verzinnen een held,
+lezen scènes die eindigen op een cliffhanger, kiezen hoe het verdergaat, en zo groeit het boek
+hoofdstuk voor hoofdstuk — tot een warm, afgerond einde na ongeveer 14 hoofdstukken.
+
+**Belangrijk — wat Nuvlo níet is:** geen voorleesapp, geen bedtime-story-app, geen app waarin
+een ouder voorleest terwijl het kind alleen luistert. Het kind is de lezer én de mede-maker.
+Een ouder mag meekijken of helpen bij het starten, maar de kernervaring is: *zelf lezen* en
+*zelf het verhaal sturen*.
 
 Kernbeloften aan het kind:
+- **Zelfstandig lezen** — de tekst is het product; de app beloont nieuwsgierigheid door te lezen,
+  niet door te luisteren of door korte taps zonder lezen.
 - **Een held die van hem/haar is** — zelf verzonnen uiterlijk, kracht, zwakte, tegenstander en
   wereld, die het hele boek (en toekomstige boeken) hetzelfde blijft.
 - **Elke scène een eigen tekening** — een AI-geïllustreerd plaatje per hoofdstuk, gemaakt terwijl
   het kind al leest.
 - **Personages die je kunt bewaren** — een held of een leuk nevenpersonage opslaan in een eigen
   "personagebibliotheek", om in een volgend boek terug te laten komen.
-- **Puur lezen, geen ballast** — geen enge dingen, geen agressieve gamification, geen advertenties.
+- **Puur lezen en bouwen, geen ballast** — geen enge dingen, geen agressieve gamification, geen
+  advertenties.
 
 ## 2. Techstack
 
@@ -200,10 +207,13 @@ het held-portret bij aanmaak en voor het offline consistentie-testscript
 Zelfde `BookPager`, maar dan read-only door een afgerond boek, met een link om verder te lezen
 als het nog niet af is.
 
-### De boekenplank (`app/page.tsx`, `components/story-card.tsx`)
-Overzicht van alle boeken van het kind, met voortgangsbalk, favorieten-ster, en een "•••"-menu
-per boek (`components/story-card-menu.tsx`) voor titel aanpassen, favoriet zetten, delen of
-verwijderen.
+### De home — held-first (`app/page.tsx`, `components/home-hero-view.tsx`)
+Nuvlo opent op de **actieve held**, niet op een boekenplank. Het kind ziet: portret + naam,
+**Verder lezen** (of boek teruglezen), **Nieuw avontuur**, en een rij om van held te wisselen
+(of een nieuwe te maken). Daaronder staan alleen de boeken van díe held (`StoryCard`).
+Welke held actief is, onthoudt de browser in `localStorage` (`lib/active-hero.ts`); het
+helden-rooster komt uit opgeslagen helden + unieke held-namen in boeken (`lib/hero-roster.ts`).
+Per-boek-acties (titel, favoriet, delen, verwijderen) blijven in `components/story-card-menu.tsx`.
 
 ## 8. Database (Supabase / Postgres)
 
@@ -312,10 +322,10 @@ zelf te lezen?* Nee → parkeren. (Dit is precies waarom het item-unlock-belonin
 is verwijderd, zie §11 — die vraag beantwoordde zichzelf met "nee".)
 
 **Positionering.** Nuvlo is *"a curiosity-driven reading app where children unlock their own
-adventure by reading"* — niet een AI-bedtime-story-app, geen voorleesapp, geen algemene
-story-generator, geen kinder-chatbot. Nuvlo praat nooit vrij met het kind (er is geen vrije-tekst-
-naar-AI-pad; Claude antwoordt uitsluitend gestructureerd via tool-use, zie §9) — het is een
-verhaalregisseur, geen chatbot.
+adventure by reading"* — kinderen lezen en bouwen zelfstandig. Niet een AI-bedtime-story-app,
+geen voorleesapp, geen algemene story-generator, geen kinder-chatbot. Nuvlo praat nooit vrij
+met het kind (er is geen vrije-tekst-naar-AI-pad; Claude antwoordt uitsluitend gestructureerd
+via tool-use, zie §9) — het is een verhaalregisseur, geen chatbot.
 
 **Het boek blijft eindig.** Geen oneindige feed: ~14 hoofdstukken, afronden vanaf hoofdstuk 12,
 harde grens 18 (al zo geïmplementeerd, zie §5). De beloning is *"ik heb mijn eigen boek gelezen

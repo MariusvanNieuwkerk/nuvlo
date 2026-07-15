@@ -26,7 +26,7 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: "Nuvlo",
-  description: "Bouw samen met je held een avondverhaal — lezen is de sleutel.",
+  description: "Lees zelfstandig en bouw met je held je eigen avontuur — lezen is de sleutel.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     title: "Nuvlo",

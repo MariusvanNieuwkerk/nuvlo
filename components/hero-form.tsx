@@ -28,6 +28,7 @@ import {
 } from "@/lib/image-styles";
 import { GENRE_LABELS, type Genre, type SavedCharacter } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { writeActiveHeroId } from "@/lib/active-hero";
 
 // Speelse, minimalistische lijn-iconen (lucide) per genre — één kleur (foreground), dikke ronde
 // lijn. Vervangt de oude GENRE_EMOJI-map (zie lib/image-styles.ts voor de stijl-iconen).
@@ -297,6 +298,13 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
         throw new Error(data.error ?? "Er ging iets mis.");
       }
       const data = await res.json();
+      // Home is held-first: onthoud meteen wie we net speelden, zodat "terug naar home"
+      // weer díe held toont (niet een andere uit de wissel-rij).
+      if (selectedCharacterId) {
+        writeActiveHeroId(selectedCharacterId);
+      } else {
+        writeActiveHeroId(`name:${form.name.trim().toLowerCase()}`);
+      }
       router.push(`/verhaal/${data.story.id}/lezen`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er ging iets mis.");
