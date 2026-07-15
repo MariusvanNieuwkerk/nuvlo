@@ -260,16 +260,6 @@ export function HomeHeroView({
           <h1 className="font-heading text-3xl font-extrabold leading-tight text-foreground sm:text-4xl md:text-5xl">
             {activeHero.name}
           </h1>
-          {activeHero.worldHint && (
-            <p className="text-base text-foreground/55 sm:text-lg">{activeHero.worldHint}</p>
-          )}
-          <button
-            type="button"
-            onClick={() => openEditor(activeHero)}
-            className="mx-auto mt-1 text-sm font-semibold text-foreground/50 underline-offset-2 hover:text-foreground/80 hover:underline sm:text-base"
-          >
-            Held bewerken
-          </button>
         </div>
 
         {editing ? (
