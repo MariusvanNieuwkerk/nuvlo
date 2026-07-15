@@ -11,6 +11,7 @@ import { generateSceneImage, generatePortrait } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
 import { getImageStyle } from "@/lib/image-styles";
+import { fillHeroDefaults } from "@/lib/hero-defaults";
 import type { Genre, Hero, SideCharacter } from "@/lib/types";
 
 // Een nieuw verhaal aanmaken doet het meeste AI-werk in één request: tekst-generatie én
@@ -50,9 +51,6 @@ export async function POST(request: Request) {
     !hero ||
     !hero.name?.trim() ||
     !hero.world?.trim() ||
-    !hero.power?.trim() ||
-    !hero.weakness?.trim() ||
-    !hero.enemy?.trim() ||
     !hero.genre ||
     !VALID_GENRES.includes(hero.genre) ||
     typeof age !== "number" ||
@@ -61,7 +59,7 @@ export async function POST(request: Request) {
     !authorName?.trim()
   ) {
     return NextResponse.json(
-      { error: "Vul de naam en leeftijd van het kind in, en alle velden over je held (leeftijd tussen 4 en 14)." },
+      { error: "Vul je naam en leeftijd in, en kies een held, wereld en genre (leeftijd tussen 4 en 14)." },
       { status: 400 },
     );
   }
@@ -76,14 +74,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const fullHero: Hero = {
-    name: hero.name.trim(),
-    world: hero.world.trim(),
-    power: hero.power.trim(),
-    weakness: hero.weakness.trim(),
-    enemy: hero.enemy.trim(),
+  // Kracht/zwakte/vijand vraagt de UX niet meer (te veel typen). Ontbreken ze, dan vullen
+  // we kindvriendelijke defaults per genre — Claude krijgt zo wél genoeg houvast.
+  const fullHero: Hero = fillHeroDefaults({
+    name: hero.name,
+    world: hero.world,
     genre: hero.genre,
-  };
+    power: hero.power,
+    weakness: hero.weakness,
+    enemy: hero.enemy,
+  });
 
   const child = await getDefaultChild();
   await updateDefaultChild(authorName, age);

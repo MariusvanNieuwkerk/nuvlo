@@ -184,14 +184,15 @@ het held-portret bij aanmaak en voor het offline consistentie-testscript
 ## 7. Belangrijkste user flows
 
 ### Een nieuw boek starten (`app/nieuw-verhaal/page.tsx` → `components/hero-form.tsx`)
-1. Naam + leeftijd van het kind (auteur).
-2. Een bestaand personage (held) uit de bibliotheek kiezen, óf een nieuwe held verzinnen
-   (naam, wereld, kracht, zwakte, tegenstander, genre, uiterlijk, tekenstijl).
-3. Los daarvan: 0 of meer bestaande **nevenpersonages** aanvinken die mogen terugkeren — die
-   krijgen gegarandeerd een eigen plaatje in dit boek.
-4. `POST /api/stories` (`app/api/stories/route.ts`) roept `startStory` aan, genereert het
-   held-portret + eventuele nevenpersonage-ankers + de openingsillustratie, en slaat het nieuwe
-   boek op.
+Kort **3-stappen**-wizard (geen lang scroll-formulier meer):
+1. **Wie?** — naam + leeftijd van het kind; bestaande held kiezen óf nieuwe held (naam +
+   kort uiterlijk).
+2. **Waar?** — wereld + genre; optioneel (ingeklapt) bijfiguren meenemen.
+3. **Start** — tekenstijl (default al gekozen) → Begin het avontuur.
+
+Kracht / zwakte / vijand vraagt de UX niet meer; `lib/hero-defaults.ts` vult die server-side
+per genre in (`POST /api/stories`). Daarna: `startStory`, held-portret + openingsillustratie,
+boek opslaan.
 
 ### Lezen & kiezen (`app/verhaal/[id]/lezen/page.tsx`, `components/book-pager.tsx`)
 1. Het kind bladert door de "bladzijden" van het huidige hoofdstuk (swipe/pijltjes/knoppen).
