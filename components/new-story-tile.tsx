@@ -21,15 +21,15 @@ export function NewStoryTile() {
           className="float-soft absolute bottom-5 right-6 size-3 text-orange-400/60 sm:bottom-6 sm:right-8"
           style={{ animationDelay: "1.1s" }}
         />
-        <span className="float-soft flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-400 text-white shadow-lg shadow-amber-500/30 transition-transform duration-200 group-hover:scale-110 sm:size-16">
+        <span className="float-soft flex size-14 items-center justify-center rounded-full bg-amber-400 text-white transition-transform duration-200 group-hover:scale-110 sm:size-16">
           <Plus className="size-7 sm:size-8" strokeWidth={2.5} />
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-4">
-        <p className="font-heading text-base font-bold text-amber-800 sm:text-lg dark:text-amber-200">
+      <div className="flex flex-1 flex-col items-center gap-1.5 p-4 text-center">
+        <p className="font-heading text-xl font-bold text-amber-800 sm:text-2xl dark:text-amber-200">
           Nieuw verhaal
         </p>
-        <p className="text-sm text-foreground/60">Verzin je eigen held en avontuur ✨</p>
+        <p className="text-base text-foreground/70 sm:text-lg">Verzin je eigen held en avontuur ✨</p>
       </div>
     </Link>
   );
