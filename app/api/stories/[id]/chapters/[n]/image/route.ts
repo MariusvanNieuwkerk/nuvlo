@@ -70,38 +70,49 @@ export async function POST(
 
   // Alleen bij een verse scène is er echt teken-werk: bij hergebruik (imageReused) staat het
   // beeld al klaar en slaan we dit hele blok over (dat scheelt fal.ai- én quota-kosten).
+  //
+  // Alles hierbinnen staat bewust in een try/catch: gebeurt er ONVERWACHT iets mis (een bug,
+  // een timeout, een onverwachte fal.ai-respons) dan MAG het hoofdstuk nooit voor altijd op
+  // imagePending=true blijven staan — dat gaf precies het "de tekening wordt gemaakt…" dat
+  // nooit verscheen en zonder herstelmogelijkheid was. We loggen de fout, laten sceneImageUrl
+  // dan gewoon null, en gaan altijd door naar de write-back hieronder.
   if (!chapter.imageReused) {
-    // Zorg dat elk nevenpersonage in déze scène een ankerbeeld heeft (maakt er hooguit één
-    // per nog-onbekend personage aan, met quota-bescherming — zie lib/side-character-images.ts).
-    const refs = await ensureSceneCharacterReferences(
-      child.id,
-      bible.sideCharacters,
-      sceneCharactersInScene,
-      character.imageStyleHint,
-    );
-    updatedBible = { ...bible, sideCharacters: refs.registry };
-
-    // Harde daglimiet: is de quota op, dan claimt dit niets, doen we GEEN fal-call en blijft
-    // sceneImageUrl null → de lees-UI toont de "geen tekening"-placeholder.
-    if (await tryClaimImageQuota(child.id)) {
-      // Scène-illustratie met het held-portret én de zojuist opgehaalde/aangemaakte
-      // nevenpersonage-ankers als referentie. Faalt de fal-call (bv. 403/geen tegoed) →
-      // url null, quota teruggeven.
-      const scene = await generateSceneImage(
-        chapter.imagePrompt,
-        character.appearance,
+    try {
+      // Zorg dat elk nevenpersonage in déze scène een ankerbeeld heeft (maakt er hooguit één
+      // per nog-onbekend personage aan, met quota-bescherming — zie lib/side-character-images.ts).
+      const refs = await ensureSceneCharacterReferences(
+        child.id,
+        bible.sideCharacters,
+        sceneCharactersInScene,
         character.imageStyleHint,
-        bible.worldAppearance,
-        refs.sceneCharacters,
-        character.portraitUrl,
-        null,
-        chapter.heroTemporaryAppearance,
       );
-      if (scene.url) {
-        sceneImageUrl = scene.url;
-      } else {
-        await releaseImageQuota(child.id);
+      updatedBible = { ...bible, sideCharacters: refs.registry };
+
+      // Harde daglimiet: is de quota op, dan claimt dit niets, doen we GEEN fal-call en blijft
+      // sceneImageUrl null → de lees-UI toont de "geen tekening"-placeholder.
+      if (await tryClaimImageQuota(child.id)) {
+        // Scène-illustratie met het held-portret én de zojuist opgehaalde/aangemaakte
+        // nevenpersonage-ankers als referentie. Faalt de fal-call (bv. 403/geen tegoed) →
+        // url null, quota teruggeven.
+        const scene = await generateSceneImage(
+          chapter.imagePrompt,
+          character.appearance,
+          character.imageStyleHint,
+          bible.worldAppearance,
+          refs.sceneCharacters,
+          character.portraitUrl,
+          null,
+          chapter.heroTemporaryAppearance,
+        );
+        if (scene.url) {
+          sceneImageUrl = scene.url;
+        } else {
+          await releaseImageQuota(child.id);
+        }
       }
+    } catch (err) {
+      console.error("Onverwachte fout tijdens illustratie-generatie:", err);
+      sceneImageUrl = null;
     }
   }
 

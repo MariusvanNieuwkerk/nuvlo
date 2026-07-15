@@ -95,6 +95,21 @@ export function BookPager({
     return pendingChapter?.n ?? null;
   }, [chapters]);
 
+  // Na hoe lang wachten we het automatische opnieuw-proberen (elke 8s, zie hieronder) stil
+  // z'n werk laten doen, voordat we ook een KNOP tonen om het zelf opnieuw te proberen? Bewust
+  // niet meteen: de allereerste seconden is "wordt getekend" gewoon de normale, rustige gang
+  // van zaken. Duurt het langer, dan kan er iets vastgelopen zijn (bv. de achtergrond-poging
+  // zelf crashte) — dan wil je als kind/ouder niet eindeloos blijven wachten zonder enige optie.
+  const MANUAL_RETRY_AFTER_MS = 20000;
+  const [manualRetryReady, setManualRetryReady] = useState(false);
+
+  useEffect(() => {
+    setManualRetryReady(false);
+    if (pendingChapterN === null) return;
+    const timer = window.setTimeout(() => setManualRetryReady(true), MANUAL_RETRY_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, [pendingChapterN]);
+
   // Idempotent: het endpoint zelf checkt of het hoofdstuk nog écht pending is (zie
   // app/api/.../image/route.ts), dus dubbel aanroepen kan geen kwaad — de tweede aanroep doet
   // dan gewoon niks. Dat maakt herhaald proberen (hieronder) veilig.
@@ -247,6 +262,11 @@ export function BookPager({
           <Illustration
             imageUrl={current.chapter.imageUrl}
             pending={current.chapter.imagePending && !current.chapter.imageUrl}
+            onManualRetry={
+              manualRetryReady && pendingChapterN === current.chapter.n
+                ? () => fetchPendingImage(current.chapter.n)
+                : undefined
+            }
             alt={`Illustratie van hoofdstuk ${current.chapter.n}`}
           />
         </div>

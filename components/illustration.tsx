@@ -12,6 +12,12 @@ type IllustrationProps = {
   // Dan tonen we een rustige "tekening wordt gemaakt…"-placeholder i.p.v. de "geen tekening"-
   // melding — het kind leest ondertussen verder en het plaatje verschijnt straks als beloning.
   pending?: boolean;
+  // Alleen gezet door book-pager.tsx zodra het pending-wachten al een tijdje duurt (zie
+  // MANUAL_RETRY_AFTER_MS daar) — dan tonen we naast de rustige tekst óók een knop om het
+  // opnieuw te proberen, voor de (zeldzame) keer dat de achtergrond-poging zelf is vastgelopen
+  // en het automatisch opnieuw-proberen niet aanslaat. Zonder deze knop bleef zo'n hoofdstuk
+  // eerder voor altijd op "wordt getekend" staan, zonder dat het kind/de ouder iets kon doen.
+  onManualRetry?: () => void;
   className?: string;
 };
 
@@ -22,7 +28,7 @@ type IllustrationProps = {
 const MAX_SILENT_RETRIES = 2;
 const SILENT_RETRY_DELAY_MS = 1500;
 
-export function Illustration({ imageUrl, alt, pending, className }: IllustrationProps) {
+export function Illustration({ imageUrl, alt, pending, onManualRetry, className }: IllustrationProps) {
   // attempt telt mee in de src (als cache-bustende querystring) zodat de browser/Next.js
   // Image-optimizer de afbeelding ECHT opnieuw ophaalt i.p.v. dezelfde mislukte poging uit
   // de cache te herhalen. failed wordt pas true na MAX_SILENT_RETRIES mislukte pogingen —
@@ -93,8 +99,20 @@ export function Illustration({ imageUrl, alt, pending, className }: Illustration
         <>
           <Pencil className="float-soft relative size-10 text-amber-200/90 sm:size-14" />
           <p className="relative max-w-[85%] text-sm text-white/80 sm:max-w-[70%] sm:text-base">
-            De tekening wordt gemaakt… lees rustig verder, hij verschijnt zo vanzelf!
+            {onManualRetry
+              ? "Dit duurt nu wat langer dan gewoonlijk… lees rustig verder, of probeer het opnieuw."
+              : "De tekening wordt gemaakt… lees rustig verder, hij verschijnt zo vanzelf!"}
           </p>
+          {onManualRetry && (
+            <button
+              type="button"
+              onClick={onManualRetry}
+              className="relative flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-amber-950 shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
+            >
+              <RotateCw className="size-4 sm:size-5" />
+              Probeer opnieuw
+            </button>
+          )}
         </>
       ) : (
         <>
