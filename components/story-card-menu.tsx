@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Star, Share2, Trash2 } from "lucide-react";
+import { MoreHorizontal, Star, Share2, Trash2, Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,9 @@ export function StoryCardMenu({ story }: { story: Story }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [titleValue, setTitleValue] = useState(story.title);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
@@ -24,8 +27,50 @@ export function StoryCardMenu({ story }: { story: Story }) {
     e.preventDefault();
     e.stopPropagation();
     setConfirmDelete(false);
+    setRenaming(false);
+    setTitleValue(story.title);
+    setRenameError(null);
     setShareFeedback(null);
     setOpen(true);
+  }
+
+  async function saveTitle() {
+    const trimmed = titleValue.trim();
+    if (!trimmed) {
+      setRenameError("Geef het boek een titel.");
+      return;
+    }
+    if (trimmed === story.title) {
+      setRenaming(false);
+      return;
+    }
+    setBusy(true);
+    setRenameError(null);
+    try {
+      const res = await fetch(`/api/stories/${story.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (!res.ok) throw new Error("opslaan mislukte");
+      setOpen(false);
+      router.refresh();
+    } catch {
+      setRenameError("Opslaan mislukte. Probeer het nog eens.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onTitleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void saveTitle();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setRenaming(false);
+    }
   }
 
   async function toggleFavorite(e: MouseEvent<HTMLButtonElement>) {
@@ -104,7 +149,49 @@ export function StoryCardMenu({ story }: { story: Story }) {
             </DialogDescription>
           </DialogHeader>
 
-          {confirmDelete ? (
+          {renaming ? (
+            <div className="flex flex-col gap-3">
+              <input
+                autoFocus
+                value={titleValue}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setTitleValue(e.target.value)}
+                onKeyDown={onTitleKeyDown}
+                disabled={busy}
+                maxLength={80}
+                className="w-full min-w-0 rounded-xl border-2 border-amber-400/70 bg-white/90 px-3 py-2.5 text-base font-semibold text-foreground outline-none focus-visible:border-amber-500 disabled:opacity-60 dark:bg-white/10"
+                aria-label="Titel van het boek"
+              />
+              {renameError && (
+                <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{renameError}</p>
+              )}
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void saveTitle();
+                  }}
+                  className="flex-1 rounded-xl bg-amber-400 px-4 py-3 text-sm font-bold text-amber-950 shadow-sm transition-all active:scale-[0.97] disabled:opacity-60 sm:text-base"
+                >
+                  {busy ? "Bezig…" : "Opslaan"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setRenaming(false);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-foreground/15 px-4 py-3 text-sm font-bold text-foreground/70 transition-all active:scale-[0.97] sm:text-base"
+                >
+                  Annuleren
+                </button>
+              </div>
+            </div>
+          ) : confirmDelete ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm font-semibold text-foreground/80 sm:text-base">
                 Weet je het zeker? Dit boek is dan helemaal weg.
@@ -134,6 +221,20 @@ export function StoryCardMenu({ story }: { story: Story }) {
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setTitleValue(story.title);
+                  setRenameError(null);
+                  setRenaming(true);
+                }}
+                className="flex items-center gap-3 rounded-2xl border-2 border-foreground/10 p-3.5 text-left text-base font-semibold text-foreground transition-all hover:border-indigo-400/50 hover:bg-indigo-400/10 sm:p-4"
+              >
+                <Pencil className="size-5 shrink-0" />
+                Titel aanpassen
+              </button>
               <button
                 type="button"
                 disabled={busy}
