@@ -217,8 +217,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Vangnet tegen een bekende iOS Safari-bug: als de pagina-inhoud korter is dan het scherm,
+     kan het vaste (.night-sky) achtergrondje op <body> daaronder een wit/grijs stuk kale
+     canvaskleur laten zien in plaats van door te lopen. Door <html> zelf ook alvast de
+     basiskleur te geven (dezelfde --background-variabele), valt dat gat — mocht het toch nog
+     optreden — niet meer op: het is dan bijna precies dezelfde tint als de rest van de pagina. */
   html {
-    @apply font-sans;
+    @apply font-sans bg-background;
   }
   h1,
   h2,
@@ -230,14 +235,16 @@
 
 /* Achtergrond voor de hele app. Licht = zachte, zonnige ochtendlucht.
    Donker (".dark") = nachtelijke hemel met sterren en maanschijn.
-   Gebruikt bg-fixed zodat de achtergrond niet meescrollt — voelt rustiger op een groot scherm. */
+   GEEN background-attachment: fixed (voorheen wel, voor een rustiger effect op groot scherm) —
+   dat is een bekende iOS Safari-bug: op een iPad liet dat soms een los, verkeerd gekleurd
+   vlak onderaan de pagina zien zodra de inhoud korter was dan het scherm. Gewoon meescrollen
+   (de standaardwaarde) is nauwelijks zichtbaar anders, maar wél overal betrouwbaar. */
 .night-sky {
   background-color: var(--background);
   background-image:
     radial-gradient(ellipse 55% 40% at 18% 8%, oklch(0.94 0.08 95 / 70%), transparent 70%),
     radial-gradient(ellipse 70% 50% at 90% 90%, oklch(0.85 0.08 55 / 35%), transparent 70%),
     linear-gradient(to bottom, oklch(0.94 0.03 90), oklch(0.95 0.025 85) 50%, oklch(0.93 0.03 70) 100%);
-  background-attachment: fixed;
   background-size: cover;
   position: relative;
   isolation: isolate;

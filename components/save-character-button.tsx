@@ -20,6 +20,9 @@ export function SaveCharacterButton({
   portraitUrl,
   className,
   size = "sm",
+  // Optioneel: direct na een succesvolle save aanroepen — de aanroeper kan dit gebruiken om de
+  // suggestie meteen te verbergen (net als bij wegdrukken), i.p.v. te wachten op een refresh.
+  onSaved,
 }: {
   storyId: string;
   kind: "hero" | "side";
@@ -29,6 +32,7 @@ export function SaveCharacterButton({
   portraitUrl?: string | null;
   className?: string;
   size?: "sm" | "md";
+  onSaved?: () => void;
 }) {
   const [state, setState] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -53,6 +57,7 @@ export function SaveCharacterButton({
         throw new Error(data.error ?? "Opslaan mislukte");
       }
       setState("done");
+      onSaved?.();
     } catch (err) {
       setErrorText(err instanceof Error ? err.message : "Opslaan mislukte");
       setState("error");

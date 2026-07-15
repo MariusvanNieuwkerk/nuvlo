@@ -43,6 +43,13 @@ export function SideCharacterSaver({
     });
   }
 
+  // Na een succesvolle "Sla op als personage": de suggestie meteen verbergen, i.p.v. te
+  // wachten tot een volgende paginalading (dan filtert de server hem alsnog eruit, zie
+  // app/verhaal/[id]/lezen/page.tsx — maar dat voelt in dezelfde sessie nog steeds traag aan).
+  function hideAfterSave(name: string) {
+    setHidden((prev) => new Set(prev).add(name));
+  }
+
   return (
     <section className="flex flex-col gap-2 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-white/10">
       <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-foreground/50 sm:text-sm">
@@ -86,6 +93,7 @@ export function SideCharacterSaver({
               name={c.name}
               appearance={c.appearance}
               portraitUrl={c.referenceImageUrl}
+              onSaved={() => hideAfterSave(c.name)}
             />
             <button
               type="button"

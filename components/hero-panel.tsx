@@ -15,12 +15,17 @@ export function HeroPanel({
   portraitUrl,
   items,
   hasUnseenPortrait,
+  alreadySaved = false,
 }: {
   storyId: string;
   heroName: string;
   portraitUrl: string | null;
   items: string[];
   hasUnseenPortrait: boolean;
+  // True als deze held al in de personagens-bibliotheek staat (bv. hergebruikt, of eerder al
+  // met "Sla op" bewaard) — dan tonen we de knop niet meer. Zonder deze check kwam "Sla op"
+  // steeds terug na een refresh/volgend hoofdstuk, ook als het personage al lang opgeslagen was.
+  alreadySaved?: boolean;
 }) {
   // Lokaal onthouden of we het "veranderd"-moment tonen. We starten met de serverwaarde en
   // laten hem staan zolang het component leeft, ook nadat we de server "gezien" gemeld hebben —
@@ -62,7 +67,7 @@ export function HeroPanel({
         </button>
       )}
 
-      <div className="flex items-center gap-3 rounded-2xl bg-foreground/5 p-3 sm:gap-4 sm:p-4">
+      <div className="flex items-center gap-3 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm sm:gap-4 sm:p-4 dark:bg-white/10">
         {portraitUrl ? (
           <span className="relative size-12 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/10 sm:size-14">
             <Image src={portraitUrl} alt={heroName} fill className="object-cover" />
@@ -79,7 +84,7 @@ export function HeroPanel({
             <p className="text-xs text-foreground/50 sm:text-sm">Nog niks verzameld — lees verder!</p>
           )}
         </div>
-        {storyId && (
+        {storyId && !alreadySaved && (
           <SaveCharacterButton
             storyId={storyId}
             kind="hero"

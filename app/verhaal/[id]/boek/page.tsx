@@ -4,7 +4,7 @@ import { BookPager } from "@/components/book-pager";
 import { HeroPanel } from "@/components/hero-panel";
 import { SideCharacterSaver } from "@/components/side-character-saver";
 import { EditableStoryTitle } from "@/components/editable-story-title";
-import { getStory } from "@/lib/storage";
+import { getAlreadySavedForStory, getDefaultChild, getStory } from "@/lib/storage";
 
 // Altijd vers renderen: het verhaal groeit met elke keuze, dus nooit uit de cache tonen.
 export const dynamic = "force-dynamic";
@@ -17,6 +17,12 @@ export default async function MijnBoekPage({
   const { id } = await params;
   const story = await getStory(id);
   if (!story) notFound();
+
+  const child = await getDefaultChild();
+  const { heroSaved, sideNames: alreadySavedSideNames } = await getAlreadySavedForStory(
+    child.id,
+    story.id,
+  );
 
   return (
     <PageShell size="wide">
@@ -33,13 +39,16 @@ export default async function MijnBoekPage({
         portraitUrl={story.character.portraitUrl}
         items={story.character.items}
         hasUnseenPortrait={Boolean(story.character.hasUnseenPortrait)}
+        alreadySaved={heroSaved}
       />
 
       {/* Ook op de boek-pagina: bekende nevenpersonages met een "Sla op als personage"-knop en
           een wegdruk-kruisje. Weggedrukte personages verbergen we hier (ze blijven wel in de
-          illustraties van het verhaal). */}
+          illustraties van het verhaal), en eenmaal opgeslagen personages ook niet meer. */}
       {(() => {
-        const suggesties = story.bible.sideCharacters.filter((c) => !c.dismissed);
+        const suggesties = story.bible.sideCharacters.filter(
+          (c) => !c.dismissed && !alreadySavedSideNames.has(c.name.toLowerCase()),
+        );
         return suggesties.length > 0 ? (
           <SideCharacterSaver storyId={story.id} sideCharacters={suggesties} />
         ) : null;
