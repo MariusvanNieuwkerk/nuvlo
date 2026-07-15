@@ -133,7 +133,7 @@ export function ChoiceButtons({
       {ownIdeaOpen ? (
         <div className="flex flex-col gap-2.5 rounded-2xl border-2 border-violet-400/40 bg-violet-400/10 p-4 sm:gap-3 sm:rounded-3xl sm:p-5">
           <p className="text-sm font-semibold text-foreground/70 sm:text-base">
-            Wat verzin jij dat er nu gebeurt?
+            Wat gebeurt er nu volgens jou?
           </p>
           <Textarea
             value={ownIdea}
@@ -171,10 +171,10 @@ export function ChoiceButtons({
           type="button"
           disabled={pending}
           onClick={() => setOwnIdeaOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-foreground/20 p-3.5 text-sm font-semibold text-foreground/60 transition-all hover:border-violet-400/50 hover:text-foreground/90 disabled:pointer-events-none sm:p-4 sm:text-base"
+          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-amber-400/50 bg-amber-400/10 p-3.5 text-sm font-semibold text-amber-900/80 transition-all hover:border-amber-400/80 hover:bg-amber-400/15 hover:text-amber-950 disabled:pointer-events-none sm:p-4 sm:text-base dark:text-amber-100/90 dark:hover:text-amber-50"
         >
           <PenLine className="size-4 sm:size-5" />
-          Verzin het zelf!
+          Schrijf zelf wat er gebeurt
         </button>
       )}
 

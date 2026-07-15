@@ -77,7 +77,7 @@ export default async function LezenPage({
         href={`/verhaal/${story.id}/boek`}
         className="mt-2 text-center text-sm font-semibold text-foreground/50 underline-offset-4 hover:text-foreground/80 hover:underline sm:text-base"
       >
-        Bekijk mijn boek tot nu toe
+        Mijn boek tot hier
       </Link>
     </PageShell>
   );
