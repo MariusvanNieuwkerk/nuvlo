@@ -15,6 +15,9 @@ export type HeroRosterEntry = {
   worldHint: string | null;
   // Meest recente updatedAt van boeken van deze held — voor default-actieve-held.
   lastStoryAt: string | null;
+  // Uiterlijk + tekenstijl om een story-held opnieuw te kunnen kiezen zonder bibliotheek-id.
+  appearanceFreeform: string;
+  imageStyleHint: string;
 };
 
 function normName(name: string): string {
@@ -59,7 +62,13 @@ export function buildHeroRoster(
     byNameStories.set(key, list);
   }
 
-  function metaForName(name: string): { portraitUrl: string | null; worldHint: string | null; lastStoryAt: string | null } {
+  function metaForName(name: string): {
+    portraitUrl: string | null;
+    worldHint: string | null;
+    lastStoryAt: string | null;
+    appearanceFreeform: string;
+    imageStyleHint: string;
+  } {
     const list = byNameStories.get(normName(name)) ?? [];
     // stories komen al favorite/updated_at-gesorteerd binnen; eerste = meest recent.
     const latest = list[0];
@@ -67,6 +76,10 @@ export function buildHeroRoster(
       portraitUrl: latest?.character.portraitUrl ?? null,
       worldHint: latest?.hero.world?.trim() || null,
       lastStoryAt: latest?.updatedAt ?? null,
+      appearanceFreeform: latest?.character.appearance.freeform ?? "",
+      imageStyleHint:
+        latest?.character.imageStyleHint ??
+        "flat colorful 2D children's picture-book illustration style",
     };
   }
 
@@ -81,6 +94,8 @@ export function buildHeroRoster(
       sourceStoryIds: c.sourceStoryIds,
       worldHint: meta.worldHint,
       lastStoryAt: meta.lastStoryAt,
+      appearanceFreeform: c.appearance.freeform || meta.appearanceFreeform,
+      imageStyleHint: c.imageStyleHint || meta.imageStyleHint,
     };
   });
 
@@ -88,6 +103,7 @@ export function buildHeroRoster(
     const latest = list[0];
     if (!latest) continue;
     if (savedNames.has(normName(latest.hero.name))) continue;
+    const meta = metaForName(latest.hero.name);
     roster.push({
       id: nameKey(latest.hero.name),
       name: latest.hero.name,
@@ -96,6 +112,8 @@ export function buildHeroRoster(
       sourceStoryIds: [],
       worldHint: latest.hero.world?.trim() || null,
       lastStoryAt: latest.updatedAt,
+      appearanceFreeform: meta.appearanceFreeform,
+      imageStyleHint: meta.imageStyleHint,
     });
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -27,7 +27,8 @@ import {
   getImageStyleByHint,
   type ImageStyleId,
 } from "@/lib/image-styles";
-import { GENRE_LABELS, type Genre, type SavedCharacter } from "@/lib/types";
+import { buildHeroRoster, type HeroRosterEntry } from "@/lib/hero-roster";
+import { GENRE_LABELS, type Genre, type SavedCharacter, type Story } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { writeActiveHeroId } from "@/lib/active-hero";
 
@@ -58,15 +59,22 @@ const INPUT_CARD =
 
 export function HeroForm({
   initialCharacterId,
+  initialHeroName,
   initialAuthorName,
   initialAge,
+  initialStories = [],
 }: {
   initialCharacterId?: string;
+  initialHeroName?: string;
   initialAuthorName?: string;
   initialAge?: number;
+  // Zelfde bron als home: boeken + bibliotheek → ook helden die alleen in boeken bestaan
+  // (zoals "Papa") verschijnen onder "Bestaande held".
+  initialStories?: Story[];
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<WizardStep>(initialCharacterId ? 2 : 1);
+  const startWithExisting = Boolean(initialCharacterId || initialHeroName);
+  const [step, setStep] = useState<WizardStep>(startWithExisting ? 2 : 1);
   const [form, setForm] = useState<FormState>({
     authorName: initialAuthorName?.trim() || "",
     name: "",
@@ -79,11 +87,12 @@ export function HeroForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<StartMode>(initialCharacterId ? "existing" : "new");
+  const [mode, setMode] = useState<StartMode>(startWithExisting ? "existing" : "new");
   const [characters, setCharacters] = useState<SavedCharacter[]>([]);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
   const [charactersError, setCharactersError] = useState<string | null>(null);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
+  // Roster-id: opgeslagen character-id OF "name:papa" voor story-helden.
+  const [selectedRosterId, setSelectedRosterId] = useState<string | null>(
     initialCharacterId ?? null,
   );
   const [initialApplied, setInitialApplied] = useState(false);
@@ -93,6 +102,26 @@ export function HeroForm({
 
   const [selectedSideCharacterIds, setSelectedSideCharacterIds] = useState<string[]>([]);
   const [showSidePick, setShowSidePick] = useState(false);
+
+  const heroRoster = useMemo(
+    () => buildHeroRoster(characters, initialStories),
+    [characters, initialStories],
+  );
+
+  function applyRosterEntry(entry: HeroRosterEntry) {
+    setSelectedRosterId(entry.id);
+    setForm((prev) => ({
+      ...prev,
+      name: entry.name,
+      appearance: entry.appearanceFreeform,
+      styleId: getImageStyleByHint(entry.imageStyleHint).id,
+      // Wereld mag alvast uit het vorige boek komen — kind kan het in stap 2 nog wijzigen.
+      world: prev.world || entry.worldHint || "",
+    }));
+    if (entry.savedCharacterId) {
+      setSelectedSideCharacterIds((prev) => prev.filter((x) => x !== entry.savedCharacterId));
+    }
+  }
 
   const loadCharacters = useCallback(async () => {
     setLoadingCharacters(true);
@@ -105,15 +134,21 @@ export function HeroForm({
       const data: { characters: SavedCharacter[] } = await res.json();
       const options = (data.characters ?? []).slice();
       setCharacters(options);
-      if (initialCharacterId && !initialAppliedRef.current) {
-        const found = options.find((c) => c.id === initialCharacterId);
+      if (!initialAppliedRef.current && (initialCharacterId || initialHeroName)) {
+        const roster = buildHeroRoster(options, initialStories);
+        const found = initialCharacterId
+          ? roster.find((h) => h.id === initialCharacterId || h.savedCharacterId === initialCharacterId)
+          : roster.find(
+              (h) => h.name.trim().toLowerCase() === initialHeroName!.trim().toLowerCase(),
+            );
         if (found) {
-          setSelectedCharacterId(found.id);
+          setSelectedRosterId(found.id);
           setForm((prev) => ({
             ...prev,
             name: found.name,
-            appearance: found.appearance.freeform,
+            appearance: found.appearanceFreeform,
             styleId: getImageStyleByHint(found.imageStyleHint).id,
+            world: prev.world || found.worldHint || "",
           }));
         }
         setInitialApplied(true);
@@ -129,7 +164,7 @@ export function HeroForm({
       clearTimeout(timeout);
       setLoadingCharacters(false);
     }
-  }, [initialCharacterId]);
+  }, [initialCharacterId, initialHeroName, initialStories]);
 
   const loadedRef = useRef(false);
   useEffect(() => {
@@ -137,6 +172,21 @@ export function HeroForm({
     loadedRef.current = true;
     loadCharacters();
   }, [loadCharacters]);
+
+  // Story-helden staan al in initialStories — ook zonder API-lading meteen toepassen.
+  useEffect(() => {
+    if (initialAppliedRef.current) return;
+    if (!initialHeroName || initialCharacterId) return;
+    if (characters.length > 0) return; // wacht op loadCharacters-pad
+    const roster = buildHeroRoster([], initialStories);
+    const found = roster.find(
+      (h) => h.name.trim().toLowerCase() === initialHeroName.trim().toLowerCase(),
+    );
+    if (found) {
+      applyRosterEntry(found);
+      setInitialApplied(true);
+    }
+  }, [initialHeroName, initialCharacterId, initialStories, characters.length]);
 
   function toggleSideCharacter(id: string) {
     setSelectedSideCharacterIds((prev) =>
@@ -154,8 +204,8 @@ export function HeroForm({
       if (!res.ok) throw new Error("verwijderen mislukte");
       setCharacters((prev) => prev.filter((x) => x.id !== c.id));
       setSelectedSideCharacterIds((prev) => prev.filter((x) => x !== c.id));
-      if (selectedCharacterId === c.id) {
-        setSelectedCharacterId(null);
+      if (selectedRosterId === c.id) {
+        setSelectedRosterId(null);
         setForm((prev) => ({ ...prev, name: "", appearance: "" }));
       }
     } catch {
@@ -169,32 +219,23 @@ export function HeroForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function selectCharacter(c: SavedCharacter) {
-    setSelectedCharacterId(c.id);
-    setForm((prev) => ({
-      ...prev,
-      name: c.name,
-      appearance: c.appearance.freeform,
-      styleId: getImageStyleByHint(c.imageStyleHint).id,
-    }));
-    setSelectedSideCharacterIds((prev) => prev.filter((x) => x !== c.id));
-  }
-
   function switchMode(next: StartMode) {
     setMode(next);
     setError(null);
     if (next === "new") {
-      setSelectedCharacterId(null);
+      setSelectedRosterId(null);
       setForm((prev) => ({
         ...prev,
         name: "",
         appearance: "",
+        world: "",
         styleId: DEFAULT_IMAGE_STYLE_ID,
       }));
     }
   }
 
-  const heroCandidates = characters.filter((c) => c.kind === "hero");
+  const selectedEntry = heroRoster.find((h) => h.id === selectedRosterId) ?? null;
+  const selectedCharacterId = selectedEntry?.savedCharacterId ?? null;
   const sideCandidates = characters.filter((c) => c.kind === "side");
 
   const childValid =
@@ -202,7 +243,7 @@ export function HeroForm({
   const step1Valid =
     childValid &&
     (mode === "existing"
-      ? Boolean(selectedCharacterId)
+      ? Boolean(selectedRosterId && form.name.trim() && form.appearance.trim())
       : form.name.trim().length > 0 && form.appearance.trim().length > 0);
   const step2Valid = form.world.trim().length > 0 && Boolean(form.genre);
   const canSubmit = step1Valid && step2Valid;
@@ -273,8 +314,8 @@ export function HeroForm({
         throw new Error(data.error ?? "Er ging iets mis.");
       }
       const data = await res.json();
-      if (selectedCharacterId) {
-        writeActiveHeroId(selectedCharacterId);
+      if (selectedRosterId) {
+        writeActiveHeroId(selectedRosterId);
       } else {
         writeActiveHeroId(`name:${form.name.trim().toLowerCase()}`);
       }
@@ -354,7 +395,7 @@ export function HeroForm({
                 onClick={() => switchMode("existing")}
                 icon={Users}
                 label="Bestaande held"
-                hint="Uit je personages"
+                hint="Uit je boeken"
               />
               <ModeButton
                 active={mode === "new"}
@@ -368,24 +409,35 @@ export function HeroForm({
             {mode === "existing" && (
               <div className="flex flex-col gap-2.5">
                 {renderLoadStatus()}
-                {!loadingCharacters && !charactersError && heroCandidates.length === 0 && (
+                {!loadingCharacters && !charactersError && heroRoster.length === 0 && (
                   <p className="text-sm text-foreground/60">
-                    Nog geen opgeslagen helden. Kies &quot;Nieuwe held&quot;, of sla een held op
-                    vanuit een boek.
+                    Nog geen helden. Kies &quot;Nieuwe held&quot; om te beginnen.
                   </p>
                 )}
-                {heroCandidates.length > 0 && (
+                {heroRoster.length > 0 && (
                   <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-                    {heroCandidates.map((c) => (
-                      <CharacterOptionTile
-                        key={c.id}
-                        character={c}
-                        selected={selectedCharacterId === c.id}
-                        onToggle={() => selectCharacter(c)}
-                        onDelete={() => void handleDeleteCharacter(c)}
-                        deleting={deletingCharacterId === c.id}
-                      />
-                    ))}
+                    {heroRoster.map((entry) => {
+                      const saved = entry.savedCharacterId
+                        ? characters.find((c) => c.id === entry.savedCharacterId)
+                        : null;
+                      return (
+                        <RosterHeroTile
+                          key={entry.id}
+                          entry={entry}
+                          selected={selectedRosterId === entry.id}
+                          onToggle={() => applyRosterEntry(entry)}
+                          onDelete={
+                            saved
+                              ? () => void handleDeleteCharacter(saved)
+                              : undefined
+                          }
+                          deleting={Boolean(
+                            entry.savedCharacterId &&
+                              deletingCharacterId === entry.savedCharacterId,
+                          )}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -589,6 +641,75 @@ function StepDots({ current }: { current: WizardStep }) {
           )}
         />
       ))}
+    </div>
+  );
+}
+
+function RosterHeroTile({
+  entry,
+  selected,
+  onToggle,
+  onDelete,
+  deleting,
+}: {
+  entry: HeroRosterEntry;
+  selected: boolean;
+  onToggle: () => void;
+  onDelete?: () => void;
+  deleting: boolean;
+}) {
+  return (
+    <div className={cn("group relative", deleting && "opacity-40")}>
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete();
+          }}
+          disabled={deleting}
+          aria-label={`${entry.name} verwijderen`}
+          title="Verwijderen uit personages"
+          className="absolute -top-1.5 -right-1.5 z-10 flex size-6 items-center justify-center rounded-full bg-white text-foreground/50 shadow-md ring-1 ring-foreground/10 transition-colors hover:bg-rose-100 hover:text-rose-600 active:scale-90 dark:bg-slate-800"
+        >
+          <X className="size-3.5" strokeWidth={2.5} />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={deleting}
+        title={entry.name}
+        className={cn(
+          "flex w-full flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-[0.97] sm:py-3.5",
+          selected
+            ? "-translate-y-0.5 border-amber-500 bg-amber-50/90 shadow-md dark:bg-amber-400/15"
+            : "border-amber-200/60 bg-white/60 hover:border-amber-400/80 hover:shadow-sm dark:bg-white/5",
+        )}
+      >
+        <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-foreground/10 sm:size-20">
+          {entry.portraitUrl ? (
+            <Image
+              src={entry.portraitUrl}
+              alt={entry.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 64px, 80px"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center">
+              <Sparkles className="size-6 text-foreground/40 sm:size-7" />
+            </span>
+          )}
+        </span>
+        <span className="line-clamp-2 min-h-[2.1em] w-full text-xs font-bold leading-tight text-foreground sm:text-sm">
+          {entry.name}
+        </span>
+        <span className="text-[10px] font-semibold text-foreground/50 sm:text-xs">
+          {entry.savedCharacterId ? "Held" : "Uit boek"}
+        </span>
+      </button>
     </div>
   );
 }

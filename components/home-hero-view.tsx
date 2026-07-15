@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Plus, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BookOpen, Plus, Sparkles, X } from "lucide-react";
 import { StoryCard } from "@/components/story-card";
 import { readActiveHeroId, writeActiveHeroId } from "@/lib/active-hero";
 import {
@@ -48,14 +49,22 @@ function HeroPortrait({
 
 export function HomeHeroView({
   stories,
-  characters,
+  characters: initialCharacters,
 }: {
   stories: Story[];
   characters: SavedCharacter[];
 }) {
+  const router = useRouter();
+  const [characters, setCharacters] = useState(initialCharacters);
+  useEffect(() => {
+    setCharacters(initialCharacters);
+  }, [initialCharacters]);
+
   const roster = useMemo(() => buildHeroRoster(characters, stories), [characters, stories]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const preferred = readActiveHeroId();
@@ -66,6 +75,34 @@ export function HomeHeroView({
   function selectHero(id: string) {
     setActiveId(id);
     writeActiveHeroId(id);
+  }
+
+  async function deleteSavedHero(hero: HeroRosterEntry) {
+    if (!hero.savedCharacterId) return;
+    if (
+      !window.confirm(
+        `${hero.name} verwijderen uit je personages? Boeken blijven bestaan; alleen de snelle keuze verdwijnt.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(hero.savedCharacterId);
+    try {
+      const res = await fetch(`/api/characters/${hero.savedCharacterId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("verwijderen mislukte");
+      setCharacters((prev) => prev.filter((c) => c.id !== hero.savedCharacterId));
+      if (activeId === hero.id) {
+        const next = roster.find((h) => h.id !== hero.id);
+        if (next) {
+          selectHero(next.id);
+        }
+      }
+      router.refresh();
+    } catch {
+      window.alert("Verwijderen is niet gelukt. Probeer het nog eens.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   const activeHero = roster.find((h) => h.id === activeId) ?? null;
@@ -107,7 +144,7 @@ export function HomeHeroView({
     continueStory?.status === "klaar" ? "Boek teruglezen" : "Verder lezen";
   const newAdventureHref = activeHero.savedCharacterId
     ? `/nieuw-verhaal?held=${encodeURIComponent(activeHero.savedCharacterId)}`
-    : "/nieuw-verhaal";
+    : `/nieuw-verhaal?naam=${encodeURIComponent(activeHero.name)}`;
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
@@ -150,56 +187,104 @@ export function HomeHeroView({
 
       {/* Wissel-rij: andere helden + nieuwe held. */}
       <section className="flex flex-col gap-3 sm:gap-3.5">
-        <h2 className="text-center text-sm font-semibold text-foreground/45 sm:text-base">
-          Andere held
-        </h2>
-        <div className="flex flex-wrap items-start justify-center gap-3 sm:gap-4">
-          {roster.map((hero) => {
-            const selected = hero.id === activeHero.id;
-            return (
-              <button
-                key={hero.id}
-                type="button"
-                onClick={() => selectHero(hero.id)}
-                aria-pressed={selected}
-                aria-label={`Kies ${hero.name}`}
-                className={cn(
-                  "flex w-16 flex-col items-center gap-1.5 rounded-2xl p-1 transition-all sm:w-20",
-                  selected ? "opacity-100" : "opacity-70 hover:opacity-100",
-                )}
-              >
-                <span
-                  className={cn(
-                    "rounded-full transition-shadow",
-                    selected && "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
-                  )}
+        <div className="flex items-center justify-center gap-3">
+          <h2 className="text-sm font-semibold text-foreground/45 sm:text-base">Andere held</h2>
+          {roster.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setManaging((v) => !v)}
+              className="text-sm font-semibold text-foreground/55 underline-offset-2 hover:text-foreground/80 hover:underline sm:text-base"
+            >
+              {managing ? "Klaar" : "Beheer"}
+            </button>
+          )}
+        </div>
+
+        {managing ? (
+          <div className="mx-auto flex w-full max-w-lg flex-col gap-2 rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-3 sm:p-4">
+            <p className="text-center text-sm text-foreground/55">
+              Verwijder een opgeslagen held met ✕. Helden &quot;uit boek&quot; verdwijnen
+              automatisch als je hun boeken verwijdert.
+            </p>
+            <ul className="flex flex-col gap-2">
+              {roster.map((hero) => (
+                <li
+                  key={hero.id}
+                  className="flex items-center gap-3 rounded-xl bg-background/70 px-3 py-2"
                 >
                   <HeroPortrait hero={hero} size="sm" />
-                </span>
-                <span
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="truncate font-heading text-base font-bold text-foreground">
+                      {hero.name}
+                    </p>
+                    <p className="text-xs text-foreground/50">
+                      {hero.savedCharacterId ? "Opgeslagen personage" : "Alleen in boeken"}
+                    </p>
+                  </div>
+                  {hero.savedCharacterId ? (
+                    <button
+                      type="button"
+                      disabled={deletingId === hero.savedCharacterId}
+                      onClick={() => void deleteSavedHero(hero)}
+                      aria-label={`${hero.name} verwijderen`}
+                      className="flex size-9 items-center justify-center rounded-full bg-foreground/5 text-foreground/50 transition-colors hover:bg-rose-100 hover:text-rose-600 disabled:opacity-40"
+                    >
+                      <X className="size-4" strokeWidth={2.5} />
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 sm:gap-4 sm:justify-center sm:flex-wrap sm:overflow-visible">
+            {roster.map((hero) => {
+              const selected = hero.id === activeHero.id;
+              return (
+                <button
+                  key={hero.id}
+                  type="button"
+                  onClick={() => selectHero(hero.id)}
+                  aria-pressed={selected}
+                  aria-label={`Kies ${hero.name}`}
                   className={cn(
-                    "line-clamp-2 w-full text-center text-[11px] font-bold leading-tight sm:text-xs",
-                    selected ? "text-foreground" : "text-foreground/55",
+                    "flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 transition-all sm:w-20",
+                    selected ? "opacity-100" : "opacity-70 hover:opacity-100",
                   )}
                 >
-                  {hero.name}
-                </span>
-              </button>
-            );
-          })}
-          <Link
-            href="/nieuw-verhaal"
-            aria-label="Nieuwe held"
-            className="flex w-16 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-20"
-          >
-            <span className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-amber-400/60 bg-amber-400/10 sm:size-16">
-              <Plus className="size-6 text-amber-700 dark:text-amber-300" strokeWidth={2.5} />
-            </span>
-            <span className="line-clamp-2 w-full text-center text-[11px] font-bold leading-tight text-foreground/55 sm:text-xs">
-              Nieuw
-            </span>
-          </Link>
-        </div>
+                  <span
+                    className={cn(
+                      "rounded-full transition-shadow",
+                      selected && "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
+                    )}
+                  >
+                    <HeroPortrait hero={hero} size="sm" />
+                  </span>
+                  <span
+                    className={cn(
+                      "line-clamp-2 w-full text-center text-[11px] font-bold leading-tight sm:text-xs",
+                      selected ? "text-foreground" : "text-foreground/55",
+                    )}
+                  >
+                    {hero.name}
+                  </span>
+                </button>
+              );
+            })}
+            <Link
+              href="/nieuw-verhaal"
+              aria-label="Nieuwe held"
+              className="flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-20"
+            >
+              <span className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-amber-400/60 bg-amber-400/10 sm:size-16">
+                <Plus className="size-6 text-amber-700 dark:text-amber-300" strokeWidth={2.5} />
+              </span>
+              <span className="line-clamp-2 w-full text-center text-[11px] font-bold leading-tight text-foreground/55 sm:text-xs">
+                Nieuw
+              </span>
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Boeken van deze held — secundair, onder de held. */}
