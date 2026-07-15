@@ -7,7 +7,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BookPage } from "@/components/book-page";
 import { Illustration } from "@/components/illustration";
 import { ChoiceButtons } from "@/components/choice-buttons";
-import { ReadingProgress } from "@/components/reading-progress";
 import { PageScrubber } from "@/components/page-scrubber";
 import type { Chapter } from "@/lib/types";
 
@@ -262,10 +261,6 @@ export function BookPager({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Kindvriendelijke voortgang bovenaan: hoe ver ben ik in mijn boek. Rustig en warm,
-          nooit iets over de geheime akte-structuur. */}
-      <ReadingProgress chaptersDone={chapters.length} finished={finished} />
-
       {/* De beloning: de illustratie van dit hoofdstuk, alleen op de eerste bladzijde. De key
           op hoofdstuk-niveau zorgt dat de onthul-animatie opnieuw speelt telkens als je een
           (ander) hoofdstuk binnenkomt — bv. na een keuze, of bij terugbladeren. */}
