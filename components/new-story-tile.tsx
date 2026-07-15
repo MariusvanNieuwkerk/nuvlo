@@ -10,7 +10,7 @@ export function NewStoryTile() {
   return (
     <Link
       href="/nieuw-verhaal"
-      className="group flex flex-col overflow-hidden rounded-2xl border-2 border-dashed border-amber-400/50 bg-gradient-to-br from-amber-100/70 via-orange-50/50 to-amber-50/30 transition-all duration-200 hover:-translate-y-1 hover:border-amber-400/80 hover:shadow-xl hover:shadow-amber-400/20 active:translate-y-0 dark:from-amber-400/10 dark:via-orange-400/5 dark:to-transparent"
+      className="group flex flex-col overflow-hidden rounded-2xl border-2 border-dashed border-amber-400/50 bg-gradient-to-br from-amber-100/70 via-orange-50/50 to-amber-50/30 transition-all duration-200 hover:-translate-y-1 hover:border-amber-400/80 hover:shadow-xl hover:shadow-amber-400/20 active:translate-y-0 dark:border-amber-300/70 dark:from-amber-400/10 dark:via-orange-400/5 dark:to-transparent dark:hover:border-amber-300/90"
     >
       <div className="relative flex aspect-[4/3] flex-col items-center justify-center overflow-hidden">
         <Sparkles
