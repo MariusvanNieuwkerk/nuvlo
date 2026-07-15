@@ -113,13 +113,19 @@ export function BookPager({
   // Idempotent: het endpoint zelf checkt of het hoofdstuk nog écht pending is (zie
   // app/api/.../image/route.ts), dus dubbel aanroepen kan geen kwaad — de tweede aanroep doet
   // dan gewoon niks. Dat maakt herhaald proberen (hieronder) veilig.
+  // `force: true` heropent een mislukte scène (geen plaatje, pending al uit) zodat de knop
+  // op de lege placeholder wél opnieuw mag tekenen.
+  const [forceRetryingN, setForceRetryingN] = useState<number | null>(null);
   const fetchPendingImage = useCallback(
-    async (chapterN: number) => {
+    async (chapterN: number, force = false) => {
       if (inFlightChapterRef.current === chapterN) return;
       inFlightChapterRef.current = chapterN;
+      if (force) setForceRetryingN(chapterN);
       try {
         const res = await fetch(`/api/stories/${storyId}/chapters/${chapterN}/image`, {
           method: "POST",
+          headers: force ? { "Content-Type": "application/json" } : undefined,
+          body: force ? JSON.stringify({ force: true }) : undefined,
         });
         if (!res.ok) throw new Error("image endpoint faalde");
         // Het beeld staat nu op de server: verversen zodat het plaatje binnenkomt en onthuld wordt.
@@ -129,6 +135,11 @@ export function BookPager({
         // volgende keer dat het tabblad weer actief wordt, probeert het gewoon opnieuw.
       } finally {
         inFlightChapterRef.current = null;
+        // Korte buffer zodat router.refresh() de nieuwe staat kan binnenhalen voordat we
+        // de optimistische "wordt getekend"-UI weer uitzetten.
+        window.setTimeout(() => {
+          setForceRetryingN((n) => (n === chapterN ? null : n));
+        }, 800);
       }
     },
     [storyId, router],
@@ -271,11 +282,18 @@ export function BookPager({
         >
           <Illustration
             imageUrl={current.chapter.imageUrl}
-            pending={current.chapter.imagePending && !current.chapter.imageUrl}
+            pending={
+              (Boolean(current.chapter.imagePending) && !current.chapter.imageUrl) ||
+              forceRetryingN === current.chapter.n
+            }
             onManualRetry={
-              manualRetryReady && pendingChapterN === current.chapter.n
-                ? () => fetchPendingImage(current.chapter.n)
-                : undefined
+              current.chapter.imageUrl || forceRetryingN === current.chapter.n
+                ? undefined
+                : current.chapter.imagePending
+                  ? manualRetryReady && pendingChapterN === current.chapter.n
+                    ? () => fetchPendingImage(current.chapter.n)
+                    : undefined
+                  : () => fetchPendingImage(current.chapter.n, true)
             }
             alt={`Illustratie van hoofdstuk ${current.chapter.n}`}
           />

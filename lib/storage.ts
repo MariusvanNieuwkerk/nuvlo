@@ -566,6 +566,22 @@ export async function updateChapterImageAtomic(
   return await getStory(id);
 }
 
+// Zet een mislukte scène opnieuw op "wordt getekend" zodat fase B nog eens mag lopen.
+// Alleen als er nog GEEN imageUrl is — een bestaande tekening nooit opnieuw laten betalen.
+// Gebruikt door de "Probeer opnieuw"-knop op de lege-plaatjes-placeholder.
+export async function reopenChapterImagePending(id: string, n: number): Promise<Story | null> {
+  const story = await getStory(id);
+  if (!story) return null;
+  const idx = story.chapters.findIndex((c) => c.n === n);
+  if (idx === -1) return null;
+  const chapter = story.chapters[idx];
+  if (chapter.imageUrl) return story;
+  if (chapter.imagePending) return story;
+  const chapters = story.chapters.slice();
+  chapters[idx] = { ...chapter, imagePending: true, imageReused: false };
+  return saveStory({ ...story, chapters });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Personages-bibliotheek (characters-tabel).
 // ─────────────────────────────────────────────────────────────────────────────

@@ -118,9 +118,20 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
         <>
           <Sparkles className="float-soft relative size-10 text-amber-200/90 sm:size-14" />
           <p className="relative max-w-[85%] text-sm text-white/75 sm:max-w-[70%] sm:text-base">
-            Er kon nu geen tekening bij deze scène gemaakt worden. Morgen is er weer plek voor
-            nieuwe tekeningen!
+            {onManualRetry
+              ? "Er is nog geen tekening bij deze scène. Wil je het opnieuw proberen?"
+              : "Er is nog geen tekening bij deze scène."}
           </p>
+          {onManualRetry && (
+            <button
+              type="button"
+              onClick={onManualRetry}
+              className="relative flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-amber-950 shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
+            >
+              <RotateCw className="size-4 sm:size-5" />
+              Probeer opnieuw
+            </button>
+          )}
         </>
       )}
     </div>

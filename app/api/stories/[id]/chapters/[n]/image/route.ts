@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getDefaultChild, getStory, updateChapterImageAtomic } from "@/lib/storage";
+import {
+  getDefaultChild,
+  getStory,
+  reopenChapterImagePending,
+  updateChapterImageAtomic,
+} from "@/lib/storage";
 import { generateSceneImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
@@ -26,8 +31,12 @@ export const maxDuration = 60;
 // in Postgres (updateChapterImageAtomic / RPC update_chapter_image_atomic) die alleen slaat
 // als het hoofdstuk op dat moment nog imagePending=true heeft. Werkt op Vercel serverless met
 // meerdere instanties — een dubbel-getriggerde fase B kan zo nooit twee fal-calls maken.
+//
+// FORCE RETRY: body `{ force: true }` heropent een mislukte scène (imageUrl null, pending
+// al false) zodat de "Probeer opnieuw"-knop in de lees-UI alsnog een echte tekening kan
+// aanvragen — bv. nadat de dagquota weer ruimte heeft.
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; n: string }> },
 ) {
   const { id, n: nRaw } = await params;
@@ -36,17 +45,32 @@ export async function POST(
     return NextResponse.json({ error: "Ongeldig hoofdstuknummer." }, { status: 400 });
   }
 
-  const story = await getStory(id);
+  const body = await request.json().catch(() => null);
+  const force = Boolean(body && typeof body === "object" && (body as { force?: unknown }).force);
+
+  let story = await getStory(id);
   if (!story) {
     return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
   }
 
-  const idx = story.chapters.findIndex((c) => c.n === n);
+  let idx = story.chapters.findIndex((c) => c.n === n);
   if (idx === -1) {
     return NextResponse.json({ error: "Hoofdstuk niet gevonden." }, { status: 404 });
   }
 
-  const chapter = story.chapters[idx];
+  let chapter = story.chapters[idx];
+
+  // Handmatige retry: scène opnieuw in de wachtrij zetten als er nog geen plaatje is.
+  if (force && !chapter.imageUrl && !chapter.imagePending) {
+    const reopened = await reopenChapterImagePending(id, n);
+    if (!reopened) {
+      return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
+    }
+    story = reopened;
+    idx = story.chapters.findIndex((c) => c.n === n);
+    chapter = story.chapters[idx];
+  }
+
   // Idempotent: niks meer te doen (beeld staat er al, of dit hoofdstuk heeft nooit
   // achtergrondwerk gehad). Dubbele fetch of een herhaalde refresh kan zo geen kwaad.
   if (!chapter.imagePending) {
