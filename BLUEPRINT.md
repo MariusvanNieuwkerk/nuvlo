@@ -290,9 +290,10 @@ browser) en helpers als `lib/image-usage.ts` en `lib/side-character-images.ts`.
 
 ## 11. Bekende afwegingen & valkuilen (voor toekomstig werk)
 
-- **Eén gedeeld kind-profiel.** `children`-tabel heeft momenteel effectief altijd maar één rij
-  (`getDefaultChild`/`updateDefaultChild` in `lib/storage.ts`) — er is nog geen multi-kind- of
-  login-systeem. `authorName`/`authorAge` per boek bestaan wél al los daarvan (zie §4).
+- **Eén gedeeld kind-profiel (nu).** `children`-tabel heeft momenteel effectief altijd maar één
+  rij (`getDefaultChild`/`updateDefaultChild` in `lib/storage.ts`) — er is nog geen multi-kind-
+  of login-systeem. `authorName`/`authorAge` per boek bestaan wél al los daarvan (zie §4).
+  Het bedoelde model voor later staat in §12.
 - **iOS Safari is een structurele aandachtspunt.** Cascade layers (`@layer`, Tailwind v4),
   `oklch`-kleuren en `background-attachment: fixed` gaven eerder concrete, zichtbare bugs op
   oudere iPads. `postcss-cascade-layers` en sRGB-fallbacks vangen dit nu op; puur `oklch` zonder
@@ -310,7 +311,49 @@ browser) en helpers als `lib/image-usage.ts` en `lib/side-character-images.ts`.
 - **Alle Vercel-functies hebben `maxDuration = 60`** (Hobby-plan-maximum) op elke route die AI
   aanroept — zonder die regel kapt Vercel serverless functions na de standaard ~10s af.
 
-## 12. Toekomstplan: Curiosity-Driven Reading
+## 12. Accounts, kind-profielen & gezin-abonnement (toekomst)
+
+Nog **niet gebouwd**. Dit is het vaste productmodel voor wanneer Nuvlo accounts en betalen krijgt —
+makkelijk voor kinderen, veilig voor ouders, eenvoudig te begrijpen.
+
+### Hoofdregel
+
+**De ouder logt in. Het kind tikt op zichzelf. Het gezin betaalt.**
+
+Het kind heeft **geen e-mail** nodig en geen eigen account met wachtwoord.
+
+### Rollen
+
+| Wie | Wat |
+|---|---|
+| **Ouder** | Échte login (e-mail/wachtwoord, of Apple/Google). Instellingen, betalen, annuleren, toestemming voor delen. |
+| **Kind-profiel** | Alleen kiezen via portret/naam op het startscherm. Eigen helden, boeken en leesniveau. Geen e-mail. |
+| **Gezin** | Één abonnement (bv. Stripe) dat bij het ouder-account hoort, met ruimte voor meerdere kind-profielen. |
+
+### Wat we bewust níet doen
+
+- Kind-login met e-mail (veel kinderen hebben die niet; privacy/AVG-risico)
+- Apart account of abonnement per kind (onnodig duur en complex)
+- Apart account per held (helden horen onder een kind-profiel)
+- Alleen “dit apparaat onthouden” zonder ouder-account (breekt bij nieuw apparaat en betalen)
+
+### Veiligheid
+
+- Geen openbare kind-profielen, geen vrije kind-kind-chat
+- Delen alleen met oudertoestemming
+- Zo min mogelijk persoonsgegevens van het kind
+- Optioneel later: ouder-PIN om van kind-profiel te wisselen of instellingen te openen op een gedeelde iPad
+
+### Bouwvolgorde (pas als product dit nodig heeft)
+
+1. Ouder-auth (bijv. Supabase Auth) + één kind-profiel gekoppeld aan dat account  
+2. Meerdere kind-profielen + wissel-scherm (“wie ben jij?”)  
+3. Gezin-abonnement (Stripe) op het ouder-account  
+4. Ouder-PIN / ouder-instellingen  
+
+Tot die tijd blijft de app zoals nu: één gedeeld kind-profiel zonder login (zie §11).
+
+## 13. Toekomstplan: Curiosity-Driven Reading
 
 Product-richting (vastgelegd juli 2026): Nuvlo groeit langzaam uit tot een **curiosity-driven
 reading platform**. De kern is niet "AI maakt een verhaaltje" maar: *kinderen gaan zélf lezen
@@ -338,11 +381,12 @@ en gemaakt"*, niet een oneindige stroom content.
 3. Tekstlengte/leeftijd verder afstemmen
 4. Illustraties als beloning verfijnen
 5. Afgerond boek/PDF/cover verbeteren
-6. Privé delen met familie (vereist eerst een account-/toestemmingslaag — die bestaat nu nog niet, zie §11)
-7. Vriendjes veilig laten lezen/reageren (alleen veilige, vaste reacties — geen vrije chat)
-8. Samen een boek maken (om de beurt lezen/kiezen, AI blijft regisseur)
-9. Gecureerde openbare bibliotheek (alleen na goedkeuring, geen echte namen/foto's)
-10. Schooldashboard (sober: gelezen hoofdstukken/minuten, geen ranglijsten of competitie)
+6. **Accounts + gezin-abonnement** (zie §12) — nodig vóór privé delen en betalen
+7. Privé delen met familie (vereist §12)
+8. Vriendjes veilig laten lezen/reageren (alleen veilige, vaste reacties — geen vrije chat)
+9. Samen een boek maken (om de beurt lezen/kiezen, AI blijft regisseur)
+10. Gecureerde openbare bibliotheek (alleen na goedkeuring, geen echte namen/foto's)
+11. Schooldashboard (sober: gelezen hoofdstukken/minuten, geen ranglijsten of competitie)
 
 **Al gedaan richting stap 1-2 (deze sessie):**
 - *Cliffhanger-/keuzekwaliteit aangescherpt* in `lib/ai/system-prompt.ts` (regels 4-5): concrete
@@ -370,9 +414,9 @@ dashboard of rapportage die dit toont, dat komt pas als er genoeg data is om iet
 voor het kind, geen echte horror, geen publieke profielen of vrije kind-kind-chat in de vroege
 fases, oudercontrole bij elke vorm van delen, zo min mogelijk persoonsgegevens, geen advertenties,
 geen agressieve engagement-mechanics — nieuwsgierigheid en eigenaarschap mogen de motor zijn,
-niet verslavende social mechanics.
+niet verslavende social mechanics. Zie ook §12 voor het account-/gezin-model.
 
-## 13. Snel navigeren in de code
+## 14. Snel navigeren in de code
 
 | Wil je... | Kijk in... |
 |---|---|
@@ -382,9 +426,11 @@ niet verslavende social mechanics.
 | De leeservaring (bladeren, keuzes) | `components/book-pager.tsx`, `components/choice-buttons.tsx`, `components/illustration.tsx` |
 | Boek aanmaken | `app/nieuw-verhaal/page.tsx`, `components/hero-form.tsx`, `app/api/stories/route.ts` |
 | Personagebibliotheek | `lib/types.ts` (`SavedCharacter`), `app/api/characters/**`, `components/save-character-button.tsx` |
+| Home / actieve held | `components/home-hero-view.tsx`, `lib/hero-roster.ts`, `lib/active-hero.ts` |
 | Styling/thema/lettertype | `app/globals.css`, `app/layout.tsx` |
 | Eenmalige reparatie-/testscripts | `scripts/*.ts` (draaien via `NODE_OPTIONS="--conditions=react-server" npx tsx scripts/...`) |
-| Leessignaal-meting / productrichting | `lib/storage.ts` (`recordStoryOpened`), `app/api/stories/[id]/opened/route.ts`, §12 hierboven |
+| Leessignaal-meting / productrichting | `lib/storage.ts` (`recordStoryOpened`), `app/api/stories/[id]/opened/route.ts`, §13 hierboven |
+| Accounts / gezin / abonnement (toekomst) | §12 hierboven |
 
 ---
 *Dit document is een momentopname (juli 2026) en geen gegarandeerd actuele spec — bij twijfel
