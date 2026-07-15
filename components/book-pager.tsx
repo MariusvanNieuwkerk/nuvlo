@@ -90,39 +90,62 @@ export function BookPager({
   // ChoiceButtons — omdat BookPager blijft bestaan over refreshes heen en zo elk pending
   // hoofdstuk oppakt, ongeacht hóé het ontstond. Een functie als prop van de server-component
   // doorgeven mag niet (RSC-regel), dus we regelen de fetch volledig client-side.
-  const triggeredRef = useRef<Set<number>>(new Set());
+  const inFlightChapterRef = useRef<number | null>(null);
   const pendingChapterN = useMemo(() => {
     const pendingChapter = chapters.find((c) => c.imagePending && !c.imageUrl);
     return pendingChapter?.n ?? null;
   }, [chapters]);
 
-  useEffect(() => {
-    if (pendingChapterN === null) return;
-    // Guard tegen dubbel triggeren: hetzelfde hoofdstuk maar één keer aanstoten (het endpoint is
-    // óók idempotent, maar zo voorkomen we zelfs de overbodige fetch bij een tussentijdse render).
-    if (triggeredRef.current.has(pendingChapterN)) return;
-    triggeredRef.current.add(pendingChapterN);
-
-    let cancelled = false;
-    (async () => {
+  // Idempotent: het endpoint zelf checkt of het hoofdstuk nog écht pending is (zie
+  // app/api/.../image/route.ts), dus dubbel aanroepen kan geen kwaad — de tweede aanroep doet
+  // dan gewoon niks. Dat maakt herhaald proberen (hieronder) veilig.
+  const fetchPendingImage = useCallback(
+    async (chapterN: number) => {
+      if (inFlightChapterRef.current === chapterN) return;
+      inFlightChapterRef.current = chapterN;
       try {
-        const res = await fetch(`/api/stories/${storyId}/chapters/${pendingChapterN}/image`, {
+        const res = await fetch(`/api/stories/${storyId}/chapters/${chapterN}/image`, {
           method: "POST",
         });
         if (!res.ok) throw new Error("image endpoint faalde");
         // Het beeld staat nu op de server: verversen zodat het plaatje binnenkomt en onthuld wordt.
-        if (!cancelled) router.refresh();
+        router.refresh();
       } catch {
-        // Mislukt (bv. netwerk): guard vrijgeven zodat een volgende render/refresh opnieuw mag
-        // proberen. De placeholder blijft ondertussen gewoon staan (geen crash voor het kind).
-        triggeredRef.current.delete(pendingChapterN);
+        // Mislukt (bv. wankel netwerk): niks bijzonders doen — de intervaltimer en/of de
+        // volgende keer dat het tabblad weer actief wordt, probeert het gewoon opnieuw.
+      } finally {
+        inFlightChapterRef.current = null;
       }
-    })();
+    },
+    [storyId, router],
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [pendingChapterN, storyId, router]);
+  useEffect(() => {
+    if (pendingChapterN === null) return;
+    fetchPendingImage(pendingChapterN);
+
+    // Blijf het elke 8s opnieuw proberen zolang deze pagina open is en het plaatje nog niet
+    // klaar is. Zonder dit bleef een hoofdstuk PERMANENT op "wordt getekend" staan zodra de
+    // allereerste poging niet aankwam (bv. het kind zette de app heel even weg terwijl de
+    // tekening nog liep, of een trage fal.ai-aanroep die net over de tijd liep) — de enige
+    // herstelweg was dan de hele pagina opnieuw openen. Nu herstelt het zichzelf terwijl je
+    // gewoon blijft lezen.
+    const interval = setInterval(() => fetchPendingImage(pendingChapterN), 8000);
+    return () => clearInterval(interval);
+  }, [pendingChapterN, fetchPendingImage]);
+
+  // Extra vangnet: komt het tabblad/de app weer op de voorgrond (bv. na even wegleggen) terwijl
+  // er nog een plaatje in de wacht staat, probeer het dan meteen opnieuw i.p.v. te wachten op de
+  // volgende 8s-tik.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible" && pendingChapterN !== null) {
+        fetchPendingImage(pendingChapterN);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [pendingChapterN, fetchPendingImage]);
 
   // De platte index van de eerste bladzijde van een hoofdstuk — voor de startpositie en de
   // automatische sprong naar een net gegenereerd hoofdstuk.
