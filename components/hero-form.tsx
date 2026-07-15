@@ -231,9 +231,11 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
   const appearanceValid = mode === "existing" ? Boolean(selectedCharacterId) : form.appearance.trim().length > 0;
   const isValid = Boolean(baseValid && appearanceValid);
 
-  // Elk opgeslagen personage mag als bijfiguur terugkomen, behalve degene die net als held
-  // gekozen is (die staat al vast als hoofdpersonage van dit verhaal).
-  const sideCandidates = characters.filter((c) => c.id !== selectedCharacterId);
+  // "Bestaand personage" toont alleen helden/hoofdpersonages — een bijfiguur als nieuwe held
+  // kiezen kon eerder wel, maar bleek verwarrend naast de apart bijfiguren-keuze hieronder.
+  const heroCandidates = characters.filter((c) => c.kind === "hero");
+  // De bijfiguren-keuze toont juist alleen bijfiguren — helemaal los van welke held gekozen is.
+  const sideCandidates = characters.filter((c) => c.kind === "side");
 
   // Gedeelde laad-/foutstatus voor de personagens-bibliotheek — hergebruikt door zowel de
   // held-tegels (alleen zichtbaar bij "bestaand personage") als de bijfiguren-tegels
@@ -360,15 +362,15 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
         {mode === "existing" && (
           <div className="flex flex-col gap-2.5 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-white/10">
             {renderLoadStatus()}
-            {!loadingCharacters && !charactersError && characters.length === 0 && (
+            {!loadingCharacters && !charactersError && heroCandidates.length === 0 && (
               <p className="text-sm text-foreground/60">
-                Nog geen opgeslagen personages. Verzin er hieronder zelf één, of sla een
-                personage op vanuit een van je boeken (knop &quot;Sla op als personage&quot;).
+                Nog geen opgeslagen helden. Verzin er hieronder zelf één, of sla een held op
+                vanuit een van je boeken (knop &quot;Sla op als personage&quot;).
               </p>
             )}
-            {characters.length > 0 && (
+            {heroCandidates.length > 0 && (
               <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-                {characters.map((c) => (
+                {heroCandidates.map((c) => (
                   <CharacterOptionTile
                     key={c.id}
                     character={c}
@@ -400,7 +402,8 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
         {renderLoadStatus()}
         {!loadingCharacters && !charactersError && sideCandidates.length === 0 && (
           <p className="text-sm text-foreground/60">
-            Nog geen andere opgeslagen personages om te kiezen.
+            Nog geen opgeslagen bijfiguren. Sla een leuk nevenpersonage op vanuit een van je
+            boeken (knop &quot;Sla op als personage&quot;) om hem hier later te kunnen kiezen.
           </p>
         )}
         {sideCandidates.length > 0 && (

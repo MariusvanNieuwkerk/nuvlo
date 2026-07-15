@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDefaultChild, listCharacters, saveCharacter } from "@/lib/storage";
 import { getStory } from "@/lib/storage";
+import { generateSideCharacterReferenceImage } from "@/lib/image";
+import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
+import { cleanSideCharacterAppearance } from "@/lib/appearance";
 import type { SavedCharacter } from "@/lib/types";
+
+// POST kan nu een fal.ai-aanroep doen (ankerbeeld voor een nieuw opgeslagen bijfiguur) — net
+// als bij de andere routes die beeldgeneratie doen, is de standaard ~10s van Vercel te kort.
+export const maxDuration = 60;
 
 // GET /api/characters → lijst opgeslagen personages (hoofd- en bijfiguren) voor het
 // ingelogde (default) kind. Wordt gebruikt door de "Mijn personages"-sectie op Home en door
@@ -22,6 +29,9 @@ export async function GET() {
 // `fromStoryId` is de hoofdreden dat dit endpoint niet zomaar een create is: het haalt het
 // gestructureerde uiterlijk EN het portret uit het bronverhaal, zodat we niet opnieuw een
 // fal-call hoeven te doen voor het ankerbeeld — kostentechnisch de echte winst van hergebruik.
+// Heeft een BIJFIGUUR na dat alles nog steeds geen portret (kwam nooit in een geïllustreerde
+// scène voor), dan genereren we er hier alsnog één — anders zou hij voor altijd zonder foto
+// in de bibliotheek blijven staan.
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
@@ -82,6 +92,26 @@ export async function POST(request: Request) {
       { error: "Geef een uiterlijk mee, of een fromStoryId om het uit op te halen." },
       { status: 400 },
     );
+  }
+
+  // Een bijfiguur die zonder ankerbeeld in de bibliotheek terechtkomt (bv. omdat hij in zijn
+  // bronverhaal nooit een geïllustreerde scène kreeg) zou anders VOOR ALTIJD zonder foto
+  // blijven — niets triggert een generatie achteraf. Dit is dus het laatste, gegarandeerde
+  // moment om er alsnog één te maken, quota toestaand.
+  if (kind === "side" && !resolvedPortraitUrl) {
+    const sideAppearance = cleanSideCharacterAppearance(resolvedAppearance);
+    if (await tryClaimImageQuota(child.id)) {
+      const ref = await generateSideCharacterReferenceImage(
+        { name: name.trim(), appearance: sideAppearance, referenceImageUrl: null },
+        resolvedImageStyleHint,
+        null,
+      );
+      if (ref.url) {
+        resolvedPortraitUrl = ref.url;
+      } else {
+        await releaseImageQuota(child.id);
+      }
+    }
   }
 
   const saved: SavedCharacter = await saveCharacter({

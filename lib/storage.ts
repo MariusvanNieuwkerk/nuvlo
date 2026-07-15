@@ -436,6 +436,22 @@ export async function setStoryFavorite(id: string, favorite: boolean): Promise<S
   return rowToStory(data as StoryRow);
 }
 
+// Laat het kind de titel van een boek achteraf aanpassen — bv. omdat Claude's verzonnen
+// titel niet lekker klinkt. Een lege/whitespace-only titel wordt genegeerd (nooit een boek
+// zonder titel op de boekenplank).
+export async function updateStoryTitle(id: string, title: string): Promise<Story | null> {
+  const trimmed = title.trim();
+  if (!trimmed) return null;
+  const { data, error } = await client()
+    .from("stories")
+    .update({ title: trimmed, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error || !data) return null;
+  return rowToStory(data as StoryRow);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Atomaire concurrentie-helpers (vervangen lib/locks.ts).
 //

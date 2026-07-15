@@ -3,6 +3,7 @@ import { PageShell } from "@/components/page-shell";
 import { BookPager } from "@/components/book-pager";
 import { HeroPanel } from "@/components/hero-panel";
 import { SideCharacterSaver } from "@/components/side-character-saver";
+import { EditableStoryTitle } from "@/components/editable-story-title";
 import { getStory } from "@/lib/storage";
 
 // Altijd vers renderen: het verhaal groeit met elke keuze, dus nooit uit de cache tonen.
@@ -22,7 +23,7 @@ export default async function MijnBoekPage({
       <div className="flex flex-col gap-0.5 sm:gap-1">
         <p className="text-sm font-semibold text-foreground/50 sm:text-base">Mijn boek</p>
         <h1 className="font-heading text-2xl font-extrabold text-foreground sm:text-3xl md:text-4xl">
-          {story.title}
+          <EditableStoryTitle storyId={story.id} title={story.title} />
         </h1>
       </div>
 
