@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Compass,
   Fish,
   PawPrint,
+  RefreshCw,
   Rocket,
   Search,
   Sparkles,
   UserPlus,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -91,51 +93,88 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
   // dan vullen we het formulier eenmalig in. Vlaggetje voorkomt dat een latere gebruikers-
   // selectie overschreven wordt door een herhaal-effect.
   const [initialApplied, setInitialApplied] = useState(false);
+  const [deletingCharacterId, setDeletingCharacterId] = useState<string | null>(null);
+  const initialAppliedRef = useRef(initialApplied);
+  initialAppliedRef.current = initialApplied;
 
-  // Alleen de helden laden zodra het kind voor "bestaande held" kiest — niet eerder (scheelt
-  // een ongebruikte call). Herlaadt niet bij elke render: de effect-guard houdt dit op orde.
-  useEffect(() => {
-    if (mode !== "existing") return;
-    if (characters.length > 0 || loadingCharacters) return;
-    let cancelled = false;
+  // Haalt de personagens-bibliotheek op. Met een harde timeout (AbortController): zonder dat
+  // bleef "Personages laden…" bij een trage/vastgelopen verbinding eeuwig staan, zonder
+  // foutmelding of een manier om het opnieuw te proberen — dat voelde voor een kind aan als
+  // "het werkt niet". Na de timeout (of een echte netwerkfout) tonen we nu een duidelijke
+  // melding MET een "Opnieuw proberen"-knop.
+  const loadCharacters = useCallback(async () => {
     setLoadingCharacters(true);
     setCharactersError(null);
-    fetch("/api/characters")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("laden mislukte"))))
-      .then((data: { characters: SavedCharacter[] }) => {
-        if (cancelled) return;
-        // Élk opgeslagen personage (held óf bijfiguur) is kandidaat om een nieuw verhaal mee
-        // te starten — een leuk nevenpersonage uit een vorig boek mag net zo goed de nieuwe
-        // hoofdheld worden. Voorheen werden bijfiguren hier expres weggefilterd, wat de
-        // klacht "ik kan alleen een held kiezen" verklaarde.
-        const options = (data.characters ?? []).slice();
-        setCharacters(options);
-        // Eerste keer met initialCharacterId: meteen voorselecteren + formulier invullen.
-        if (initialCharacterId && !initialApplied) {
-          const found = options.find((c) => c.id === initialCharacterId);
-          if (found) {
-            setSelectedCharacterId(found.id);
-            setForm((prev) => ({
-              ...prev,
-              name: found.name,
-              appearance: found.appearance.freeform,
-              styleId: getImageStyleByHint(found.imageStyleHint).id,
-            }));
-          }
-          setInitialApplied(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch("/api/characters", { signal: controller.signal });
+      if (!res.ok) throw new Error("laden mislukte");
+      const data: { characters: SavedCharacter[] } = await res.json();
+      // Élk opgeslagen personage (held óf bijfiguur) is kandidaat om een nieuw verhaal mee te
+      // starten — een leuk nevenpersonage uit een vorig boek mag net zo goed de nieuwe
+      // hoofdheld worden.
+      const options = (data.characters ?? []).slice();
+      setCharacters(options);
+      // Eerste keer met initialCharacterId: meteen voorselecteren + formulier invullen.
+      if (initialCharacterId && !initialAppliedRef.current) {
+        const found = options.find((c) => c.id === initialCharacterId);
+        if (found) {
+          setSelectedCharacterId(found.id);
+          setForm((prev) => ({
+            ...prev,
+            name: found.name,
+            appearance: found.appearance.freeform,
+            styleId: getImageStyleByHint(found.imageStyleHint).id,
+          }));
         }
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setCharactersError(err instanceof Error ? err.message : "laden mislukte");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingCharacters(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [mode, characters.length, loadingCharacters, initialCharacterId, initialApplied]);
+        setInitialApplied(true);
+      }
+    } catch (err) {
+      const timedOut = err instanceof DOMException && err.name === "AbortError";
+      setCharactersError(
+        timedOut
+          ? "Het laden duurt te lang. Controleer je internet en probeer het opnieuw."
+          : "Laden mislukte. Probeer het opnieuw.",
+      );
+    } finally {
+      clearTimeout(timeout);
+      setLoadingCharacters(false);
+    }
+  }, [initialCharacterId]);
+
+  // Alleen de personages laden zodra het kind voor "bestaand personage" kiest — niet eerder
+  // (scheelt een ongebruikte call), en maar één keer per keer dat "existing" actief wordt.
+  const loadedForModeRef = useRef(false);
+  useEffect(() => {
+    if (mode !== "existing") {
+      loadedForModeRef.current = false;
+      return;
+    }
+    if (loadedForModeRef.current) return;
+    loadedForModeRef.current = true;
+    loadCharacters();
+  }, [mode, loadCharacters]);
+
+  async function handleDeleteCharacter(c: SavedCharacter) {
+    if (!window.confirm(`${c.name} verwijderen uit je personages? Dit kan niet ongedaan gemaakt worden.`)) {
+      return;
+    }
+    setDeletingCharacterId(c.id);
+    try {
+      const res = await fetch(`/api/characters/${c.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("verwijderen mislukte");
+      setCharacters((prev) => prev.filter((x) => x.id !== c.id));
+      if (selectedCharacterId === c.id) {
+        setSelectedCharacterId(null);
+        setForm((prev) => ({ ...prev, name: "", appearance: "" }));
+      }
+    } catch {
+      window.alert("Verwijderen is niet gelukt. Probeer het nog eens.");
+    } finally {
+      setDeletingCharacterId(null);
+    }
+  }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -228,10 +267,10 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
           anders dan de naam van de held in stap 2, die mag gewoon verzonnen zijn. ────────── */}
       <section className="flex flex-col gap-2.5 sm:gap-3">
         <h2 className="font-heading text-lg font-bold text-foreground/80 sm:text-xl">
-          Voor welk kind is het boek?
+          Wat is jouw naam en leeftijd?
         </h2>
         <p className="text-sm text-foreground/60 sm:text-base">
-          Zo weten we wie de auteur is, en hoe moeilijk de zinnen moeten zijn.
+          Zo weten we wie dit boek geschreven heeft, en hoe we de zinnen moeten schrijven.
         </p>
         <div className="flex flex-wrap gap-4">
           <Field label="Naam van het kind">
@@ -281,9 +320,19 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
               <p className="text-sm text-foreground/60">Personages laden…</p>
             )}
             {charactersError && (
-              <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">
-                {charactersError}
-              </p>
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">
+                  {charactersError}
+                </p>
+                <button
+                  type="button"
+                  onClick={loadCharacters}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-sm font-bold text-rose-700 transition-colors hover:bg-rose-200 active:scale-95 dark:bg-rose-400/15 dark:text-rose-200"
+                >
+                  <RefreshCw className="size-3.5" />
+                  Opnieuw proberen
+                </button>
+              </div>
             )}
             {!loadingCharacters && !charactersError && characters.length === 0 && (
               <p className="text-sm text-foreground/60">
@@ -292,44 +341,68 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
               </p>
             )}
             {characters.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5">
+              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
                 {characters.map((c) => {
                   const selected = selectedCharacterId === c.id;
+                  const isHero = c.kind === "hero";
+                  const deleting = deletingCharacterId === c.id;
                   return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => selectCharacter(c)}
-                      className={cn(
-                        "flex flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-[0.97] sm:py-3.5",
-                        selected
-                          ? "border-amber-500 bg-amber-50/90 dark:bg-amber-400/15 shadow-md -translate-y-0.5"
-                          : "border-amber-200/60 hover:border-amber-400/80 hover:shadow-sm bg-white/60 dark:bg-white/5",
-                      )}
-                    >
-                      <span className="relative size-12 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/10 bg-foreground/5">
-                        {c.portraitUrl ? (
-                          <Image
-                            src={c.portraitUrl}
-                            alt={c.name}
-                            fill
-                            className="object-cover"
-                            sizes="48px"
-                          />
-                        ) : (
-                          <span className="flex size-full items-center justify-center">
-                            <Sparkles className="size-5 text-foreground/40" />
-                          </span>
+                    <div key={c.id} className={cn("group relative", deleting && "opacity-40")}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleDeleteCharacter(c);
+                        }}
+                        disabled={deleting}
+                        aria-label={`${c.name} verwijderen`}
+                        title="Verwijderen"
+                        className="absolute -top-1.5 -right-1.5 z-10 flex size-6 items-center justify-center rounded-full bg-white text-foreground/50 shadow-md ring-1 ring-foreground/10 transition-colors hover:bg-rose-100 hover:text-rose-600 active:scale-90 dark:bg-slate-800"
+                      >
+                        <X className="size-3.5" strokeWidth={2.5} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectCharacter(c)}
+                        disabled={deleting}
+                        className={cn(
+                          "flex w-full flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-[0.97] sm:py-3.5",
+                          selected
+                            ? "border-amber-500 bg-amber-50/90 dark:bg-amber-400/15 shadow-md -translate-y-0.5"
+                            : "border-amber-200/60 hover:border-amber-400/80 hover:shadow-sm bg-white/60 dark:bg-white/5",
                         )}
-                      </span>
-                      <span className="text-xs font-bold text-foreground sm:text-sm">{c.name}</span>
-                      {/* Label zodat duidelijk is dat ook bijfiguren hier gekozen kunnen
-                          worden als nieuwe hoofdheld — anders lijkt deze lijst per ongeluk
-                          nog steeds "alleen helden". */}
-                      <span className="text-[10px] font-semibold text-foreground/50 sm:text-xs">
-                        {c.seriesNote ?? (c.kind === "side" ? "Bijfiguur" : "Held")}
-                      </span>
-                    </button>
+                      >
+                        <span className="relative size-16 shrink-0 overflow-hidden rounded-full ring-2 ring-foreground/10 bg-foreground/5 sm:size-20">
+                          {c.portraitUrl ? (
+                            <Image
+                              src={c.portraitUrl}
+                              alt={c.name}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 640px) 64px, 80px"
+                            />
+                          ) : (
+                            <span className="flex size-full items-center justify-center">
+                              {isHero ? (
+                                <Sparkles className="size-6 text-foreground/40 sm:size-7" />
+                              ) : (
+                                <Users className="size-6 text-foreground/40 sm:size-7" />
+                              )}
+                            </span>
+                          )}
+                        </span>
+                        <span className="line-clamp-1 w-full text-xs font-bold text-foreground sm:text-sm">
+                          {c.name}
+                        </span>
+                        {/* Label zodat duidelijk is dat ook bijfiguren hier gekozen kunnen
+                            worden als nieuwe hoofdheld — anders lijkt deze lijst per ongeluk
+                            nog steeds "alleen helden". */}
+                        <span className="text-[10px] font-semibold text-foreground/50 sm:text-xs">
+                          {c.seriesNote ?? (isHero ? "Held" : "Bijfiguur")}
+                        </span>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -405,7 +478,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
         title="Hoe ziet je held eruit?"
         subtitle={mode === "existing"
           ? "Dit uiterlijk komt uit je personages — je kunt het hier nog aanpassen voor dit verhaal."
-          : "Verzin het helemaal zelf — haar, kleuren, kleding, alles mag. Later, als je verder komt in het verhaal, unlock je nog nieuwe items voor je held."}
+          : "Verzin het helemaal zelf — haar, kleuren, kleding, alles mag."}
       >
         <Textarea
           value={form.appearance}

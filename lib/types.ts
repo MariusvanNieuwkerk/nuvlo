@@ -35,7 +35,10 @@ export type Hero = {
 export type CharacterSheet = {
   appearance: CharacterAppearance; // gestructureerd — verborgen, gaat mee in elke image-prompt
   imageStyleHint: string; // Engelse kunststijl-aanwijzing voor de illustratie-AI, bv. "Minecraft voxel art style"
-  items: string[]; // ge-unlockte accessoires/skins
+  // Legacy: accessoires die vroeger via een unlock-mijlpaal verdiend werden (mechanisme
+  // verwijderd). Blijft bestaan zodat oudere, al opgeslagen verhalen dit niet verliezen; er
+  // komen geen nieuwe items meer bij.
+  items: string[];
   portraitUrl: string | null; // held-portret dat het kind nu ziet (uitgestelde beloning)
   pendingPortraitUrl: string | null; // nieuw portret, wacht tot de volgende sessie om te tonen
   // Nice-to-have vlag: het laatste portret voldeed na alle verificatie-pogingen nog niet
@@ -120,10 +123,6 @@ export type Chapter = {
   // hoofdstukken van vóór deze functie) betekent altijd "vers gegenereerd" — dat is de
   // veilige terugval, anders zou de skip-streak-telling oude data verkeerd meerekenen.
   imageReused?: boolean;
-  // De naam van het voorwerp dat het kind in DIT hoofdstuk ge-unlockt heeft (mijlpaal-beat,
-  // zie isItemUnlockMilestone). De lees-UI toont hier één keer een klein feestmoment ("Nieuw!
-  // Je hebt … verdiend"). Ontbrekend/leeg = geen unlock in dit hoofdstuk.
-  unlockedItem?: string;
 };
 
 export type StoryStatus = "bezig" | "klaar";

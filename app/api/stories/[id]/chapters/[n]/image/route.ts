@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDefaultChild, getStory, updateChapterImageAtomic } from "@/lib/storage";
 import { generateSceneImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
+import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
 
 // Het tekenmodel (fal.ai / nano-banana-2) doet vaak 20–60s over één illustratie. Zonder deze
 // regel kapt Vercel de functie al na de lage standaardlimiet (~10s) af: de fal-call is dan nog
@@ -14,11 +15,12 @@ export const maxDuration = 60;
 // endpoint aan direct nadat fase A (de choice-route) de nieuwe tekst heeft opgeslagen, zodat het
 // plaatje op de achtergrond ontstaat terwijl het kind al leest.
 //
-// KOSTEN-AFWEGING (bewust versoberd): per hoofdstuk wordt hier MAXIMAAL ÉÉN fal-call gedaan —
-// alleen de scène-illustratie, met het held-portret als enige (goedkope) consistentie-anker. De
-// vroegere extra's op dit pad zijn VERWIJDERD (zie oude filegeschiedenis). Bij hergebruik
-// (imageReused) of uitgeputte quota/fal-fout: 0 calls, dan verschijnt netjes de
-// "geen tekening"-placeholder.
+// KOSTEN-AFWEGING: per hoofdstuk wordt hier het held-portret altijd als (goedkoop, want
+// hergebruikt) consistentie-anker meegegeven. Komt een nevenpersonage voor het EERST in beeld,
+// dan kost dat éénmalig een extra fal-call voor zijn eigen ankerbeeld (via
+// ensureSceneCharacterReferences) — daarna is dat anker voor de rest van het boek gratis
+// herbruikbaar, precies zoals het held-portret. Bij hergebruik (imageReused) of uitgeputte
+// quota/fal-fout: geen extra calls, dan verschijnt netjes de "geen tekening"-placeholder.
 //
 // CONCURRENTIE: vroeger lib/locks.ts (in-process mutex), nu een atomaire conditionele UPDATE
 // in Postgres (updateChapterImageAtomic / RPC update_chapter_image_atomic) die alleen slaat
@@ -55,33 +57,42 @@ export async function POST(
   const bible = story.bible;
   const character = story.character;
 
-  // De nevenpersonages in deze scène gebruiken we alleen nog voor hun TEKST-beschrijving in
-  // de prompt (gratis). Hun aparte ankerBEELDEN maken we niet meer aan, dus strippen we een
-  // eventueel (uit oudere data) aanwezige referenceImageUrl: op het runtime-pad is het
-  // held-portret het enige referentiebeeld — één anker, één call.
-  const sceneCharacters = bible.sideCharacters
-    .filter((c) =>
-      (chapter.sceneCharacterNames ?? []).some((name) => name.toLowerCase() === c.name.toLowerCase()),
-    )
-    .map((c) => ({ ...c, referenceImageUrl: null }));
+  // De nevenpersonages die Claude aangaf dat écht in DEZE scène te zien zijn.
+  const sceneCharactersInScene = bible.sideCharacters.filter((c) =>
+    (chapter.sceneCharacterNames ?? []).some((name) => name.toLowerCase() === c.name.toLowerCase()),
+  );
 
   // Reused chapter houdt het vorige plaatje; een verse scène begint zonder beeld.
   let sceneImageUrl: string | null = chapter.imageUrl;
+  // Alleen ingevuld als er tijdens deze aanroep echt teken-werk gebeurde — dan slaan we de
+  // (mogelijk met een nieuw nevenpersonage-anker bijgewerkte) bible mee op.
+  let updatedBible: typeof bible | undefined;
 
   // Alleen bij een verse scène is er echt teken-werk: bij hergebruik (imageReused) staat het
   // beeld al klaar en slaan we dit hele blok over (dat scheelt fal.ai- én quota-kosten).
   if (!chapter.imageReused) {
+    // Zorg dat elk nevenpersonage in déze scène een ankerbeeld heeft (maakt er hooguit één
+    // per nog-onbekend personage aan, met quota-bescherming — zie lib/side-character-images.ts).
+    const refs = await ensureSceneCharacterReferences(
+      child.id,
+      bible.sideCharacters,
+      sceneCharactersInScene,
+      character.imageStyleHint,
+    );
+    updatedBible = { ...bible, sideCharacters: refs.registry };
+
     // Harde daglimiet: is de quota op, dan claimt dit niets, doen we GEEN fal-call en blijft
     // sceneImageUrl null → de lees-UI toont de "geen tekening"-placeholder.
     if (await tryClaimImageQuota(child.id)) {
-      // Één scène-illustratie, met alléén het held-portret als referentie-anker. Faalt de
-      // fal-call (bv. 403/geen tegoed) → url null, quota teruggeven.
+      // Scène-illustratie met het held-portret én de zojuist opgehaalde/aangemaakte
+      // nevenpersonage-ankers als referentie. Faalt de fal-call (bv. 403/geen tegoed) →
+      // url null, quota teruggeven.
       const scene = await generateSceneImage(
         chapter.imagePrompt,
         character.appearance,
         character.imageStyleHint,
         bible.worldAppearance,
-        sceneCharacters,
+        refs.sceneCharacters,
         character.portraitUrl,
         null,
       );
@@ -95,7 +106,7 @@ export async function POST(
 
   // Atomaire write-back: alleen schrijven als het hoofdstuk intussen nog imagePending=true
   // heeft (iemand anders was ons net voor → 0 rijen → verse staat teruglezen en tonen).
-  const updated = await updateChapterImageAtomic(id, n, sceneImageUrl);
+  const updated = await updateChapterImageAtomic(id, n, sceneImageUrl, updatedBible);
   if (!updated) {
     return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
   }

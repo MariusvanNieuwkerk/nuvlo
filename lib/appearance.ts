@@ -101,25 +101,6 @@ export function cleanSideCharacterAppearance(raw: unknown, fallbackFreeform = ""
   };
 }
 
-// Voegt één net verdiend voorwerp toe aan het vaste uiterlijk van de held. Het komt in
-// `accessories` (dé lijst die lib/image.ts als verplicht-te-tekenen eis meeneemt én die de
-// verificatie-loop controleert) én wordt aan de leesbare `freeform`-zin geplakt, zodat de
-// volledige beschrijving die overal als basis/vangnet dient het voorwerp ook noemt. Dubbel
-// toevoegen wordt voorkomen (idempotent), zodat herhaald aanroepen nooit een rij duplicaten
-// oplevert.
-export function appendAccessory(appearance: CharacterAppearance, item: string): CharacterAppearance {
-  const trimmed = item.trim();
-  if (!trimmed) return appearance;
-  const already = appearance.accessories.some((a) => a.toLowerCase() === trimmed.toLowerCase());
-  if (already) return appearance;
-  const freeform = appearance.freeform.trim();
-  return {
-    ...appearance,
-    accessories: [...appearance.accessories, trimmed],
-    freeform: freeform ? `${freeform}, ${trimmed}` : trimmed,
-  };
-}
-
 // De harde-eisen-checklist voor beeldverificatie: precies de kenmerken die eerder silent
 // wegvielen (accessoires, het belangrijkste kenmerk, een vast gezelschapsdier). Haar/kleur
 // checken we niet apart — die worden al goed meegenomen door de referentiefoto zelf, en te

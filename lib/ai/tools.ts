@@ -234,11 +234,6 @@ export const NEXT_SCENE_TOOL: Anthropic.Tool = {
         description:
           "Namen (exact zoals in sideCharacters) van nevenpersonages die echt te ZIEN zijn in de illustratie van deze scène. Leeg als alleen de held te zien is.",
       },
-      unlockedItem: {
-        type: "string",
-        description:
-          "ALLEEN invullen op een groot keerpunt wanneer daar in het bericht expliciet om gevraagd wordt: de korte naam van ÉÉN nieuw, zichtbaar en goed tekenbaar voorwerp/accessoire dat de held in deze scène verdient of vindt en daarna kan blijven dragen (bv. 'een gloeiende blauwe amulet', 'een dappere rode sjaal'). Laat leeg/weg in alle andere scènes.",
-      },
     },
     required: [
       "pages",

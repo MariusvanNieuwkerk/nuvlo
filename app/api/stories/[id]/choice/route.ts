@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDefaultChild, updateStoryIfLastChapterOpen } from "@/lib/storage";
-import {
-  nextScene,
-  isItemUnlockMilestone,
-  shouldGenerateFreshImage,
-} from "@/lib/story-director";
-import { appendAccessory } from "@/lib/appearance";
+import { nextScene, shouldGenerateFreshImage } from "@/lib/story-director";
 
 // Fase A genereert de nieuwe hoofdstuktekst met het taalmodel (Anthropic). Dat kan 10–20s duren;
 // zonder deze regel kapt Vercel de functie na de lage standaardlimiet (~10s) af en mislukt de
@@ -86,21 +81,7 @@ export async function POST(
 
       const useFreshImage = shouldGenerateFreshImage(story, sceneResult.isFinale, sceneResult.visuallyDistinctFromPrevious);
 
-      let character = story.character;
-
-      const unlockName = sceneResult.unlockedItem?.trim();
-      if (
-        isItemUnlockMilestone(chapter.n, sceneResult.isFinale) &&
-        unlockName &&
-        !character.items.some((i) => i.toLowerCase() === unlockName.toLowerCase())
-      ) {
-        character = {
-          ...character,
-          items: [...character.items, unlockName],
-          appearance: appendAccessory(character.appearance, unlockName),
-        };
-        chapter.unlockedItem = unlockName;
-      }
+      const character = story.character;
 
       chapter.sceneCharacterNames = sceneResult.sceneCharacters.map((c) => c.name);
 

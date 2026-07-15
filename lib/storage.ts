@@ -10,7 +10,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
-import type { Chapter, Child, SavedCharacter, Story } from "@/lib/types";
+import type { Chapter, Child, SavedCharacter, Story, StoryBible } from "@/lib/types";
 import { SEED_CHILD, SEED_STORIES } from "@/lib/seed";
 import {
   cleanCharacterAppearance,
@@ -518,11 +518,17 @@ export async function updateChapterImageAtomic(
   id: string,
   n: number,
   imageUrl: string | null,
+  // Optioneel: alleen meegeven als er tijdens deze aanroep ook nieuwe nevenpersonage-
+  // ankerbeelden zijn aangemaakt — dan wordt de volledige bible (met de bijgewerkte
+  // registry) in DEZELFDE atomaire write terug opgeslagen, zodat dat anker niet verloren
+  // gaat als een andere instantie tegelijk iets anders aan het verhaal schrijft.
+  bible?: StoryBible,
 ): Promise<Story | null> {
   const { data, error } = await client().rpc("update_chapter_image_atomic", {
     p_story_id: id,
     p_chapter_n: n,
     p_image_url: imageUrl,
+    p_bible: bible ?? null,
   });
   if (error || !data || data.length === 0) {
     // Of de RPC faalde, of 0 rijen (al niet meer pending). Herlees de huidige staat.

@@ -1,25 +1,21 @@
-import { BookOpen, Sparkles, Users } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { StoryCard } from "@/components/story-card";
 import { NewStoryTile } from "@/components/new-story-tile";
-import { CharacterTile } from "@/components/character-tile";
-import { listCharacters, listStories } from "@/lib/storage";
+import { listStories } from "@/lib/storage";
 
 // Altijd vers renderen: de boekenplank leest live uit Supabase. Zonder dit prerendert
 // Next de pagina bij de build, waardoor verwijderde/nieuwe boeken pas na een redeploy
 // zichtbaar worden (verwijderen "werkt" dan schijnbaar niet).
 export const dynamic = "force-dynamic";
 
+// Bewust simpel gehouden: alleen welkom + boekenplank. De personage-bibliotheek (hoofd- en
+// nevenpersonages bekijken, kiezen en verwijderen) staat sinds kort in het "nieuw verhaal"-
+// formulier (zie components/hero-form.tsx) — die is de logische plek waar je toch al met je
+// personages aan het werk bent, in plaats van hier dubbel te tonen.
 export default async function HomePage() {
-  const [stories, characters] = await Promise.all([
-    listStories(),
-    listCharacters(),
-  ]);
-
-  const heroes = characters.filter((c) => c.kind === "hero");
-  const sideCharacters = characters.filter((c) => c.kind === "side");
-  const hasCharacters = heroes.length > 0 || sideCharacters.length > 0;
-  const isEmpty = stories.length === 0 && !hasCharacters;
+  const stories = await listStories();
+  const isEmpty = stories.length === 0;
 
   return (
     <PageShell showHomeLink={false} size="wide">
@@ -34,50 +30,6 @@ export default async function HomePage() {
           Tijd voor een avondavontuur.
         </p>
       </section>
-
-      {/* Personages — hoofd- en nevenpersonages staan nu naast elkaar in 2 KOLOMMEN i.p.v.
-          onder elkaar (scheelt scrollen, en maakt meteen visueel duidelijk dat het twee
-          verschillende groepen zijn). Staat er maar één groep (bv. nog geen bijfiguren),
-          dan pakt die groep de volle breedte — anders zou een lege kolom raar aanvoelen.
-          Elke tegel heeft een eigen wegdruk-kruisje (zie components/character-tile.tsx) om
-          dat personage permanent te verwijderen. */}
-      {hasCharacters && (
-        <div
-          className={
-            heroes.length > 0 && sideCharacters.length > 0
-              ? "grid grid-cols-2 gap-4 sm:gap-8"
-              : "grid grid-cols-1"
-          }
-        >
-          {heroes.length > 0 && (
-            <section className="flex flex-col items-center gap-3">
-              <h2 className="inline-flex items-center gap-2 rounded-full bg-amber-400/15 px-4 py-1.5 font-heading text-base font-semibold text-amber-800 sm:text-lg dark:bg-amber-300/10 dark:text-amber-200">
-                <Sparkles className="size-4 sm:size-5" />
-                Mijn hoofdpersonages
-              </h2>
-              <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-                {heroes.map((c) => (
-                  <CharacterTile key={c.id} character={c} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {sideCharacters.length > 0 && (
-            <section className="flex flex-col items-center gap-3">
-              <h2 className="inline-flex items-center gap-2 rounded-full bg-foreground/8 px-4 py-1.5 font-heading text-base font-semibold text-foreground/60 sm:text-lg">
-                <Users className="size-4 sm:size-5" />
-                Mijn nevenpersonages
-              </h2>
-              <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-                {sideCharacters.map((c) => (
-                  <CharacterTile key={c.id} character={c} />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
 
       {/* Boekenplank — schoon sectie-header + grid dat de breedte netjes vult. De
           "Nieuw verhaal"-tegel is de énige plek om een nieuw boek te beginnen. */}

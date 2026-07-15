@@ -8,7 +8,6 @@ import { BookPage } from "@/components/book-page";
 import { Illustration } from "@/components/illustration";
 import { ChoiceButtons } from "@/components/choice-buttons";
 import { ReadingProgress } from "@/components/reading-progress";
-import { ItemUnlockCard } from "@/components/item-unlock-card";
 import type { Chapter } from "@/lib/types";
 
 function clamp(n: number, min: number, max: number): number {
@@ -241,14 +240,6 @@ export function BookPager({
             pending={current.chapter.imagePending && !current.chapter.imageUrl}
             alt={`Illustratie van hoofdstuk ${current.chapter.n}`}
           />
-        </div>
-      )}
-
-      {/* Verdiende-voorwerp-moment: alleen op de eerste bladzijde van het hoofdstuk waarin het
-          kind iets ge-unlockt heeft. */}
-      {current.isChapterStart && current.chapter.unlockedItem && (
-        <div className="mx-auto w-full max-w-2xl">
-          <ItemUnlockCard item={current.chapter.unlockedItem} />
         </div>
       )}
 

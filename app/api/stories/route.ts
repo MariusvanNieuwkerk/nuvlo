@@ -9,6 +9,7 @@ import {
 import { startStory } from "@/lib/story-director";
 import { generateSceneImage, generatePortrait } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
+import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
 import { getImageStyle } from "@/lib/image-styles";
 import type { Genre, Hero } from "@/lib/types";
 
@@ -149,10 +150,10 @@ export async function POST(request: Request) {
 
   const bible = { ...result.bible };
 
-  // KOSTEN-AFWEGING bij het aanmaken: maximaal TWEE fal-calls i.p.v. de oude 4-6.
-  // 1) het held-portret (het goedkope consistentie-anker), en 2) de openingsscène met dat
-  // portret als enige referentie. Het wereld-referentiebeeld en de nevenpersonage-ankers zijn
-  // hier VERWIJDERD (kostten elk een aparte call), net als de vision-verify-retries.
+  // KOSTEN-AFWEGING bij het aanmaken: 1) het held-portret (het goedkope consistentie-anker),
+  // 2) eventueel één ankerbeeld per nevenpersonage die al in de openingsscène voorkomt (meestal
+  // geen), en 3) de openingsscène zelf met die ankers als referentie. Het wereld-referentiebeeld
+  // blijft weg (kostte een aparte call), net als de vision-verify-retries.
   // De cover wordt niet apart gegenereerd maar HERGEBRUIKT de openingsscène-illustratie — dat
   // scheelt nog een call, en de boekenplank toont die kaart toch in 4:3, precies het formaat
   // van de scène. Lukt de scène niet (geen quota / fal-fout), dan blijft coverUrl null en valt
@@ -170,9 +171,16 @@ export async function POST(request: Request) {
     if (!portrait.url) await releaseImageQuota(child.id);
   }
 
-  // Nevenpersonages die al in de openingsscène voorkomen gaan alleen als TEKST mee (gratis);
-  // hun aparte ankerbeelden maken we niet meer aan — het held-portret is het enige beeld-anker.
-  const sceneCharacters = result.sceneCharacters;
+  // Komt er al een nevenpersonage voor in de openingsscène, dan geven we die meteen een eigen
+  // ankerbeeld (net als het held-portret) — zo heeft ook een nevenpersonage vanaf de eerste
+  // illustratie een gezicht, niet alleen een tekstbeschrijving.
+  const refs = await ensureSceneCharacterReferences(
+    child.id,
+    bible.sideCharacters,
+    result.sceneCharacters,
+    character.imageStyleHint,
+  );
+  bible.sideCharacters = refs.registry;
 
   if (await tryClaimImageQuota(child.id)) {
     const scene = await generateSceneImage(
@@ -180,7 +188,7 @@ export async function POST(request: Request) {
       character.appearance,
       character.imageStyleHint,
       bible.worldAppearance,
-      sceneCharacters,
+      refs.sceneCharacters,
       character.portraitUrl,
       null,
     );

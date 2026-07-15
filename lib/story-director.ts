@@ -76,10 +76,6 @@ export type NextSceneResult = {
   // dan wordt er een nieuw wereld-referentiebeeld gemaakt (kostbaar → bewust zeldzaam).
   // Zie de route: bible.worldAppearance is dan al bijgewerkt naar de nieuwe locatie.
   newLocation: boolean;
-  // Alleen op een unlock-mijlpaal (zie isItemUnlockMilestone) door Claude ingevuld: de naam
-  // van het nieuwe, zichtbare voorwerp/accessoire dat de held in deze scène verdient (kort en
-  // tekenbaar). null als er niets ge-unlockt is. De route bepaalt de definitieve timing.
-  unlockedItem: string | null;
 };
 
 // `characterAppearance`/`worldAppearance`/`sideCharacters[].appearance` komen als ruwe,
@@ -111,7 +107,6 @@ type NextSceneToolOutput = {
   visuallyDistinctFromPrevious: boolean;
   newLocation?: boolean;
   newLocationAppearance?: unknown; // alleen ingevuld door Claude als newLocation true is
-  unlockedItem?: unknown; // alleen op een unlock-mijlpaal ingevuld; verder afwezig/leeg
   sideCharacters: { name?: unknown; appearance?: unknown }[];
   charactersInScene: string[];
 };
@@ -126,10 +121,8 @@ function expectedAkte(chapterN: number): number {
   return Math.min(5, Math.ceil(chapterN / 3));
 }
 
-// De twee grote verhaalbeats (ruwweg einde akte 2 en einde akte 4) waarop zowel het
-// held-portret als een voorwerp-unlock hangen. Eén gedeelde berekening zodat portret-update
-// en unlock op exact hetzelfde hoofdstuk vallen — dan versterken "je hebt X verdiend" en het
-// bijgewerkte portret waarop de held X draagt elkaar (zie de choice-route).
+// De twee grote verhaalbeats (ruwweg einde akte 2 en einde akte 4) waarop het held-portret
+// een update krijgt. Eén gedeelde berekening zodat dat altijd op een logisch verhaalmoment valt.
 export function milestoneChapters(): [number, number] {
   return [Math.round(CHAPTERS_TOTAL / 3), Math.round((CHAPTERS_TOTAL * 2) / 3)];
 }
@@ -138,15 +131,6 @@ export function milestoneChapters(): [number, number] {
 // ruwweg bij het einde van akte 2 en akte 4, plus altijd bij de finale.
 export function isPortraitMilestone(chapterN: number, isFinale: boolean): boolean {
   if (isFinale) return true;
-  const [first, second] = milestoneChapters();
-  return chapterN === first || chapterN === second;
-}
-
-// Op welke hoofdstukken de held één nieuw voorwerp/accessoire verdient. Dit zijn dezelfde twee
-// mid-beats als de portret-mijlpaal (NIET de finale — daar sluiten we het verhaal af, dat is
-// geen moment om nog customisatie te introduceren). Zo blijft de unlock zeldzaam en betekenisvol.
-export function isItemUnlockMilestone(chapterN: number, isFinale: boolean): boolean {
-  if (isFinale) return false;
   const [first, second] = milestoneChapters();
   return chapterN === first || chapterN === second;
 }
@@ -411,13 +395,6 @@ export async function nextScene(input: NextSceneInput): Promise<NextSceneResult>
     pacingNote = `\nWe naderen het einde (rond hoofdstuk ${CHAPTERS_TOTAL}). Introduceer GEEN nieuwe grote problemen meer; werk toe naar de ontknoping en rond open draadjes af.`;
   }
 
-  // Op een unlock-mijlpaal vragen we Claude om de held één nieuw, zichtbaar voorwerp te laten
-  // verdienen/vinden dat bij het verhaal past. Wij bepalen de definitieve timing in de route
-  // (isItemUnlockMilestone); dit is alleen de vraag om een passende náám te leveren.
-  const unlockNote = isItemUnlockMilestone(nextN, false)
-    ? "\nDit is een groot keerpunt in het verhaal: laat de held hier op een natuurlijke, verhalende manier ÉÉN nieuw, zichtbaar voorwerp of accessoire verdienen of vinden (iets kleins en goed tekenbaars, bv. 'een gloeiende blauwe amulet', 'een dappere rode sjaal', 'een zilveren zaklamp aan de riem'). Vul de korte naam ervan in het veld unlockedItem in en laat het voorwerp ook even terugkomen in de tekst. Kies iets dat de held daarna kan blijven dragen."
-    : "";
-
   const userMessage = `Dit wordt hoofdstuk ${nextN}. Richtlijn: dit hoofdstuk hoort ongeveer in akte ${expectedAkte(nextN)} van de verhaalbijbel te zitten, en het verhaal rondt idealiter rond hoofdstuk ${CHAPTERS_TOTAL} netjes af. Leesniveau: ${readingLevelLabel(age)}.
 
 Held: ${hero.name} (kracht: ${hero.power}, zwakte: ${hero.weakness}), tegenstander: ${hero.enemy}, wereld: ${hero.world}.
@@ -442,7 +419,7 @@ Bekende nevenpersonages met hun vaste uiterlijk (nooit een bestaand uiterlijk wi
 Vorige scène: ${(previousChapter?.pages ?? []).join("\n\n")}
 
 Het kind koos (dit kan een van de aangeboden opties zijn, of een eigen, zelf getypt idee): "${choice}"
-${pacingNote}${unlockNote}
+${pacingNote}
 Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde. Verwerk de keuze van het kind zichtbaar op de eerste bladzijde. Werk de samenvatting en de open draadjes bij.`;
 
   const result = await callStoryTool<NextSceneToolOutput>({
@@ -506,6 +483,5 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
     // toch al altijd een verse illustratie), maar we nemen Claude's eigen antwoord over.
     visuallyDistinctFromPrevious: Boolean(result.visuallyDistinctFromPrevious),
     newLocation: locationReallyChanged,
-    unlockedItem: typeof result.unlockedItem === "string" && result.unlockedItem.trim() ? result.unlockedItem.trim() : null,
   };
 }
