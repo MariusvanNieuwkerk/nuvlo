@@ -18,8 +18,8 @@ class HttpError extends Error {
 }
 
 // FASE A van de gesplitste choice-flow. Deze request doet bewust GEEN beeldwerk: ze roept
-// alleen Claude aan voor de nieuwe scène-tekst, regelt de mijlpaal-/unlock-logica en slaat het
-// hoofdstuk met alleen tekst op (imageUrl null, imagePending true). Zo verschijnt de leestekst
+// alleen Claude aan voor de nieuwe scène-tekst en slaat het hoofdstuk met alleen tekst op
+// (imageUrl null, imagePending true). Zo verschijnt de leestekst
 // vrijwel meteen (~10-20s i.p.v. minuten). Het beeldwerk — sinds de kosten-versobering nog maar
 // één scène-illustratie per hoofdstuk — gebeurt daarna op de achtergrond via een apart endpoint
 // (fase B: app/api/stories/[id]/chapters/[n]/image), terwijl het kind al leest.
@@ -81,8 +81,6 @@ export async function POST(
 
       const useFreshImage = shouldGenerateFreshImage(story, sceneResult.isFinale, sceneResult.visuallyDistinctFromPrevious);
 
-      const character = story.character;
-
       chapter.sceneCharacterNames = sceneResult.sceneCharacters.map((c) => c.name);
 
       if (useFreshImage) {
@@ -97,7 +95,6 @@ export async function POST(
 
       return {
         ...story,
-        character,
         summary: sceneResult.summary,
         bible: sceneResult.bible,
         status: sceneResult.isFinale ? "klaar" : "bezig",
