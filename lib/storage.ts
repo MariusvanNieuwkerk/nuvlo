@@ -377,6 +377,17 @@ export async function markPortraitSeen(id: string): Promise<void> {
   await client().rpc("mark_portrait_seen", { p_story_id: id });
 }
 
+// Minimale leessignaal-meting (product-richting: "curiosity-driven reading" — zie
+// BLUEPRINT.md §Toekomstplan). Los van updated_at (dat verandert al bij elke mutatie, dus
+// geen betrouwbaar leesmoment). Bewust HEEL klein gehouden: geen externe analytics-dienst,
+// geen extra persoonsgegevens, gewoon twee kolommen op de bestaande stories-rij. Geen enkel
+// scherm toont dit — puur voor toekomstige productvragen als "komt een kind zelf terug?".
+// Faalt de aanroep (netwerkhikje), dan is dat geen ramp: de aanroeper (book-pager.tsx) vangt
+// dat stil af, dit mag de leeservaring nooit blokkeren of vertragen.
+export async function recordStoryOpened(id: string): Promise<void> {
+  await client().rpc("record_story_opened", { p_story_id: id });
+}
+
 // Drukt één nevenpersonage weg uit de "Sla op als personage"-suggestielijst (zet dismissed=true
 // op het juiste element in bible.sideCharacters). Eén atomair jsonb_set op het element met de
 // gegeven naam; verandert NIETS aan de rest van het verhaal, en het personage blijft in de

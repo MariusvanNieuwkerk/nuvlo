@@ -166,6 +166,15 @@ export function BookPager({
   const touchStartX = useRef<number | null>(null);
   const prevChapterCount = useRef(chapters.length);
 
+  // Minimale leessignaal-meting (zie BLUEPRINT.md §Toekomstplan): één keer per bezoek aan
+  // deze pagina melden dat het kind dit boek nu echt opent om te lezen. Bewust "fire and
+  // forget" — geen await, geen UI-effect, een mislukking wordt stil genegeerd. Dit mag de
+  // leeservaring op geen enkele manier vertragen of onderbreken.
+  useEffect(() => {
+    fetch(`/api/stories/${storyId}/opened`, { method: "POST" }).catch(() => {});
+    // Bewust alleen bij het eerste mount van deze pagina, niet bij elke bladzijde-tik.
+  }, [storyId]);
+
   const current = pages[clamp(index, 0, maxIndex)] ?? pages[0];
   const isFirst = index === 0;
   const isLast = index === maxIndex;
