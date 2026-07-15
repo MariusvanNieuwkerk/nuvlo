@@ -132,7 +132,11 @@ export function StoryCardMenu({ story }: { story: Story }) {
         type="button"
         onClick={openMenu}
         aria-label="Meer opties"
-        className="absolute top-2.5 left-2.5 flex size-9 items-center justify-center rounded-full bg-white/90 text-foreground/70 shadow-md transition-transform active:scale-90 hover:bg-white sm:size-10"
+        // Bewust een VASTE donkere kleur voor het icoon (niet text-foreground/70): de cirkel
+        // erachter is altijd wit, in zowel licht als donker thema (bg-white/90) — maar
+        // text-foreground verandert wél mee met het thema, en werd in donkere modus een
+        // lichte crème-kleur. Lichte stippen op een witte cirkel waren dan bijna onzichtbaar.
+        className="absolute top-2.5 left-2.5 flex size-9 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-md transition-transform active:scale-90 hover:bg-white hover:text-slate-900 sm:size-10"
       >
         <MoreHorizontal className="size-5" />
       </button>
