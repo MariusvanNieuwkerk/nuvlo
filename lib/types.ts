@@ -122,7 +122,18 @@ export type Chapter = {
   // shouldGenerateFreshImage in lib/story-director.ts). Ontbrekend veld (oudere
   // hoofdstukken van vóór deze functie) betekent altijd "vers gegenereerd" — dat is de
   // veilige terugval, anders zou de skip-streak-telling oude data verkeerd meerekenen.
+  // Sinds MAX_CONSECUTIVE_IMAGE_SKIPS = 0 komt dit in de praktijk niet meer voor (elk
+  // hoofdstuk krijgt een verse illustratie), maar het veld blijft bestaan voor oudere data.
   imageReused?: boolean;
+  // Ingevuld door Claude ALLEEN als de held er in DEZE ene scène fysiek anders uitziet dan
+  // normaal — bv. tijdelijk gekrompen, veranderd in een dier, betoverd (een gewoon jasje of
+  // kostuum aandoen is GEEN echte vormverandering en hoort hier niet in). Zonder dit veld
+  // dwong lib/image.ts elke illustratie om het vaste, normale uiterlijk van de held te
+  // tekenen — ook als de scènetekst een transformatie beschreef, waardoor de held soms
+  // TWEE keer in beeld kwam (zijn normale vorm ÉN de nieuwe vorm, als los "personage"
+  // naast elkaar). Staat dit veld gevuld, dan vervangt lib/image.ts de vaste
+  // uiterlijk-instructie voor die illustratie door deze beschrijving (zie generateSceneImage).
+  heroTemporaryAppearance?: string;
 };
 
 export type StoryStatus = "bezig" | "klaar";

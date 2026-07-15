@@ -232,6 +232,7 @@ export async function POST(request: Request) {
       sceneCharactersForImage,
       character.portraitUrl,
       null,
+      chapter.heroTemporaryAppearance,
     );
     chapter.imageUrl = scene.url;
     if (!scene.url) await releaseImageQuota(child.id);

@@ -92,6 +92,18 @@ const SIDE_CHARACTERS_SCHEMA_FOR_UPDATE = {
     "De VOLLEDIGE, bijgewerkte lijst van bekende nevenpersonages. Bestaande personages (zie 'Bekende nevenpersonages' in het bericht): kopieer hun naam en gestructureerde uiterlijk EXACT over, verander nooit een bestaand uiterlijk — anders klopt de nieuwe illustratie niet meer met eerdere platen. Komt er in deze scène een NIEUW nevenpersonage met een duidelijk, tekenbaar uiterlijk bij? Voeg dat toe met een vaste naam en gestructureerd uiterlijk.",
 };
 
+// Optioneel veld, alleen gevuld als de held er in DEZE ene scène ECHT fysiek anders uitziet
+// dan normaal (getransformeerd/gekrompen/veranderd in een dier/betoverd). Zonder dit veld
+// dwong lib/image.ts elke illustratie om het vaste, normale uiterlijk te tekenen, ook als de
+// scènetekst een transformatie beschreef — met als gevolg dat de held soms TWEE keer in
+// beeld kwam (de normale vorm ÉN de nieuwe vorm, als los personage naast elkaar). Zie ook
+// Chapter.heroTemporaryAppearance in lib/types.ts en generateSceneImage in lib/image.ts.
+const HERO_TEMPORARY_APPEARANCE_SCHEMA = {
+  type: "string" as const,
+  description:
+    "Vul dit VEEL vaker leeg dan gevuld — alleen invullen als de held er in DEZE ene scène ECHT fysiek anders uitziet dan normaal: bv. tijdelijk gekrompen tot muisformaat, veranderd in een dier, onzichtbaar, betoverd tot een ander wezen. Een gewoon kostuum, jas, helm of vermomming AANTREKKEN is GEEN echte vormverandering — dan blijft dit veld leeg. Is er wel een echte vormverandering, beschrijf dan kort en beeldend hoe de held er NU uitziet (bv. 'een klein bruin muisje, met nog steeds de rode sjaal om'). BELANGRIJK: dit vervangt het normale uiterlijk voor deze ene illustratie volledig — de held mag dus NOOIT tegelijk in zijn gewone vorm ÉN deze nieuwe vorm te zien zijn, dat zijn geen twee wezens maar hetzelfde personage.",
+};
+
 export const START_STORY_TOOL: Anthropic.Tool = {
   name: "verhaal_starten",
   description:
@@ -147,6 +159,7 @@ export const START_STORY_TOOL: Anthropic.Tool = {
         description:
           "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit pages[0] hierboven (de EERSTE bladzijde — daar wordt de illustratie getoond, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. De illustratie-code voegt het exacte uiterlijk van de held en de wereld er zelf al aan toe (niet zelf herhalen), focus dus op de scène-specifieke inhoud van dat ene moment.",
       },
+      heroTemporaryAppearance: HERO_TEMPORARY_APPEARANCE_SCHEMA,
       worldAppearance: WORLD_APPEARANCE_SCHEMA,
       sideCharacters: SIDE_CHARACTERS_SCHEMA,
       charactersInScene: {
@@ -227,6 +240,7 @@ export const NEXT_SCENE_TOOL: Anthropic.Tool = {
         description:
           "ALLEEN invullen als newLocation true is: de gestructureerde spec (freeform + setting + paletteAndAtmosphere + landmark) van de NIEUWE plek waar de scène zich nu afspeelt. Laat leeg/weg als newLocation false is.",
       },
+      heroTemporaryAppearance: HERO_TEMPORARY_APPEARANCE_SCHEMA,
       sideCharacters: SIDE_CHARACTERS_SCHEMA_FOR_UPDATE,
       charactersInScene: {
         type: "array",

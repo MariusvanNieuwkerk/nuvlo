@@ -295,6 +295,16 @@ export async function generateSceneImage(
   sceneCharacters?: SideCharacter[],
   referencePortraitUrl?: string | null,
   worldReferenceImageUrl?: string | null,
+  // Alleen gevuld als de held er in DEZE scène tijdelijk anders uitziet dan normaal (zie
+  // Chapter.heroTemporaryAppearance in lib/types.ts). ZONDER deze parameter kreeg elke
+  // illustratie onvoorwaardelijk de instructie "teken het vaste, normale uiterlijk" — ook
+  // als de scènetekst een transformatie beschreef. Het model probeerde dan BEIDE
+  // instructies te volgen en tekende de held soms twee keer: één keer normaal, én nog eens
+  // in de nieuwe vorm, als los personage ernaast. Is dit veld gevuld, dan vervangt het de
+  // vaste-uiterlijk-instructie volledig (in plaats van hem aan te vullen) en laten we ook
+  // het held-portret als referentiebeeld weg — dat portret toont namelijk de NORMALE vorm,
+  // en zou het model juist terugtrekken richting die normale vorm.
+  heroTemporaryAppearance?: string | null,
 ): Promise<ImageResult> {
   // De vaste identiteits-/wereldbeschrijving komt vóóraan en altijd in dezelfde woorden —
   // beeldmodellen hechten meer gewicht aan wat vroeg in de prompt staat, en een letterlijk
@@ -306,8 +316,11 @@ export async function generateSceneImage(
     .filter((c) => c.name.trim() && c.appearance.freeform.trim())
     .map((c) => `${c.name} ziet er zo uit: ${c.appearance.freeform}${c.appearance.distinguishingFeature ? ` (kenmerk dat nooit mag ontbreken: ${c.appearance.distinguishingFeature})` : ""}`)
     .join(" ");
+  const heroLine = heroTemporaryAppearance
+    ? `BELANGRIJK, tijdelijke vorm: in DEZE ene illustratie ziet de hoofdpersoon er NIET normaal uit, maar zo: ${heroTemporaryAppearance}. Dit is nog STEEDS hetzelfde personage — er is maar ÉÉN wezen in deze illustratie. Teken NOOIT ook de normale/originele vorm van het personage erbij als los, tweede figuur ernaast; laat die normale vorm hier volledig weg.`
+    : `De hoofdpersoon ziet er zo uit: ${describeCharacterAppearance(appearance)}. Houd dit uiterlijk exact aan, ook als eerdere platen er iets anders uitzagen.`;
   const fixedFacts = [
-    `De hoofdpersoon ziet er zo uit: ${describeCharacterAppearance(appearance)}`,
+    heroLine,
     sideCharacterLines,
     world ? `De wereld/omgeving ziet er zo uit: ${describeWorldAppearance(world)}` : "",
   ]
@@ -319,16 +332,20 @@ export async function generateSceneImage(
   // referenceImageUrl) — dat is de bewuste, goedkope keuze: één anker, één call. De extra
   // parameters blijven bestaan zodat een offline aanroep (scripts/check-image-consistency.ts)
   // desgewenst ook wereld-/nevenpersonage-ankers als referentie kan meegeven.
+  // Bij een tijdelijke vormverandering laten we het held-portret bewust WEG als referentie
+  // (zie de parameterbeschrijving hierboven) — anders trekt dat beeld het model terug naar
+  // de normale vorm, precies het probleem dat we hier oplossen.
+  const effectivePortraitRef = heroTemporaryAppearance ? null : referencePortraitUrl;
   const sideCharacterReferenceUrls = (sceneCharacters ?? [])
     .map((c) => c.referenceImageUrl)
     .filter((u): u is string => Boolean(u));
-  const referenceUrls = [referencePortraitUrl, worldReferenceImageUrl, ...sideCharacterReferenceUrls].filter(
+  const referenceUrls = [effectivePortraitRef, worldReferenceImageUrl, ...sideCharacterReferenceUrls].filter(
     (u): u is string => Boolean(u),
   );
 
   // BEWUST één generatie zonder vision-verificatie: dit zit op het kritieke leespad en elke
   // verify + hergeneratie is een extra dure/trage call. De beste poging wordt gebruikt.
-  const prompt = `${fixedFacts}. Houd dit uiterlijk exact aan, ook als eerdere platen er iets anders uitzagen. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. Scène: ${imagePrompt}.`;
+  const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. Scène: ${imagePrompt}.`;
 
   const url =
     referenceUrls.length > 0

@@ -96,6 +96,7 @@ type StartStoryToolOutput = {
   pages: unknown; // array van leesbladzijden, nog ongevalideerd → opschonen via cleanStringArray
   choices: string[];
   imagePrompt: string;
+  heroTemporaryAppearance?: unknown; // alleen ingevuld als de held er in DEZE scène tijdelijk anders uitziet
   worldAppearance: unknown;
   sideCharacters: { name?: unknown; appearance?: unknown }[];
   charactersInScene: string[];
@@ -111,6 +112,7 @@ type NextSceneToolOutput = {
   visuallyDistinctFromPrevious: boolean;
   newLocation?: boolean;
   newLocationAppearance?: unknown; // alleen ingevuld door Claude als newLocation true is
+  heroTemporaryAppearance?: unknown; // alleen ingevuld als de held er in DEZE scène tijdelijk anders uitziet
   sideCharacters: { name?: unknown; appearance?: unknown }[];
   charactersInScene: string[];
 };
@@ -142,12 +144,14 @@ export function isPortraitMilestone(chapterN: number, isFinale: boolean): boolea
 // Hoeveel hoofdstukken op rij (tellend vanaf het laatste) een hergebruikte illustratie
 // hadden. Een ontbrekend imageReused-veld (oudere hoofdstukken) telt als "vers gegenereerd"
 // — zie Chapter.imageReused — dus die stoppen de telling altijd, ook bij oude data.
-// Verlaagd van 2 naar 1: op de goedkopere "lite"-beeldmodellen (zie lib/image.ts) is een
-// extra plaatje nog maar een paar cent, en "de afbeeldingen komen niet overeen met het
-// verhaal" bleek deels hierdoor te komen — Claude's eigen visuallyDistinctFromPrevious-
-// inschatting is niet perfect, dus hoe minder hoofdstukken we op die inschatting laten
-// hergebruiken, hoe kleiner het risico op een duidelijk verkeerd/oud plaatje.
-const MAX_CONSECUTIVE_IMAGE_SKIPS = 1;
+// Op 0 gezet (was 1, was ooit 2): elk kind zag soms 2 hoofdstukken op rij met precies
+// dezelfde illustratie, en dat viel te veel op — voor een goed kinderboek moet elk hoofdstuk
+// zijn EIGEN plaatje hebben. Claude's eigen visuallyDistinctFromPrevious-inschatting bepaalt
+// dus niet meer of er hergebruikt wordt (shouldGenerateFreshImage hieronder geeft nu altijd
+// true terug); dat veld blijft in de tool-output bestaan maar heeft geen effect meer. Op de
+// goedkope "lite"-beeldmodellen (zie lib/image.ts) is de meerkost van altijd een vers plaatje
+// minimaal, en dat wegen we hier bewust zwaarder dan die laatste besparing.
+const MAX_CONSECUTIVE_IMAGE_SKIPS = 0;
 
 function consecutiveImageSkipStreak(chapters: Chapter[]): number {
   let streak = 0;
@@ -200,6 +204,15 @@ function imagePromptOrFallback(imagePrompt: unknown, pages: unknown): string {
   const firstPage = Array.isArray(pages) && typeof pages[0] === "string" ? pages[0].trim() : "";
   const snippet = firstPage.slice(0, 240).replace(/\s+/g, " ");
   return `Een vrolijke, spannende kinderboek-illustratie van deze scène: ${snippet || "de held beleeft een nieuw avontuur."}`;
+}
+
+// Claude vult heroTemporaryAppearance alleen in als de held er in DEZE scène écht fysiek
+// anders uitziet dan normaal (getransformeerd, gekrompen, vermomd als dier, ...) — zie de
+// tool-omschrijving in lib/ai/tools.ts. Een lege/ontbrekende waarde betekent: gewone,
+// vaste vorm, dus dan geven we undefined terug (niet een lege string) zodat lib/image.ts
+// dat verschil eenvoudig met een simpele "if" kan onderscheiden.
+function cleanOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function cleanStringArray(value: unknown): string[] {
@@ -349,6 +362,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
     chosen: null,
     imagePrompt: imagePromptOrFallback(result.imagePrompt, result.pages),
     imageUrl: null,
+    heroTemporaryAppearance: cleanOptionalString(result.heroTemporaryAppearance),
   };
 
   const aktes = cleanStringArray(result.aktes);
@@ -464,6 +478,7 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
     chosen: null,
     imagePrompt: imagePromptOrFallback(result.imagePrompt, result.pages),
     imageUrl: null,
+    heroTemporaryAppearance: cleanOptionalString(result.heroTemporaryAppearance),
   };
 
   // Claude hoort bestaande personages exact terug te geven. Voor de zekerheid dwingen we dat

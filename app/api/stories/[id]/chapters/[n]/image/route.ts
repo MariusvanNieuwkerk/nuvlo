@@ -95,6 +95,7 @@ export async function POST(
         refs.sceneCharacters,
         character.portraitUrl,
         null,
+        chapter.heroTemporaryAppearance,
       );
       if (scene.url) {
         sceneImageUrl = scene.url;
