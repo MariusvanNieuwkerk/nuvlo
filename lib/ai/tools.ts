@@ -145,7 +145,7 @@ export const START_STORY_TOOL: Anthropic.Tool = {
       imagePrompt: {
         type: "string",
         description:
-          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van deze scène: WAT gebeurt er, WAAR precies, welke actie/houding — de illustratie-code voegt het exacte uiterlijk van de held en de wereld er zelf al aan toe (niet zelf herhalen), focus dus op de scène-specifieke inhoud.",
+          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit pages[0] hierboven (de EERSTE bladzijde — daar wordt de illustratie getoond, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. De illustratie-code voegt het exacte uiterlijk van de held en de wereld er zelf al aan toe (niet zelf herhalen), focus dus op de scène-specifieke inhoud van dat ene moment.",
       },
       worldAppearance: WORLD_APPEARANCE_SCHEMA,
       sideCharacters: SIDE_CHARACTERS_SCHEMA,
@@ -206,7 +206,7 @@ export const NEXT_SCENE_TOOL: Anthropic.Tool = {
       imagePrompt: {
         type: "string",
         description:
-          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van deze scène: WAT gebeurt er, WAAR precies, welke actie/houding/nieuwe omgevingsdetails — het exacte uiterlijk van de held en de wereld voegt de illustratie-code er zelf al aan toe (niet zelf herhalen), focus dus op wat er in DEZE scène specifiek gebeurt.",
+          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit pages[0] hierboven (de EERSTE bladzijde — daar wordt de illustratie getoond, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding/nieuwe omgevingsdetails. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. Het exacte uiterlijk van de held en de wereld voegt de illustratie-code er zelf al aan toe (niet zelf herhalen), focus dus op wat er op dat ene moment specifiek gebeurt.",
       },
       isFinale: {
         type: "boolean",
