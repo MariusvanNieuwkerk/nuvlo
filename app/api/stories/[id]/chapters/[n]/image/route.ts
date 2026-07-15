@@ -77,6 +77,11 @@ export async function POST(
   // nooit verscheen en zonder herstelmogelijkheid was. We loggen de fout, laten sceneImageUrl
   // dan gewoon null, en gaan altijd door naar de write-back hieronder.
   if (!chapter.imageReused) {
+    // Bijhouden of de quota-claim voor DEZE scène-illustratie al gelukt is, zodat de catch
+    // hieronder — bij een onverwachte fout na het claimen — die plek altijd teruggeeft. Zonder
+    // dit lekte een geclaimde plek stilletjes weg bij elke onverwachte fout ná het claimen,
+    // wat de dag-quota vult zonder dat er ooit een tekening voor terugkwam.
+    let quotaClaimedForScene = false;
     try {
       // Zorg dat elk nevenpersonage in déze scène een ankerbeeld heeft (maakt er hooguit één
       // per nog-onbekend personage aan, met quota-bescherming — zie lib/side-character-images.ts).
@@ -90,7 +95,8 @@ export async function POST(
 
       // Harde daglimiet: is de quota op, dan claimt dit niets, doen we GEEN fal-call en blijft
       // sceneImageUrl null → de lees-UI toont de "geen tekening"-placeholder.
-      if (await tryClaimImageQuota(child.id)) {
+      quotaClaimedForScene = await tryClaimImageQuota(child.id);
+      if (quotaClaimedForScene) {
         // Scène-illustratie met het held-portret én de zojuist opgehaalde/aangemaakte
         // nevenpersonage-ankers als referentie. Faalt de fal-call (bv. 403/geen tegoed) →
         // url null, quota teruggeven.
@@ -108,11 +114,15 @@ export async function POST(
           sceneImageUrl = scene.url;
         } else {
           await releaseImageQuota(child.id);
+          quotaClaimedForScene = false;
         }
       }
     } catch (err) {
       console.error("Onverwachte fout tijdens illustratie-generatie:", err);
       sceneImageUrl = null;
+      if (quotaClaimedForScene) {
+        await releaseImageQuota(child.id).catch(() => {});
+      }
     }
   }
 
