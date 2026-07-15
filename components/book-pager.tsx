@@ -263,30 +263,39 @@ export function BookPager({
         </p>
       )}
 
+      {/* Blader-balk: bewust STICKY onderin het scherm (i.p.v. los onder de tekst) — bij een
+          lang stukje tekst moest je eerst helemaal naar onderen scrollen om "Volgende" te
+          kunnen raken. Nu blijft hij altijd binnen handbereik terwijl je leest, en blijft hij
+          gewoon meescrollen zodra de keuzeknoppen/afrondingstekst in beeld komen (dat is het
+          ECHTE einde van de bladzijde, daar hoort niet nog een balk overheen te zweven).
+          "Volgende" is de duidelijke, opvallende hoofdknop; "Vorige" blijft subtieler. */}
       {pages.length > 1 && (
-        <div className="flex items-center justify-between gap-3">
+        <div
+          className="sticky z-20 -mx-1 flex items-center justify-between gap-2 rounded-2xl border border-foreground/10 bg-background/85 p-2 shadow-lg shadow-black/5 backdrop-blur-md sm:gap-3 sm:p-2.5"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+        >
           <button
             type="button"
             onClick={() => go(-1)}
             disabled={isFirst}
             aria-label="Vorige pagina"
-            className="flex items-center gap-1 rounded-full bg-foreground/10 px-3.5 py-2.5 text-sm font-bold text-foreground/80 transition-all hover:bg-foreground/20 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-1.5 sm:px-5 sm:py-3 sm:text-base"
+            className="flex items-center gap-1 rounded-xl bg-foreground/10 px-4 py-3 text-sm font-bold text-foreground/80 transition-all hover:bg-foreground/20 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-1.5 sm:px-5 sm:py-3.5 sm:text-base"
           >
-            <ChevronLeft className="size-4 sm:size-5" />
-            Vorige
+            <ChevronLeft className="size-5 sm:size-6" />
+            <span className="hidden sm:inline">Vorige</span>
           </button>
-          <p className="text-sm font-semibold text-foreground/50 sm:text-base">
-            Pagina {index + 1} van {pages.length}
+          <p className="text-xs font-semibold text-foreground/50 sm:text-sm">
+            Pagina {index + 1} / {pages.length}
           </p>
           <button
             type="button"
             onClick={() => go(1)}
             disabled={isLast}
             aria-label="Volgende pagina"
-            className="flex items-center gap-1 rounded-full bg-foreground/10 px-3.5 py-2.5 text-sm font-bold text-foreground/80 transition-all hover:bg-foreground/20 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-1.5 sm:px-5 sm:py-3 sm:text-base"
+            className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-amber-950 transition-all hover:bg-amber-300 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-2 sm:px-6 sm:py-3.5 sm:text-base"
           >
             Volgende
-            <ChevronRight className="size-4 sm:size-5" />
+            <ChevronRight className="size-5 sm:size-6" />
           </button>
         </div>
       )}
