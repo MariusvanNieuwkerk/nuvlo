@@ -97,6 +97,11 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
   const initialAppliedRef = useRef(initialApplied);
   initialAppliedRef.current = initialApplied;
 
+  // Bijfiguren die mogen terugkeren in dit NIEUWE verhaal — los van de held-keuze hierboven.
+  // Je kunt dus tegelijk een held kiezen (bestaand of nieuw) ÉN één of meer bestaande
+  // bijfiguren aanvinken; die twee keuzes staan niet meer in dezelfde lijst.
+  const [selectedSideCharacterIds, setSelectedSideCharacterIds] = useState<string[]>([]);
+
   // Haalt de personagens-bibliotheek op. Met een harde timeout (AbortController): zonder dat
   // bleef "Personages laden…" bij een trage/vastgelopen verbinding eeuwig staan, zonder
   // foutmelding of een manier om het opnieuw te proberen — dat voelde voor een kind aan als
@@ -143,18 +148,21 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
     }
   }, [initialCharacterId]);
 
-  // Alleen de personages laden zodra het kind voor "bestaand personage" kiest — niet eerder
-  // (scheelt een ongebruikte call), en maar één keer per keer dat "existing" actief wordt.
-  const loadedForModeRef = useRef(false);
+  // De personagens-bibliotheek is nu voor TWEE dingen nodig — de held-keuze (alleen zichtbaar
+  // bij mode "existing") én de bijfiguren-keuze (altijd zichtbaar, ook bij een nieuwe held) —
+  // dus laden we hem altijd meteen bij het openen van dit formulier, één keer.
+  const loadedRef = useRef(false);
   useEffect(() => {
-    if (mode !== "existing") {
-      loadedForModeRef.current = false;
-      return;
-    }
-    if (loadedForModeRef.current) return;
-    loadedForModeRef.current = true;
+    if (loadedRef.current) return;
+    loadedRef.current = true;
     loadCharacters();
-  }, [mode, loadCharacters]);
+  }, [loadCharacters]);
+
+  function toggleSideCharacter(id: string) {
+    setSelectedSideCharacterIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
 
   async function handleDeleteCharacter(c: SavedCharacter) {
     if (!window.confirm(`${c.name} verwijderen uit je personages? Dit kan niet ongedaan gemaakt worden.`)) {
@@ -165,6 +173,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
       const res = await fetch(`/api/characters/${c.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("verwijderen mislukte");
       setCharacters((prev) => prev.filter((x) => x.id !== c.id));
+      setSelectedSideCharacterIds((prev) => prev.filter((x) => x !== c.id));
       if (selectedCharacterId === c.id) {
         setSelectedCharacterId(null);
         setForm((prev) => ({ ...prev, name: "", appearance: "" }));
@@ -191,6 +200,9 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
       // veranderen.getImageStyleByHint heeft een veilige terugval naar "default".
       styleId: getImageStyleByHint(c.imageStyleHint).id,
     }));
+    // Als dit personage net nog als bijfiguur aangevinkt stond, mag het niet ALSNOG dubbel
+    // als bijfiguur meegegeven worden nu het de held is.
+    setSelectedSideCharacterIds((prev) => prev.filter((x) => x !== c.id));
   }
 
   function switchMode(next: StartMode) {
@@ -219,6 +231,35 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
   const appearanceValid = mode === "existing" ? Boolean(selectedCharacterId) : form.appearance.trim().length > 0;
   const isValid = Boolean(baseValid && appearanceValid);
 
+  // Elk opgeslagen personage mag als bijfiguur terugkomen, behalve degene die net als held
+  // gekozen is (die staat al vast als hoofdpersonage van dit verhaal).
+  const sideCandidates = characters.filter((c) => c.id !== selectedCharacterId);
+
+  // Gedeelde laad-/foutstatus voor de personagens-bibliotheek — hergebruikt door zowel de
+  // held-tegels (alleen zichtbaar bij "bestaand personage") als de bijfiguren-tegels
+  // (altijd zichtbaar), zodat een mislukte/langzame lading maar op één plek uitgelegd wordt.
+  function renderLoadStatus() {
+    if (loadingCharacters) {
+      return <p className="text-sm text-foreground/60">Personages laden…</p>;
+    }
+    if (charactersError) {
+      return (
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{charactersError}</p>
+          <button
+            type="button"
+            onClick={loadCharacters}
+            className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-sm font-bold text-rose-700 transition-colors hover:bg-rose-200 active:scale-95 dark:bg-rose-400/15 dark:text-rose-200"
+          >
+            <RefreshCw className="size-3.5" />
+            Opnieuw proberen
+          </button>
+        </div>
+      );
+    }
+    return null;
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid) {
@@ -245,6 +286,8 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
           appearance: form.appearance.trim(),
           styleId: form.styleId,
           existingCharacterId: selectedCharacterId ?? undefined,
+          existingSideCharacterIds:
+            selectedSideCharacterIds.length > 0 ? selectedSideCharacterIds : undefined,
         }),
       });
       if (!res.ok) {
@@ -316,24 +359,7 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
 
         {mode === "existing" && (
           <div className="flex flex-col gap-2.5 rounded-2xl border-2 border-amber-300/60 bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-white/10">
-            {loadingCharacters && (
-              <p className="text-sm text-foreground/60">Personages laden…</p>
-            )}
-            {charactersError && (
-              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">
-                  {charactersError}
-                </p>
-                <button
-                  type="button"
-                  onClick={loadCharacters}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-sm font-bold text-rose-700 transition-colors hover:bg-rose-200 active:scale-95 dark:bg-rose-400/15 dark:text-rose-200"
-                >
-                  <RefreshCw className="size-3.5" />
-                  Opnieuw proberen
-                </button>
-              </div>
-            )}
+            {renderLoadStatus()}
             {!loadingCharacters && !charactersError && characters.length === 0 && (
               <p className="text-sm text-foreground/60">
                 Nog geen opgeslagen personages. Verzin er hieronder zelf één, of sla een
@@ -342,74 +368,56 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
             )}
             {characters.length > 0 && (
               <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-                {characters.map((c) => {
-                  const selected = selectedCharacterId === c.id;
-                  const isHero = c.kind === "hero";
-                  const deleting = deletingCharacterId === c.id;
-                  return (
-                    <div key={c.id} className={cn("group relative", deleting && "opacity-40")}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          void handleDeleteCharacter(c);
-                        }}
-                        disabled={deleting}
-                        aria-label={`${c.name} verwijderen`}
-                        title="Verwijderen"
-                        className="absolute -top-1.5 -right-1.5 z-10 flex size-6 items-center justify-center rounded-full bg-white text-foreground/50 shadow-md ring-1 ring-foreground/10 transition-colors hover:bg-rose-100 hover:text-rose-600 active:scale-90 dark:bg-slate-800"
-                      >
-                        <X className="size-3.5" strokeWidth={2.5} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectCharacter(c)}
-                        disabled={deleting}
-                        className={cn(
-                          "flex w-full flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-[0.97] sm:py-3.5",
-                          selected
-                            ? "border-amber-500 bg-amber-50/90 dark:bg-amber-400/15 shadow-md -translate-y-0.5"
-                            : "border-amber-200/60 hover:border-amber-400/80 hover:shadow-sm bg-white/60 dark:bg-white/5",
-                        )}
-                      >
-                        <span className="relative size-16 shrink-0 overflow-hidden rounded-full ring-2 ring-foreground/10 bg-foreground/5 sm:size-20">
-                          {c.portraitUrl ? (
-                            <Image
-                              src={c.portraitUrl}
-                              alt={c.name}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 640px) 64px, 80px"
-                            />
-                          ) : (
-                            <span className="flex size-full items-center justify-center">
-                              {isHero ? (
-                                <Sparkles className="size-6 text-foreground/40 sm:size-7" />
-                              ) : (
-                                <Users className="size-6 text-foreground/40 sm:size-7" />
-                              )}
-                            </span>
-                          )}
-                        </span>
-                        <span className="line-clamp-1 w-full text-xs font-bold text-foreground sm:text-sm">
-                          {c.name}
-                        </span>
-                        {/* Label zodat duidelijk is dat ook bijfiguren hier gekozen kunnen
-                            worden als nieuwe hoofdheld — anders lijkt deze lijst per ongeluk
-                            nog steeds "alleen helden". */}
-                        <span className="text-[10px] font-semibold text-foreground/50 sm:text-xs">
-                          {c.seriesNote ?? (isHero ? "Held" : "Bijfiguur")}
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })}
+                {characters.map((c) => (
+                  <CharacterOptionTile
+                    key={c.id}
+                    character={c}
+                    selected={selectedCharacterId === c.id}
+                    onToggle={() => selectCharacter(c)}
+                    onDelete={() => void handleDeleteCharacter(c)}
+                    deleting={deletingCharacterId === c.id}
+                  />
+                ))}
               </div>
             )}
           </div>
         )}
       </StepSection>
+
+      {/* ────────── Bijfiguren die mogen terugkeren — los van de held-keuze hierboven, en
+          daarom altijd zichtbaar (ook bij een gloednieuwe held). Meerdere tegels mogen
+          tegelijk aangetikt staan. Elke aangevinkte bijfiguur krijgt bij het aanmaken
+          gegarandeerd een eigen plaatje (zie app/api/stories/route.ts). ────────── */}
+      <section className="flex flex-col gap-2.5 sm:gap-3">
+        <h2 className="font-heading text-lg font-bold text-foreground sm:text-xl">
+          Bijfiguren die terugkomen{" "}
+          <span className="font-body text-sm font-normal text-foreground/50">(optioneel)</span>
+        </h2>
+        <p className="text-sm text-foreground/60 sm:text-base">
+          Tik personages aan die ook in dit verhaal mogen meespelen. Ze krijgen gegarandeerd een
+          eigen plaatje.
+        </p>
+        {renderLoadStatus()}
+        {!loadingCharacters && !charactersError && sideCandidates.length === 0 && (
+          <p className="text-sm text-foreground/60">
+            Nog geen andere opgeslagen personages om te kiezen.
+          </p>
+        )}
+        {sideCandidates.length > 0 && (
+          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
+            {sideCandidates.map((c) => (
+              <CharacterOptionTile
+                key={c.id}
+                character={c}
+                selected={selectedSideCharacterIds.includes(c.id)}
+                onToggle={() => toggleSideCharacter(c.id)}
+                onDelete={() => void handleDeleteCharacter(c)}
+                deleting={deletingCharacterId === c.id}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* ────────── Stap 2 · Wie is je held? (naam, wereld, kracht, zwakte, tegenstander) ────────── */}
       <StepSection
@@ -571,6 +579,84 @@ export function HeroForm({ initialCharacterId }: { initialCharacterId?: string }
         {submitting ? "Het verhaal begint…" : "Begin het avontuur ✨"}
       </Button>
     </form>
+  );
+}
+
+// Eén tegel in een personage-kiesgrid — gebruikt voor zowel de held-keuze (in dat geval
+// werkt onToggle als "kies dit als held") als de bijfiguren-keuze (onToggle vinkt aan/uit).
+// line-clamp-2 + een gereserveerde minimumhoogte voorkomen dat lange namen (zoals "Het
+// Kauwgomballen Monster") afgekapt worden of de rest van het rooster scheeftrekken.
+function CharacterOptionTile({
+  character,
+  selected,
+  onToggle,
+  onDelete,
+  deleting,
+}: {
+  character: SavedCharacter;
+  selected: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+  deleting: boolean;
+}) {
+  const isHero = character.kind === "hero";
+  return (
+    <div className={cn("group relative", deleting && "opacity-40")}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDelete();
+        }}
+        disabled={deleting}
+        aria-label={`${character.name} verwijderen`}
+        title="Verwijderen"
+        className="absolute -top-1.5 -right-1.5 z-10 flex size-6 items-center justify-center rounded-full bg-white text-foreground/50 shadow-md ring-1 ring-foreground/10 transition-colors hover:bg-rose-100 hover:text-rose-600 active:scale-90 dark:bg-slate-800"
+      >
+        <X className="size-3.5" strokeWidth={2.5} />
+      </button>
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={deleting}
+        title={character.name}
+        className={cn(
+          "flex w-full flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-[0.97] sm:py-3.5",
+          selected
+            ? "border-amber-500 bg-amber-50/90 dark:bg-amber-400/15 shadow-md -translate-y-0.5"
+            : "border-amber-200/60 hover:border-amber-400/80 hover:shadow-sm bg-white/60 dark:bg-white/5",
+        )}
+      >
+        <span className="relative size-16 shrink-0 overflow-hidden rounded-full ring-2 ring-foreground/10 bg-foreground/5 sm:size-20">
+          {character.portraitUrl ? (
+            <Image
+              src={character.portraitUrl}
+              alt={character.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 64px, 80px"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center">
+              {isHero ? (
+                <Sparkles className="size-6 text-foreground/40 sm:size-7" />
+              ) : (
+                <Users className="size-6 text-foreground/40 sm:size-7" />
+              )}
+            </span>
+          )}
+        </span>
+        <span className="line-clamp-2 min-h-[2.1em] w-full text-xs font-bold leading-tight text-foreground sm:text-sm">
+          {character.name}
+        </span>
+        {/* Label zodat duidelijk is dat ook bijfiguren hier gekozen kunnen worden als nieuwe
+            hoofdheld — anders lijkt deze lijst per ongeluk nog steeds "alleen helden". */}
+        <span className="text-[10px] font-semibold text-foreground/50 sm:text-xs">
+          {character.seriesNote ?? (isHero ? "Held" : "Bijfiguur")}
+        </span>
+      </button>
+    </div>
   );
 }
 

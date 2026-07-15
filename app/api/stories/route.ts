@@ -11,7 +11,7 @@ import { generateSceneImage, generatePortrait } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
 import { getImageStyle } from "@/lib/image-styles";
-import type { Genre, Hero } from "@/lib/types";
+import type { Genre, Hero, SideCharacter } from "@/lib/types";
 
 // Een nieuw verhaal aanmaken doet het meeste AI-werk in één request: tekst-generatie én
 // meerdere fal.ai-beeldcalls (held-portret, omslag én de eerste scène-illustratie). Dat duurt
@@ -35,14 +35,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
 
-  const { hero, age, authorName, appearance, styleId, existingCharacterId } = body as {
-    hero?: Partial<Hero>;
-    age?: number;
-    authorName?: string;
-    appearance?: string;
-    styleId?: string;
-    existingCharacterId?: string;
-  };
+  const { hero, age, authorName, appearance, styleId, existingCharacterId, existingSideCharacterIds } =
+    body as {
+      hero?: Partial<Hero>;
+      age?: number;
+      authorName?: string;
+      appearance?: string;
+      styleId?: string;
+      existingCharacterId?: string;
+      existingSideCharacterIds?: string[];
+    };
 
   if (
     !hero ||
@@ -101,6 +103,28 @@ export async function POST(request: Request) {
     }
   }
 
+  // Nevenpersonages die het kind expliciet koos om in dit boek te laten terugkeren (los van de
+  // held-keuze hierboven — je mag dus tegelijk een held ÉN één of meer bijfiguren kiezen). Een
+  // ID dat niet meer bestaat (bv. net verwijderd) slaan we stil over — dat mag de rest van het
+  // aanmaken niet blokkeren. Dezelfde held mag niet ook als bijfiguur meegegeven worden.
+  const sideCharacterIds = Array.from(
+    new Set((existingSideCharacterIds ?? []).filter((id) => id && id !== existingCharacterId)),
+  );
+  const existingSideSavedCharacters = (
+    await Promise.all(sideCharacterIds.map((id) => getCharacter(id)))
+  ).filter((c): c is NonNullable<typeof c> => Boolean(c));
+  // Vertaal naar het (eenvoudigere) SideCharacter-uiterlijk-formaat van de verhaalbijbel. Hun
+  // bestaande portret (indien er al één is) doet meteen dienst als vast ankerbeeld — dat is
+  // precies waarom hergebruik van een bijfiguur nooit een gegarandeerde eigen fal-call kost.
+  const existingSideCharacters: SideCharacter[] = existingSideSavedCharacters.map((c) => ({
+    name: c.name,
+    appearance: {
+      freeform: c.appearance.freeform,
+      distinguishingFeature: c.appearance.distinguishingFeature,
+    },
+    referenceImageUrl: c.portraitUrl ?? null,
+  }));
+
   // appearance-tekst is alleen verplicht wanneer we geen bestaande held hergebruiken — in
   // dat geval levert de bibliotheek de appearance. Voor de prompt maken we een lege string
   // als fallback; existingCharacter.appearance.freeform wordt door startStory afzonderlijk
@@ -120,6 +144,7 @@ export async function POST(request: Request) {
             name: existingCharacter.name,
           }
         : undefined,
+      existingSideCharacters: existingSideCharacters.length > 0 ? existingSideCharacters : undefined,
     });
   } catch (err) {
     console.error(err);
@@ -151,9 +176,11 @@ export async function POST(request: Request) {
   const bible = { ...result.bible };
 
   // KOSTEN-AFWEGING bij het aanmaken: 1) het held-portret (het goedkope consistentie-anker),
-  // 2) eventueel één ankerbeeld per nevenpersonage die al in de openingsscène voorkomt (meestal
-  // geen), en 3) de openingsscène zelf met die ankers als referentie. Het wereld-referentiebeeld
-  // blijft weg (kostte een aparte call), net als de vision-verify-retries.
+  // 2) eventueel één ankerbeeld per nevenpersonage dat al in de openingsscène voorkomt óf
+  // expliciet gekozen is als bijfiguur voor dit boek (bij hergebruik van een bestaande bijfiguur
+  // met al een portret: 0 extra calls), en 3) de openingsscène zelf met die ankers als
+  // referentie. Het wereld-referentiebeeld blijft weg (kostte een aparte call), net als de
+  // vision-verify-retries.
   // De cover wordt niet apart gegenereerd maar HERGEBRUIKT de openingsscène-illustratie — dat
   // scheelt nog een call, en de boekenplank toont die kaart toch in 4:3, precies het formaat
   // van de scène. Lukt de scène niet (geen quota / fal-fout), dan blijft coverUrl null en valt
@@ -171,16 +198,30 @@ export async function POST(request: Request) {
     if (!portrait.url) await releaseImageQuota(child.id);
   }
 
-  // Komt er al een nevenpersonage voor in de openingsscène, dan geven we die meteen een eigen
-  // ankerbeeld (net als het held-portret) — zo heeft ook een nevenpersonage vanaf de eerste
-  // illustratie een gezicht, niet alleen een tekstbeschrijving.
+  // Elk nevenpersonage dat een eigen ankerbeeld nodig heeft: zowel de personages die al in de
+  // openingsscène voorkomen, ALS elke expliciet gekozen bestaande bijfiguur — ook als die (nog)
+  // niet zelf in hoofdstuk 1 te zien is. Zo is een gekozen bijfiguur meteen gegarandeerd van een
+  // eigen plaatje, i.p.v. pas te wachten tot hij toevallig in een scène verschijnt.
+  const sceneCharacterNames = new Set(result.sceneCharacters.map((c) => c.name.toLowerCase()));
+  const chosenSideNames = new Set(existingSideCharacters.map((c) => c.name.toLowerCase()));
+  const needingReferences = bible.sideCharacters.filter(
+    (c) => sceneCharacterNames.has(c.name.toLowerCase()) || chosenSideNames.has(c.name.toLowerCase()),
+  );
+
   const refs = await ensureSceneCharacterReferences(
     child.id,
     bible.sideCharacters,
-    result.sceneCharacters,
+    needingReferences,
     character.imageStyleHint,
   );
   bible.sideCharacters = refs.registry;
+
+  // De openingsillustratie zelf toont alleen de personages die ECHT in die scène voorkomen
+  // (niet elke gekozen bijfiguur zomaar erbij plakken — dat zou het plaatje kunnen overladen
+  // met mensen die niet in de tekst van hoofdstuk 1 genoemd worden).
+  const sceneCharactersForImage = refs.sceneCharacters.filter((c) =>
+    sceneCharacterNames.has(c.name.toLowerCase()),
+  );
 
   if (await tryClaimImageQuota(child.id)) {
     const scene = await generateSceneImage(
@@ -188,7 +229,7 @@ export async function POST(request: Request) {
       character.appearance,
       character.imageStyleHint,
       bible.worldAppearance,
-      refs.sceneCharacters,
+      sceneCharactersForImage,
       character.portraitUrl,
       null,
     );
@@ -214,11 +255,12 @@ export async function POST(request: Request) {
     favorite: false,
   });
 
-  // Audit-trail bijwerken: dit verhaal gebruikt nu de opgeslagen held. Idempotent — een
-  // per ongeluk dubbele aanroep voegt het storyId maar één keer toe.
+  // Audit-trail bijwerken: dit verhaal gebruikt nu de opgeslagen held, en/of de gekozen
+  // bijfiguren. Idempotent — een per ongeluk dubbele aanroep voegt het storyId maar één keer toe.
   if (existingCharacter) {
     await registerStoryForCharacter(existingCharacter.id, story.id);
   }
+  await Promise.all(sideCharacterIds.map((id) => registerStoryForCharacter(id, story.id)));
 
   return NextResponse.json({ story }, { status: 201 });
 }

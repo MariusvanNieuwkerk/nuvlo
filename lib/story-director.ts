@@ -45,6 +45,10 @@ export type StartStoryInput = {
     imageStyleHint: string;
     name: string;
   };
+  // Optioneel: nevenpersonages uit de personagens-bibliotheek die het kind expliciet koos om
+  // in DIT verhaal terug te laten komen. Hun uiterlijk staat — net als bij existingCharacter —
+  // VAST en wordt nooit door Claude herschreven (zie de merge in startStory hieronder).
+  existingSideCharacters?: SideCharacter[];
 };
 
 export type StartStoryResult = {
@@ -293,7 +297,7 @@ async function callStoryTool<T>(options: {
 }
 
 export async function startStory(input: StartStoryInput): Promise<StartStoryResult> {
-  const { hero, age, appearance, existingCharacter } = input;
+  const { hero, age, appearance, existingCharacter, existingSideCharacters } = input;
 
   // Bij hergebruik van een opgeslagen held staat het uiterlijk vast — dan willen we niet dat
   // Claude het opnieuw "vriendelijker herschrijft" (de kans dat details dan verschuiven is
@@ -305,6 +309,17 @@ ${describeCharacterAppearance(existingCharacter.appearance)}
 Tekenstijl (imageStyleHint) staat ook vast: "${existingCharacter.imageStyleHint}".`
     : `Uiterlijk van de held, zoals het kind dat zelf aangaf (voor later gebruik in illustraties, niet letterlijk in de tekst noemen — schrijf dit eventueel netjes over in characterAppearance): ${appearance}`;
 
+  // Het kind koos vooraf al één of meer bestaande nevenpersonages die in dit nieuwe boek
+  // mogen terugkeren. Hun uiterlijk staat vast (wordt in code hieronder ook afgedwongen, voor
+  // de zekerheid) — Claude mag ze naar eigen inzicht laten meespelen, meteen in hoofdstuk 1 of
+  // pas later, maar hoeft ze niet zelf opnieuw te verzinnen.
+  const existingSideNote =
+    existingSideCharacters && existingSideCharacters.length > 0
+      ? `\n\nDeze nevenpersonages bestaan al en mogen (naar eigen inzicht, hoeft niet meteen) in dit verhaal terugkeren — hun uiterlijk staat VAST en moet je EXACT overnemen in sideCharacters, nooit herschrijven: ${existingSideCharacters
+          .map((c) => `${c.name} (${c.appearance.freeform}${c.appearance.distinguishingFeature ? `, kenmerk: ${c.appearance.distinguishingFeature}` : ""})`)
+          .join(" | ")}`
+      : "";
+
   const userMessage = `Verzin de start van een nieuw verhaal voor een kind van ${age} jaar (leesniveau: ${readingLevelLabel(age)}).
 
 Held: ${hero.name}
@@ -313,7 +328,7 @@ Superkracht: ${hero.power}
 Zwakte: ${hero.weakness}
 Tegenstander: ${hero.enemy}
 Genre: ${hero.genre}
-${appearanceNote}
+${appearanceNote}${existingSideNote}
 
 Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze held, wereld en tegenstander) en een korte titel. Schrijf daarna hoofdstuk 1: de openingsscène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde en 3 keuzes voor het kind.`;
 
@@ -350,7 +365,15 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
       ? result.imageStyleHint.trim()
       : "flat colorful 2D children's picture-book illustration style";
   const worldAppearance = cleanWorldAppearance(result.worldAppearance);
-  const sideCharacters = cleanSideCharacters(result.sideCharacters);
+  const claudeSideCharacters = cleanSideCharacters(result.sideCharacters);
+
+  // Zelfde bescherming als in nextScene: de door het kind gekozen, bestaande nevenpersonages
+  // winnen altijd van wat Claude teruggeeft (ook als Claude ze per ongeluk net anders
+  // verwoordt of vergeet te herhalen) — hun vaste uiterlijk mag nooit verschuiven.
+  const mergedByName = new Map<string, SideCharacter>();
+  for (const c of claudeSideCharacters) mergedByName.set(c.name.toLowerCase(), c);
+  for (const c of existingSideCharacters ?? []) mergedByName.set(c.name.toLowerCase(), c);
+  const sideCharacters = Array.from(mergedByName.values());
 
   return {
     title: assertNonEmptyString(result.title, "title"),
