@@ -123,6 +123,23 @@ function readingLevelLabel(age: number): string {
   return "10 jaar of ouder: vlotte, iets rijkere zinnen";
 }
 
+// Hoe onzeker/spannend een verhaal mag aanvoelen, en hoe de tegenstander zich mag gedragen —
+// schaalt met de leeftijd, net als het leesniveau hierboven. Jonge kinderen willen vooral warmte
+// en een voorspelbaar goede afloop; oudere kinderen (zie de "te zoetsappig"-feedback van een
+// 11-jarige) willen dat een tegenstander oprecht dwars kan blijven liggen en dat een verhaal ook
+// eens een echt gevoelde tegenslag of een bitterzoet einde mag hebben. De harde veiligheidsgrens
+// (geen geweld/bloed/echte pijn, zie systeemregel 2) blijft voor elke leeftijd hetzelfde — alleen
+// de EMOTIONELE uitkomst wordt minder gegarandeerd zacht.
+function tensionLevelLabel(age: number): string {
+  if (age <= 7) {
+    return "6-7 jaar: houd de tegenstander laag-dreigend. Hij blijkt vooral onhandig, verward of eenzaam te zijn, en draait aan het einde om of wordt vriendelijk. Niemand verliest echt iets; het avontuur voelt overwegend speels en veilig.";
+  }
+  if (age <= 9) {
+    return "8-9 jaar: de tegenstander mag oprecht dwars liggen en hoeft niet meteen om te draaien — laat de spanning oplopen tot het even echt onzeker aanvoelt wie er wint. Het einde is nog steeds warm, maar het mag onderweg wat pittiger en minder voorspelbaar zijn dan voor jonge kinderen.";
+  }
+  return "10-11 jaar: sta ECHTE tegenslag toe. De held mag iets voelbaars verliezen (een belofte die breekt, een vriendschap die op de proef staat, een plan dat eerst mislukt), en de tegenstander hoeft NIET bekeerd of verslagen te worden — hij mag ontsnappen, gelijk krijgen op een deelpunt, of als dreiging blijven bestaan. Het einde mag bitterzoet zijn: warm genoeg om prettig te sluiten, maar niet elk draadje hoeft perfect opgelost te worden. Blijf wel altijd binnen de veiligheidsgrens uit systeemregel 2 — het gaat om emotionele, verhalende tegenslag, niet om echt geweld.";
+}
+
 function expectedAkte(chapterN: number): number {
   return Math.min(5, Math.ceil(chapterN / 3));
 }
@@ -335,6 +352,8 @@ Tekenstijl (imageStyleHint) staat ook vast: "${existingCharacter.imageStyleHint}
 
   const userMessage = `Verzin de start van een nieuw verhaal voor een kind van ${age} jaar (leesniveau: ${readingLevelLabel(age)}).
 
+Spanningsniveau (zie systeemregel 2): ${tensionLevelLabel(age)}
+
 Held: ${hero.name}
 Wereld: ${hero.world}
 Superkracht: ${hero.power}
@@ -433,6 +452,8 @@ export async function nextScene(input: NextSceneInput): Promise<NextSceneResult>
   }
 
   const userMessage = `Dit wordt hoofdstuk ${nextN}. Richtlijn: dit hoofdstuk hoort ongeveer in akte ${expectedAkte(nextN)} van de verhaalbijbel te zitten, en het verhaal rondt idealiter rond hoofdstuk ${CHAPTERS_TOTAL} netjes af. Leesniveau: ${readingLevelLabel(age)}.
+
+Spanningsniveau (zie systeemregel 2): ${tensionLevelLabel(age)}
 
 Held: ${hero.name} (kracht: ${hero.power}, zwakte: ${hero.weakness}), tegenstander: ${hero.enemy}, wereld: ${hero.world}.
 
