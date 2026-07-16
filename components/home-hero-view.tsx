@@ -36,15 +36,15 @@ function HeroPortrait({
   return (
     <span
       className={cn(
-        "relative flex shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-amber-400/40",
+        "relative flex shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-primary/40",
         dim,
       )}
     >
       {hero.portraitUrl ? (
         <Image src={hero.portraitUrl} alt={hero.name} fill className="object-cover" sizes="176px" />
       ) : (
-        <span className="flex size-full items-center justify-center bg-gradient-to-br from-amber-200/80 to-orange-100/60 dark:from-amber-400/20 dark:to-orange-400/10">
-          <Sparkles className={cn("text-amber-700/70 dark:text-amber-200/80", size === "lg" ? "size-12" : "size-5")} />
+        <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/25 dark:to-primary/10">
+          <Sparkles className={cn("text-primary/70 dark:text-primary/80", size === "lg" ? "size-12" : "size-5")} />
         </span>
       )}
     </span>
@@ -52,7 +52,7 @@ function HeroPortrait({
 }
 
 const INPUT_CARD =
-  "bg-white/85 dark:bg-white/10 border-2 border-amber-300/60 shadow-sm focus-visible:border-amber-500 focus-visible:ring-amber-400/40";
+  "bg-white/85 dark:bg-white/10 border-2 border-primary/35 shadow-sm focus-visible:border-primary focus-visible:ring-primary/40";
 
 export function HomeHeroView({
   stories,
@@ -211,8 +211,8 @@ export function HomeHeroView({
     return (
       <div className="flex flex-col items-center gap-8 pt-4 text-center sm:gap-10 sm:pt-8">
         <div className="flex flex-col items-center gap-3">
-          <span className="flex size-28 items-center justify-center rounded-full bg-amber-400/20 ring-2 ring-amber-400/30 sm:size-32">
-            <Sparkles className="size-12 text-amber-600 sm:size-14 dark:text-amber-300" />
+          <span className="flex size-28 items-center justify-center rounded-full bg-primary/20 ring-2 ring-primary/30 sm:size-32">
+            <Sparkles className="size-12 text-primary sm:size-14 dark:text-primary" />
           </span>
           <h1 className="font-heading text-3xl font-extrabold text-foreground sm:text-4xl">
             Wie is jouw held?
@@ -223,7 +223,7 @@ export function HomeHeroView({
         </div>
         <Link
           href="/nieuw-verhaal"
-          className="inline-flex items-center gap-2 rounded-2xl bg-amber-400 px-7 py-4 text-lg font-bold text-amber-950 transition-all hover:bg-amber-300 active:scale-95 sm:px-9 sm:py-5 sm:text-xl"
+          className="inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 sm:px-9 sm:py-5 sm:text-xl"
         >
           <Plus className="size-6" strokeWidth={2.5} />
           Nieuw avontuur
@@ -252,7 +252,7 @@ export function HomeHeroView({
           className="group relative rounded-full transition-transform active:scale-95"
         >
           <HeroPortrait hero={activeHero} size="lg" />
-          <span className="absolute bottom-1 right-1 flex size-9 items-center justify-center rounded-full bg-amber-400 text-amber-950 shadow-md ring-2 ring-background transition-transform group-hover:scale-105 sm:size-10">
+          <span className="absolute bottom-1 right-1 flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-2 ring-background transition-transform group-hover:scale-105 sm:size-10">
             <Pencil className="size-4 sm:size-5" strokeWidth={2.5} />
           </span>
         </button>
@@ -322,7 +322,7 @@ export function HomeHeroView({
                   type="button"
                   disabled={saving || deleting}
                   onClick={() => void saveHeroEdits(activeHero)}
-                  className="h-12 flex-1 rounded-2xl bg-amber-400 text-base font-bold text-amber-950 hover:bg-amber-300"
+                  className="h-12 flex-1 rounded-2xl bg-primary text-base font-bold text-primary-foreground hover:bg-primary/90"
                 >
                   {saving ? "Opslaan…" : "Opslaan"}
                 </Button>
@@ -349,7 +349,7 @@ export function HomeHeroView({
             {continueStory ? (
               <Link
                 href={storyHref(continueStory)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 px-6 py-4 text-lg font-bold text-amber-950 transition-all hover:bg-amber-300 active:scale-95 sm:py-5 sm:text-xl"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 sm:py-5 sm:text-xl"
               >
                 <BookOpen className="size-5 sm:size-6" strokeWidth={2.5} />
                 {continueLabel}
@@ -361,7 +361,7 @@ export function HomeHeroView({
                 "inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-bold transition-all active:scale-95 sm:text-lg",
                 continueStory
                   ? "bg-foreground/10 text-foreground/85 hover:bg-foreground/15"
-                  : "bg-amber-400 text-amber-950 hover:bg-amber-300",
+                  : "bg-primary text-primary-foreground hover:bg-primary/90",
               )}
             >
               <Plus className="size-5" strokeWidth={2.5} />
@@ -393,7 +393,7 @@ export function HomeHeroView({
                 <span
                   className={cn(
                     "rounded-full transition-shadow",
-                    selected && "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
+                    selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                   )}
                 >
                   <HeroPortrait hero={hero} size="sm" />
@@ -414,8 +414,8 @@ export function HomeHeroView({
             aria-label="Nieuwe held"
             className="flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-20"
           >
-            <span className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-amber-400/60 bg-amber-400/10 sm:size-16">
-              <Plus className="size-6 text-amber-700 dark:text-amber-300" strokeWidth={2.5} />
+            <span className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-primary/40 bg-primary/10 sm:size-16">
+              <Plus className="size-6 text-primary dark:text-primary" strokeWidth={2.5} />
             </span>
             <span className="line-clamp-2 w-full text-center text-[11px] font-bold leading-tight text-foreground/55 sm:text-xs">
               Nieuw

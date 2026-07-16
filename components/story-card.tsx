@@ -51,7 +51,7 @@ export function StoryCard({ story }: { story: Story }) {
           <span className="absolute bottom-2.5 left-2.5 flex size-9 items-center justify-center overflow-hidden rounded-full bg-white/90 shadow-md ring-2 ring-white/80">
             <Image src={portraitUrl} alt={`${story.hero.name}`} width={36} height={36} className="size-full object-cover" />
             {hasUnseenPortrait && (
-              <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-amber-400 ring-2 ring-white" />
+              <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-primary ring-2 ring-white" />
             )}
           </span>
         )}
@@ -80,7 +80,7 @@ export function StoryCard({ story }: { story: Story }) {
               (het gevoel van een echte prestatie), lopende boeken lopen rustig vol. */}
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
             <div
-              className={`h-full rounded-full ${finished ? "bg-amber-400" : "bg-gradient-to-r from-indigo-400/80 to-violet-400/80"}`}
+              className={`h-full rounded-full ${finished ? "bg-primary" : "bg-gradient-to-r from-teal-500/80 to-primary/80"}`}
               style={{ width: `${Math.round(progress.fraction * 100)}%` }}
             />
           </div>

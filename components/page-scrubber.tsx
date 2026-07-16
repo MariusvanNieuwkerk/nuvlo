@@ -79,7 +79,7 @@ export function PageScrubber({ current, total, chapterStartIndices, onSeek, clas
       >
         <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-400/80 via-violet-400/80 to-amber-300/90"
+            className="h-full rounded-full bg-gradient-to-r from-teal-500/80 via-cyan-500/80 to-primary/90"
             style={{ width: `${pct}%` }}
           />
           {chapterStartIndices.map(
@@ -95,7 +95,7 @@ export function PageScrubber({ current, total, chapterStartIndices, onSeek, clas
         </div>
         <div
           className={cn(
-            "absolute size-4 -translate-x-1/2 rounded-full bg-amber-400 shadow-md ring-2 ring-white transition-transform dark:ring-slate-900",
+            "absolute size-4 -translate-x-1/2 rounded-full bg-primary shadow-md ring-2 ring-white transition-transform dark:ring-slate-900",
             dragging && "scale-125",
           )}
           style={{ left: `${pct}%` }}

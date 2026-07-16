@@ -33,9 +33,9 @@ export function PageShell({
           <Image
             src="/nuvlo-logo.png"
             alt="Nuvlo"
-            width={56}
-            height={56}
-            className="size-12 object-contain sm:size-14"
+            width={112}
+            height={80}
+            className="h-12 w-auto object-contain sm:h-14"
             priority
           />
           <span className="font-heading text-2xl font-extrabold text-foreground sm:text-3xl">

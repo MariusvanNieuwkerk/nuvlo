@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 const LETTER_STYLES = [
   {
-    card: "bg-amber-400/15 border-amber-400/40 hover:bg-amber-400/25",
-    badge: "bg-amber-400 text-amber-950",
+    card: "bg-primary/15 border-primary/35 hover:bg-primary/25",
+    badge: "bg-primary text-primary-foreground",
   },
   {
     card: "bg-sky-400/15 border-sky-400/40 hover:bg-sky-400/25",
@@ -81,15 +81,15 @@ export function ChoiceButtons({
   // vanzelf naar de nieuwe bladzijde — er is dus geen extra klik nodig.
   if (pending) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-amber-400/40 bg-amber-400/10 p-6 text-center sm:gap-4 sm:rounded-3xl sm:p-8">
+      <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/35 bg-primary/10 p-6 text-center sm:gap-4 sm:rounded-3xl sm:p-8">
         <div className="relative flex size-12 items-center justify-center sm:size-14">
-          <Loader2 className="size-12 animate-spin text-amber-500 sm:size-14" />
-          <Sparkles className="absolute size-5 text-amber-600 sm:size-6" />
+          <Loader2 className="size-12 animate-spin text-primary sm:size-14" />
+          <Sparkles className="absolute size-5 text-primary sm:size-6" />
         </div>
-        <p className="font-heading text-base font-bold text-amber-800 sm:text-lg dark:text-amber-200">
+        <p className="font-heading text-base font-bold text-primary sm:text-lg dark:text-primary">
           {heroName ? `${heroName} bedenkt het vervolg…` : "Het vervolg wordt bedacht…"}
         </p>
-        <p className="text-sm text-amber-800/70 sm:text-base dark:text-amber-100/70">
+        <p className="text-sm text-primary/70 sm:text-base dark:text-primary/70">
           De nieuwe bladzijde wordt geschreven — dat duurt maar even. De tekening komt er daarna
           vanzelf bij terwijl je leest.
         </p>
@@ -131,7 +131,7 @@ export function ChoiceButtons({
       </div>
 
       {ownIdeaOpen ? (
-        <div className="flex flex-col gap-2.5 rounded-2xl border-2 border-violet-400/40 bg-violet-400/10 p-4 sm:gap-3 sm:rounded-3xl sm:p-5">
+        <div className="flex flex-col gap-2.5 rounded-2xl border-2 border-primary/35 bg-primary/10 p-4 sm:gap-3 sm:rounded-3xl sm:p-5">
           <p className="text-sm font-semibold text-foreground/70 sm:text-base">
             Wat gebeurt er nu volgens jou?
           </p>
@@ -149,7 +149,7 @@ export function ChoiceButtons({
               type="button"
               disabled={pending || !ownIdea.trim()}
               onClick={submitOwnIdea}
-              className="rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 sm:px-5 sm:py-3 sm:text-base"
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-all active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 sm:px-5 sm:py-3 sm:text-base"
             >
               {pending ? "Het verhaal gaat verder…" : "Ga zo verder!"}
             </button>
@@ -171,7 +171,7 @@ export function ChoiceButtons({
           type="button"
           disabled={pending}
           onClick={() => setOwnIdeaOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-amber-400/50 bg-amber-400/10 p-3.5 text-sm font-semibold text-amber-900/80 transition-all hover:border-amber-400/80 hover:bg-amber-400/15 hover:text-amber-950 disabled:pointer-events-none sm:p-4 sm:text-base dark:text-amber-100/90 dark:hover:text-amber-50"
+          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/10 p-3.5 text-sm font-semibold text-primary/80 transition-all hover:border-primary/60 hover:bg-primary/15 hover:text-primary-foreground disabled:pointer-events-none sm:p-4 sm:text-base dark:text-primary/90 dark:hover:text-primary-foreground"
         >
           <PenLine className="size-4 sm:size-5" />
           Schrijf zelf wat er gebeurt

@@ -75,21 +75,21 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
   return (
     <div
       className={cn(
-        "relative flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-900/95 via-violet-800/90 to-amber-700/70 p-6 text-center shadow-xl sm:rounded-3xl sm:gap-4",
+        "relative flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-teal-950/95 via-cyan-900/90 to-primary/80 p-6 text-center shadow-xl sm:rounded-3xl sm:gap-4",
         className,
       )}
     >
       <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:radial-gradient(1.5px_1.5px_at_20%_30%,white,transparent),radial-gradient(1.5px_1.5px_at_70%_20%,white,transparent),radial-gradient(1.5px_1.5px_at_85%_65%,white,transparent),radial-gradient(1.5px_1.5px_at_35%_75%,white,transparent),radial-gradient(1.5px_1.5px_at_55%_50%,white,transparent)]" />
       {failed ? (
         <>
-          <Sparkles className="float-soft relative size-10 text-amber-200/90 sm:size-14" />
+          <Sparkles className="float-soft relative size-10 text-primary-foreground/90 sm:size-14" />
           <p className="relative max-w-[85%] text-sm text-white/80 sm:max-w-[70%] sm:text-base">
             Oeps, het plaatje wilde niet komen.
           </p>
           <button
             type="button"
             onClick={retryNow}
-            className="relative flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-amber-950 shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
+            className="relative flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
           >
             <RotateCw className="size-4 sm:size-5" />
             Nog een keer!
@@ -97,7 +97,7 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
         </>
       ) : pending ? (
         <>
-          <Pencil className="float-soft relative size-10 text-amber-200/90 sm:size-14" />
+          <Pencil className="float-soft relative size-10 text-primary-foreground/90 sm:size-14" />
           <p className="relative max-w-[85%] text-sm text-white/80 sm:max-w-[70%] sm:text-base">
             {onManualRetry
               ? "Dit duurt nu wat langer dan gewoonlijk… lees rustig verder, of probeer het opnieuw."
@@ -107,7 +107,7 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
             <button
               type="button"
               onClick={onManualRetry}
-              className="relative flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-amber-950 shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
+              className="relative flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
             >
               <RotateCw className="size-4 sm:size-5" />
               Probeer opnieuw
@@ -116,7 +116,7 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
         </>
       ) : (
         <>
-          <Sparkles className="float-soft relative size-10 text-amber-200/90 sm:size-14" />
+          <Sparkles className="float-soft relative size-10 text-primary-foreground/90 sm:size-14" />
           <p className="relative max-w-[85%] text-sm text-white/75 sm:max-w-[70%] sm:text-base">
             {onManualRetry
               ? "Er is nog geen tekening bij deze scène. Wil je het opnieuw proberen?"
@@ -126,7 +126,7 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
             <button
               type="button"
               onClick={onManualRetry}
-              className="relative flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-amber-950 shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
+              className="relative flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-transform active:scale-95 sm:px-6 sm:py-3 sm:text-base"
             >
               <RotateCw className="size-4 sm:size-5" />
               Probeer opnieuw

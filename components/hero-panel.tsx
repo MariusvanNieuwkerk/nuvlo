@@ -50,13 +50,13 @@ export function HeroPanel({
         <button
           type="button"
           onClick={() => setShowReveal(false)}
-          className="reward-reveal flex items-center gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-3 text-left sm:gap-4 sm:p-4"
+          className="reward-reveal flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/10 p-3 text-left sm:gap-4 sm:p-4"
         >
-          <span className="relative size-14 shrink-0 overflow-hidden rounded-full ring-2 ring-amber-300/60 sm:size-16">
+          <span className="relative size-14 shrink-0 overflow-hidden rounded-full ring-2 ring-primary/40 sm:size-16">
             <Image src={portraitUrl} alt={`${heroName} nu`} fill className="object-cover" />
           </span>
           <div className="flex flex-col">
-            <p className="flex items-center gap-1.5 font-heading text-sm font-bold text-amber-800 sm:text-base dark:text-amber-200">
+            <p className="flex items-center gap-1.5 font-heading text-sm font-bold text-primary sm:text-base dark:text-primary">
               <Sparkles className="size-4" />
               Kijk! {heroName} is veranderd sinds gisteren
             </p>

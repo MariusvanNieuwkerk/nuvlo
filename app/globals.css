@@ -5,12 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Nuvlo heeft twee sferen:
-  - Licht (":root"): een zacht, warm daglicht-thema — prettig leesbaar overdag.
-  - Donker (".dark"): het "avondritueel"-thema met sterren en lamplicht — de standaard
-    sfeer bij het openen van de app, want 's avonds lezen is waar Nuvlo om draait.
-  De ThemeToggle-knop wisselt tussen beide door de klasse "dark" op <html> te zetten;
-  de keuze wordt onthouden in de browser (localStorage).
+  Nuvlo-merkkleuren volgen het logo: cream (#fdf3e7) + diep teal (#185068).
+  Twee sferen:
+  - Licht (":root"): zachte cream-lucht met teal als primaire actiekleur.
+  - Donker (".dark"): nachtelijke teal-hemel met sterren — standaard bij openen.
+  ThemeToggle zet "dark" op <html>; keuze blijft in localStorage.
 */
 
 @theme inline {
@@ -72,85 +71,85 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Licht thema (standaard-selector, geen klasse nodig). */
+/* Licht thema — cream + logo-teal. */
 :root {
-  --background: oklch(0.96 0.018 85);
-  --foreground: oklch(0.28 0.045 55);
+  --background: oklch(0.965 0.02 85);
+  --foreground: oklch(0.28 0.04 230);
   --card: oklch(0.99 0.01 85);
-  --card-foreground: oklch(0.28 0.045 55);
+  --card-foreground: oklch(0.28 0.04 230);
   --popover: oklch(0.99 0.01 85);
-  --popover-foreground: oklch(0.28 0.045 55);
-  --primary: oklch(0.66 0.17 45);
-  --primary-foreground: oklch(0.99 0.005 85);
-  --secondary: oklch(0.92 0.025 75);
-  --secondary-foreground: oklch(0.28 0.045 55);
-  --muted: oklch(0.93 0.02 80);
-  --muted-foreground: oklch(0.48 0.04 55);
-  --accent: oklch(0.89 0.035 70);
-  --accent-foreground: oklch(0.28 0.045 55);
+  --popover-foreground: oklch(0.28 0.04 230);
+  --primary: oklch(0.42 0.055 220);
+  --primary-foreground: oklch(0.97 0.015 85);
+  --secondary: oklch(0.93 0.02 200);
+  --secondary-foreground: oklch(0.28 0.04 230);
+  --muted: oklch(0.94 0.015 90);
+  --muted-foreground: oklch(0.48 0.03 230);
+  --accent: oklch(0.91 0.025 200);
+  --accent-foreground: oklch(0.28 0.04 230);
   --destructive: oklch(0.58 0.21 25);
-  --border: oklch(0.4 0.04 55 / 14%);
-  --input: oklch(0.4 0.04 55 / 10%);
-  --ring: oklch(0.66 0.17 45);
-  --chart-1: oklch(0.66 0.17 45);
-  --chart-2: oklch(0.55 0.12 200);
-  --chart-3: oklch(0.55 0.14 140);
-  --chart-4: oklch(0.55 0.14 320);
-  --chart-5: oklch(0.6 0.15 30);
+  --border: oklch(0.4 0.03 220 / 14%);
+  --input: oklch(0.4 0.03 220 / 10%);
+  --ring: oklch(0.42 0.055 220);
+  --chart-1: oklch(0.42 0.055 220);
+  --chart-2: oklch(0.55 0.1 180);
+  --chart-3: oklch(0.55 0.12 140);
+  --chart-4: oklch(0.6 0.1 250);
+  --chart-5: oklch(0.65 0.12 70);
   --radius: 1.1rem;
-  --sidebar: oklch(0.93 0.02 80);
-  --sidebar-foreground: oklch(0.28 0.045 55);
-  --sidebar-primary: oklch(0.66 0.17 45);
-  --sidebar-primary-foreground: oklch(0.99 0.005 85);
-  --sidebar-accent: oklch(0.89 0.035 70);
-  --sidebar-accent-foreground: oklch(0.28 0.045 55);
-  --sidebar-border: oklch(0.4 0.04 55 / 12%);
-  --sidebar-ring: oklch(0.66 0.17 45);
+  --sidebar: oklch(0.94 0.015 90);
+  --sidebar-foreground: oklch(0.28 0.04 230);
+  --sidebar-primary: oklch(0.42 0.055 220);
+  --sidebar-primary-foreground: oklch(0.97 0.015 85);
+  --sidebar-accent: oklch(0.91 0.025 200);
+  --sidebar-accent-foreground: oklch(0.28 0.04 230);
+  --sidebar-border: oklch(0.4 0.03 220 / 12%);
+  --sidebar-ring: oklch(0.42 0.055 220);
 
   /* Boekpagina + zachte gloed */
-  --book: oklch(0.97 0.02 85);
-  --book-foreground: oklch(0.28 0.04 60);
-  --lamp: oklch(0.88 0.06 70 / 40%);
+  --book: oklch(0.98 0.015 85);
+  --book-foreground: oklch(0.28 0.035 230);
+  --lamp: oklch(0.75 0.06 200 / 35%);
 }
 
-/* Donker "avondritueel"-thema — standaard sfeer, geactiveerd via de klasse "dark". */
+/* Donker "avondritueel"-thema — diepe teal-nacht. */
 .dark {
-  --background: oklch(0.18 0.045 268);
-  --foreground: oklch(0.96 0.02 85);
-  --card: oklch(0.24 0.05 268);
-  --card-foreground: oklch(0.96 0.02 85);
-  --popover: oklch(0.22 0.05 268);
-  --popover-foreground: oklch(0.96 0.02 85);
-  --primary: oklch(0.74 0.16 55);
-  --primary-foreground: oklch(0.2 0.05 268);
-  --secondary: oklch(0.32 0.06 268);
-  --secondary-foreground: oklch(0.96 0.02 85);
-  --muted: oklch(0.28 0.05 268);
-  --muted-foreground: oklch(0.78 0.04 85);
-  --accent: oklch(0.4 0.08 268);
-  --accent-foreground: oklch(0.96 0.02 85);
+  --background: oklch(0.18 0.04 230);
+  --foreground: oklch(0.96 0.015 85);
+  --card: oklch(0.24 0.04 230);
+  --card-foreground: oklch(0.96 0.015 85);
+  --popover: oklch(0.22 0.04 230);
+  --popover-foreground: oklch(0.96 0.015 85);
+  --primary: oklch(0.72 0.07 200);
+  --primary-foreground: oklch(0.18 0.04 230);
+  --secondary: oklch(0.3 0.04 230);
+  --secondary-foreground: oklch(0.96 0.015 85);
+  --muted: oklch(0.28 0.035 230);
+  --muted-foreground: oklch(0.78 0.03 90);
+  --accent: oklch(0.35 0.05 220);
+  --accent-foreground: oklch(0.96 0.015 85);
   --destructive: oklch(0.65 0.2 25);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.74 0.16 55);
-  --chart-1: oklch(0.74 0.16 55);
-  --chart-2: oklch(0.6 0.12 200);
-  --chart-3: oklch(0.65 0.14 140);
-  --chart-4: oklch(0.6 0.14 320);
-  --chart-5: oklch(0.7 0.15 30);
-  --sidebar: oklch(0.2 0.05 268);
-  --sidebar-foreground: oklch(0.96 0.02 85);
-  --sidebar-primary: oklch(0.74 0.16 55);
-  --sidebar-primary-foreground: oklch(0.2 0.05 268);
-  --sidebar-accent: oklch(0.3 0.06 268);
-  --sidebar-accent-foreground: oklch(0.96 0.02 85);
+  --ring: oklch(0.72 0.07 200);
+  --chart-1: oklch(0.72 0.07 200);
+  --chart-2: oklch(0.6 0.1 180);
+  --chart-3: oklch(0.65 0.12 140);
+  --chart-4: oklch(0.6 0.1 250);
+  --chart-5: oklch(0.7 0.1 70);
+  --sidebar: oklch(0.2 0.04 230);
+  --sidebar-foreground: oklch(0.96 0.015 85);
+  --sidebar-primary: oklch(0.72 0.07 200);
+  --sidebar-primary-foreground: oklch(0.18 0.04 230);
+  --sidebar-accent: oklch(0.3 0.04 230);
+  --sidebar-accent-foreground: oklch(0.96 0.015 85);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.74 0.16 55);
+  --sidebar-ring: oklch(0.72 0.07 200);
 
-  /* Boekpagina + lamplicht */
-  --book: oklch(0.94 0.03 85);
-  --book-foreground: oklch(0.28 0.04 60);
-  --lamp: oklch(0.78 0.14 70);
+  /* Boekpagina + zachte nachtgloed */
+  --book: oklch(0.95 0.02 85);
+  --book-foreground: oklch(0.28 0.035 230);
+  --lamp: oklch(0.7 0.08 200);
 }
 
 /*
@@ -163,50 +162,50 @@
 */
 @supports not (color: oklch(0 0 0)) {
   :root {
-    --background: #f7f1e5;
-    --foreground: #3a2312;
-    --card: #fffbf4;
-    --card-foreground: #3a2312;
-    --popover: #fffbf4;
-    --popover-foreground: #3a2312;
-    --primary: #e36927;
-    --primary-foreground: #fdfcf8;
-    --secondary: #efe3d3;
-    --secondary-foreground: #3a2312;
-    --muted: #efe7d9;
-    --muted-foreground: #705848;
-    --accent: #ead7c2;
-    --accent-foreground: #3a2312;
+    --background: #fdf3e7;
+    --foreground: #1a3a48;
+    --card: #fffbf5;
+    --card-foreground: #1a3a48;
+    --popover: #fffbf5;
+    --popover-foreground: #1a3a48;
+    --primary: #185068;
+    --primary-foreground: #fdf3e7;
+    --secondary: #e8f0f2;
+    --secondary-foreground: #1a3a48;
+    --muted: #f3ebe0;
+    --muted-foreground: #4a6570;
+    --accent: #dce8ec;
+    --accent-foreground: #1a3a48;
     --destructive: #db2b33;
-    --border: rgba(89, 66, 51, 0.14);
-    --input: rgba(89, 66, 51, 0.1);
-    --ring: #e36927;
-    --book: #fbf4e6;
-    --book-foreground: #372414;
-    --lamp: rgba(242, 209, 173, 0.4);
+    --border: rgba(24, 80, 104, 0.14);
+    --input: rgba(24, 80, 104, 0.1);
+    --ring: #185068;
+    --book: #fbf6ec;
+    --book-foreground: #1a3a48;
+    --lamp: rgba(24, 80, 104, 0.25);
   }
   .dark {
-    --background: #091025;
+    --background: #0a1c24;
     --foreground: #f8f1e3;
-    --card: #151e37;
+    --card: #122832;
     --card-foreground: #f8f1e3;
-    --popover: #111932;
+    --popover: #0f232c;
     --popover-foreground: #f8f1e3;
-    --primary: #f68c36;
-    --primary-foreground: #0c142d;
-    --secondary: #263151;
+    --primary: #7eb8c9;
+    --primary-foreground: #0a1c24;
+    --secondary: #1a3540;
     --secondary-foreground: #f8f1e3;
-    --muted: #1e2842;
-    --muted-foreground: #c3b69b;
-    --accent: #354573;
+    --muted: #16303a;
+    --muted-foreground: #b8c5c9;
+    --accent: #234550;
     --accent-foreground: #f8f1e3;
     --destructive: #f14d4c;
     --border: rgba(255, 255, 255, 0.12);
     --input: rgba(255, 255, 255, 0.14);
-    --ring: #f68c36;
+    --ring: #7eb8c9;
     --book: #f4ead5;
-    --book-foreground: #372414;
-    --lamp: #f0a646;
+    --book-foreground: #1a3a48;
+    --lamp: #5a9aab;
   }
 }
 
@@ -233,8 +232,8 @@
   }
 }
 
-/* Achtergrond voor de hele app. Licht = zachte, zonnige ochtendlucht.
-   Donker (".dark") = nachtelijke hemel met sterren en maanschijn.
+/* Achtergrond voor de hele app. Licht = cream-lucht met zachte teal-gloed.
+   Donker (".dark") = nachtelijke teal-hemel met sterren.
    GEEN background-attachment: fixed (voorheen wel, voor een rustiger effect op groot scherm) —
    dat is een bekende iOS Safari-bug: op een iPad liet dat soms een los, verkeerd gekleurd
    vlak onderaan de pagina zien zodra de inhoud korter was dan het scherm. Gewoon meescrollen
@@ -242,9 +241,9 @@
 .night-sky {
   background-color: var(--background);
   background-image:
-    radial-gradient(ellipse 55% 40% at 18% 8%, oklch(0.94 0.08 95 / 70%), transparent 70%),
-    radial-gradient(ellipse 70% 50% at 90% 90%, oklch(0.85 0.08 55 / 35%), transparent 70%),
-    linear-gradient(to bottom, oklch(0.94 0.03 90), oklch(0.95 0.025 85) 50%, oklch(0.93 0.03 70) 100%);
+    radial-gradient(ellipse 55% 40% at 18% 8%, oklch(0.94 0.04 200 / 55%), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 90% 90%, oklch(0.9 0.04 85 / 40%), transparent 70%),
+    linear-gradient(to bottom, oklch(0.97 0.02 85), oklch(0.965 0.02 85) 50%, oklch(0.94 0.025 95) 100%);
   background-size: cover;
   position: relative;
   isolation: isolate;
@@ -281,8 +280,8 @@
     radial-gradient(1.2px 1.2px at 76% 66%, rgba(255, 255, 255, 0.55), transparent),
     radial-gradient(1.8px 1.8px at 90% 82%, rgba(255, 255, 255, 0.7), transparent),
     radial-gradient(1.2px 1.2px at 5% 55%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(ellipse 60% 40% at 82% 6%, oklch(0.85 0.09 75 / 35%), transparent 70%),
-    linear-gradient(to bottom, oklch(0.15 0.045 268), oklch(0.2 0.05 265) 45%, oklch(0.26 0.07 25) 100%);
+    radial-gradient(ellipse 60% 40% at 82% 6%, oklch(0.55 0.08 200 / 30%), transparent 70%),
+    linear-gradient(to bottom, oklch(0.14 0.04 230), oklch(0.18 0.045 225) 45%, oklch(0.22 0.05 210) 100%);
 }
 
 .night-sky::before {

@@ -72,7 +72,7 @@ export function SaveCharacterButton({
       onClick={save}
       disabled={state === "saving" || state === "done"}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border-2 border-amber-300/60 bg-white/85 font-bold text-foreground transition-all active:scale-[0.97] disabled:cursor-default disabled:opacity-70 hover:border-amber-400/80 hover:shadow-sm dark:bg-white/10",
+        "inline-flex items-center gap-1.5 rounded-full border-2 border-primary/35 bg-white/85 font-bold text-foreground transition-all active:scale-[0.97] disabled:cursor-default disabled:opacity-70 hover:border-primary/60 hover:shadow-sm dark:bg-white/10",
         size === "sm" ? "px-3 py-1.5 text-xs sm:text-sm" : "px-4 py-2.5 text-sm sm:text-base",
         state === "done" && "border-emerald-400/60 text-emerald-700 dark:text-emerald-300",
         className,

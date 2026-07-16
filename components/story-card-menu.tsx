@@ -162,7 +162,7 @@ export function StoryCardMenu({ story }: { story: Story }) {
                 onKeyDown={onTitleKeyDown}
                 disabled={busy}
                 maxLength={80}
-                className="w-full min-w-0 rounded-xl border-2 border-amber-400/70 bg-white/90 px-3 py-2.5 text-base font-semibold text-foreground outline-none focus-visible:border-amber-500 disabled:opacity-60 dark:bg-white/10"
+                className="w-full min-w-0 rounded-xl border-2 border-primary/50 bg-white/90 px-3 py-2.5 text-base font-semibold text-foreground outline-none focus-visible:border-primary disabled:opacity-60 dark:bg-white/10"
                 aria-label="Titel van het boek"
               />
               {renameError && (
@@ -177,7 +177,7 @@ export function StoryCardMenu({ story }: { story: Story }) {
                     e.stopPropagation();
                     void saveTitle();
                   }}
-                  className="flex-1 rounded-xl bg-amber-400 px-4 py-3 text-sm font-bold text-amber-950 shadow-sm transition-all active:scale-[0.97] disabled:opacity-60 sm:text-base"
+                  className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-sm transition-all active:scale-[0.97] disabled:opacity-60 sm:text-base"
                 >
                   {busy ? "Bezig…" : "Opslaan"}
                 </button>
@@ -243,7 +243,7 @@ export function StoryCardMenu({ story }: { story: Story }) {
                 type="button"
                 disabled={busy}
                 onClick={toggleFavorite}
-                className="flex items-center gap-3 rounded-2xl border-2 border-foreground/10 p-3.5 text-left text-base font-semibold text-foreground transition-all hover:border-amber-400/50 hover:bg-amber-400/10 disabled:opacity-60 sm:p-4"
+                className="flex items-center gap-3 rounded-2xl border-2 border-foreground/10 p-3.5 text-left text-base font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-primary/10 disabled:opacity-60 sm:p-4"
               >
                 <Star
                   className={cn(

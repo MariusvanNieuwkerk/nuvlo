@@ -55,7 +55,7 @@ type StartMode = "new" | "existing";
 type WizardStep = 1 | 2 | 3;
 
 const INPUT_CARD =
-  "bg-white/85 dark:bg-white/10 border-2 border-amber-300/60 shadow-sm focus-visible:border-amber-500 focus-visible:ring-amber-400/40";
+  "bg-white/85 dark:bg-white/10 border-2 border-primary/35 shadow-sm focus-visible:border-primary focus-visible:ring-primary/40";
 
 export function HeroForm({
   initialCharacterId,
@@ -501,8 +501,8 @@ export function HeroForm({
                         "flex flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-4 text-sm font-bold transition-all active:scale-[0.97] sm:gap-2 sm:py-5 sm:text-base",
                         "bg-white/85 dark:bg-white/10 shadow-sm",
                         selected
-                          ? "border-amber-500 bg-amber-50/90 text-amber-700 shadow-md -translate-y-0.5 dark:bg-amber-400/15 dark:text-amber-200"
-                          : "border-amber-300/60 text-foreground/80 hover:border-amber-400/80 hover:shadow-md",
+                          ? "border-primary bg-primary/10 text-primary shadow-md -translate-y-0.5 dark:bg-primary/15 dark:text-primary"
+                          : "border-primary/35 text-foreground/80 hover:border-primary/60 hover:shadow-md",
                       )}
                     >
                       <Icon className="size-7 sm:size-8" strokeWidth={2.5} />
@@ -570,8 +570,8 @@ export function HeroForm({
                     "flex flex-col items-center gap-1.5 rounded-2xl border-2 px-2 py-4 text-center text-xs font-bold transition-all active:scale-[0.97] sm:gap-2 sm:py-5 sm:text-sm",
                     "bg-white/85 shadow-sm dark:bg-white/10",
                     selected
-                      ? "-translate-y-0.5 border-amber-500 bg-amber-50/90 shadow-md dark:bg-amber-400/15"
-                      : "border-amber-300/60 hover:border-amber-400/80 hover:shadow-md",
+                      ? "-translate-y-0.5 border-primary bg-primary/10 shadow-md dark:bg-primary/15"
+                      : "border-primary/35 hover:border-primary/60 hover:shadow-md",
                   )}
                 >
                   <span
@@ -611,7 +611,7 @@ export function HeroForm({
           <Button
             type="button"
             onClick={goNext}
-            className="h-14 flex-1 rounded-2xl bg-amber-400 text-lg font-bold text-amber-950 hover:bg-amber-300 sm:h-16 sm:text-xl"
+            className="h-14 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 sm:h-16 sm:text-xl"
           >
             Verder
           </Button>
@@ -619,7 +619,7 @@ export function HeroForm({
           <Button
             type="submit"
             disabled={!canSubmit || submitting}
-            className="h-14 flex-1 rounded-2xl bg-amber-400 text-lg font-bold text-amber-950 hover:bg-amber-300 disabled:opacity-50 sm:h-16 sm:text-xl"
+            className="h-14 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 sm:h-16 sm:text-xl"
           >
             {submitting ? "Het verhaal begint…" : "Begin het avontuur ✨"}
           </Button>
@@ -637,7 +637,7 @@ function StepDots({ current }: { current: WizardStep }) {
           key={n}
           className={cn(
             "h-2 rounded-full transition-all",
-            n === current ? "w-8 bg-amber-400" : "w-2 bg-foreground/15",
+            n === current ? "w-8 bg-primary" : "w-2 bg-foreground/15",
           )}
         />
       ))}
@@ -684,8 +684,8 @@ function RosterHeroTile({
         className={cn(
           "flex w-full flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-[0.97] sm:py-3.5",
           selected
-            ? "-translate-y-0.5 border-amber-500 bg-amber-50/90 shadow-md dark:bg-amber-400/15"
-            : "border-amber-200/60 bg-white/60 hover:border-amber-400/80 hover:shadow-sm dark:bg-white/5",
+            ? "-translate-y-0.5 border-primary bg-primary/10 shadow-md dark:bg-primary/15"
+            : "border-primary/25 bg-white/60 hover:border-primary/60 hover:shadow-sm dark:bg-white/5",
         )}
       >
         <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-foreground/10 sm:size-20">
@@ -752,8 +752,8 @@ function CharacterOptionTile({
         className={cn(
           "flex w-full flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-[0.97] sm:py-3.5",
           selected
-            ? "-translate-y-0.5 border-amber-500 bg-amber-50/90 shadow-md dark:bg-amber-400/15"
-            : "border-amber-200/60 bg-white/60 hover:border-amber-400/80 hover:shadow-sm dark:bg-white/5",
+            ? "-translate-y-0.5 border-primary bg-primary/10 shadow-md dark:bg-primary/15"
+            : "border-primary/25 bg-white/60 hover:border-primary/60 hover:shadow-sm dark:bg-white/5",
         )}
       >
         <span className="relative size-16 shrink-0 overflow-hidden rounded-full bg-foreground/5 ring-2 ring-foreground/10 sm:size-20">
@@ -807,8 +807,8 @@ function ModeButton({
         "flex flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-4 text-sm font-bold transition-all active:scale-[0.97] sm:gap-2 sm:py-5 sm:text-base",
         "bg-white/85 shadow-sm dark:bg-white/10",
         active
-          ? "-translate-y-0.5 border-amber-500 bg-amber-50/90 text-amber-700 shadow-md dark:bg-amber-400/15 dark:text-amber-200"
-          : "border-amber-300/60 text-foreground/80 hover:border-amber-400/80 hover:shadow-md",
+          ? "-translate-y-0.5 border-primary bg-primary/10 text-primary shadow-md dark:bg-primary/15 dark:text-primary"
+          : "border-primary/35 text-foreground/80 hover:border-primary/60 hover:shadow-md",
       )}
     >
       <Icon className="size-7 sm:size-8" strokeWidth={2.5} />
@@ -820,7 +820,7 @@ function ModeButton({
 
 function StepBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm font-extrabold text-amber-950 sm:h-7 sm:w-7 sm:text-base">
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-extrabold text-primary-foreground sm:h-7 sm:w-7 sm:text-base">
       {children}
     </span>
   );

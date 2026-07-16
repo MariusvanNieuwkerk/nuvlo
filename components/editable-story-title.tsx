@@ -87,7 +87,7 @@ export function EditableStoryTitle({
             onKeyDown={onKeyDown}
             disabled={saving}
             className={cn(
-              "min-w-0 flex-1 rounded-lg border-2 border-amber-400/70 bg-white/90 px-2.5 py-1 outline-none focus-visible:border-amber-500 disabled:opacity-60 dark:bg-white/10",
+              "min-w-0 flex-1 rounded-lg border-2 border-primary/50 bg-white/90 px-2.5 py-1 outline-none focus-visible:border-primary disabled:opacity-60 dark:bg-white/10",
               className,
             )}
             style={{ font: "inherit", color: "inherit" }}
@@ -99,7 +99,7 @@ export function EditableStoryTitle({
             disabled={saving}
             aria-label="Titel opslaan"
             title="Opslaan"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-400 text-amber-950 shadow-sm transition-transform active:scale-90 disabled:opacity-60"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform active:scale-90 disabled:opacity-60"
           >
             <Check className="size-4" />
           </button>

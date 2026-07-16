@@ -349,7 +349,7 @@ export function BookPager({
               onClick={() => go(1)}
               disabled={isLast}
               aria-label="Volgende pagina"
-              className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-amber-950 transition-all hover:bg-amber-300 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-2 sm:px-6 sm:py-3.5 sm:text-base"
+              className="flex items-center gap-1.5 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:pointer-events-none disabled:opacity-30 sm:gap-2 sm:px-6 sm:py-3.5 sm:text-base"
             >
               Volgende
               <ChevronRight className="size-5 sm:size-6" />
@@ -394,19 +394,19 @@ function BookPagerFooter({
 }) {
   if (finished) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-6 text-center sm:gap-3 sm:p-8">
+      <div className="flex flex-col items-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 p-6 text-center sm:gap-3 sm:p-8">
         <span className="text-4xl sm:text-5xl">🏆</span>
-        <p className="font-heading text-lg font-bold text-amber-800 sm:text-xl dark:text-amber-200">
+        <p className="font-heading text-lg font-bold text-primary sm:text-xl dark:text-primary">
           {variant === "lezen" ? "Het boek is af — wat een avontuur!" : "Boek af!"}
         </p>
         {variant === "boek" ? (
-          <p className="text-sm text-amber-800/80 sm:text-base dark:text-amber-100/80">
+          <p className="text-sm text-primary/80 sm:text-base dark:text-primary/80">
             {heroName} heeft {heroEnemy} overwonnen. Wat een verhaal!
           </p>
         ) : (
           <Link
             href={`/verhaal/${storyId}/boek`}
-            className="rounded-2xl bg-amber-400 px-5 py-3 text-base font-bold text-amber-950 hover:bg-amber-300 sm:px-7 sm:py-4 sm:text-lg"
+            className="rounded-2xl bg-primary px-5 py-3 text-base font-bold text-primary-foreground hover:bg-primary/90 sm:px-7 sm:py-4 sm:text-lg"
           >
             Lees het hele boek terug
           </Link>
@@ -419,7 +419,7 @@ function BookPagerFooter({
     return (
       <Link
         href={`/verhaal/${storyId}/lezen`}
-        className="rounded-2xl bg-amber-400 px-5 py-4 text-center text-lg font-bold text-amber-950 hover:bg-amber-300 sm:py-5 sm:text-xl"
+        className="rounded-2xl bg-primary px-5 py-4 text-center text-lg font-bold text-primary-foreground hover:bg-primary/90 sm:py-5 sm:text-xl"
       >
         Verder lezen ✨
       </Link>

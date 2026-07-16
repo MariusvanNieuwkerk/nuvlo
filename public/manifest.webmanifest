@@ -4,8 +4,8 @@
   "description": "Avond-leesapp voor kinderen",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#faf1e0",
-  "theme_color": "#e8924a",
+  "background_color": "#fdf3e7",
+  "theme_color": "#185068",
   "icons": [
     {
       "src": "/icon.png",
