@@ -1,9 +1,17 @@
 # Nuvlo — Blueprint
 
-> Dit document is een uitgebreide, actuele beschrijving van hoe Nuvlo in elkaar zit: wat het is,
-> hoe het technisch werkt, welke keuzes bewust gemaakt zijn (en waarom), en waar je moet zijn in
-> de code als je iets wilt aanpassen. Geschreven in gewone taal, met verwijzingen naar de echte
-> bestanden — geen losstaande theorie.
+> **Simple at the front. Intelligent at the back.**
+>
+> Nuvlo is geen AI-product dat toevallig over lezen gaat. Het is een **leesproduct dat AI
+> gebruikt** — alleen waar dat helpt om kinderen vrijwillig zelf te laten lezen. De kernvraag bij
+> elke feature: *zorgt dit ervoor dat het kind méér zin krijgt om zelf te lezen?* Zo niet →
+> parkeren. Productnaam voor die richting: **Curiosity-Driven Reading** (zie §14).
+>
+> Dit document beschrijft hoe Nuvlo in elkaar zit: wat het is, hoe het technisch werkt, welke
+> keuzes bewust gemaakt zijn (en waarom), en waar je moet zijn in de code. Geschreven in gewone
+> taal, met verwijzingen naar echte bestanden — geen losstaande theorie. De lange-termijnvisie
+> (het levende universum van het kind) staat in §16 — nog niet bouwen, wél als kompas bij elke
+> nieuwe feature.
 
 ## 1. Wat is Nuvlo?
 
@@ -26,8 +34,9 @@ Kernbeloften aan het kind:
   wereld, die het hele boek (en toekomstige boeken) hetzelfde blijft.
 - **Elke scène een eigen tekening** — een AI-geïllustreerd plaatje per hoofdstuk, gemaakt terwijl
   het kind al leest.
-- **Personages die je kunt bewaren** — een held of een leuk nevenpersonage opslaan in een eigen
-  "personagebibliotheek", om in een volgend boek terug te laten komen.
+- **Personages die je kunt bewaren** — een held of een leuk nevenpersonage opslaan (technisch:
+  de personagebibliotheek; later in de UX mogelijk “Mijn Wereld”, zie §16), om in een volgend
+  boek terug te laten komen.
 - **Puur lezen en bouwen, geen ballast** — geen enge dingen, geen agressieve gamification, geen
   advertenties.
 
@@ -407,7 +416,9 @@ zich.
 
 **De ontwerpregel bij elke nieuwe feature:** *zorgt dit ervoor dat het kind méér zin krijgt om
 zelf te lezen?* Nee → parkeren. (Dit is precies waarom het item-unlock-beloningssysteem eerder
-is verwijderd, zie §12 — die vraag beantwoordde zichzelf met "nee".)
+is verwijderd, zie §12 — die vraag beantwoordde zichzelf met "nee".) Aanvullend: **Simple at
+the front. Intelligent at the back.** — en past het in het levende universum van het kind
+(§16), of is het een losse gadget?
 
 **Positionering.** Nuvlo is *"a curiosity-driven reading app where children unlock their own
 adventure by reading"* — kinderen lezen en bouwen zelfstandig. Niet een AI-bedtime-story-app,
@@ -485,6 +496,60 @@ niet verslavende social mechanics. Zie ook §13 voor het account-/gezin-model.
 | Eenmalige reparatie-/testscripts | `scripts/*.ts` (draaien via `NODE_OPTIONS="--conditions=react-server" npx tsx scripts/...`) |
 | Leessignaal-meting / productrichting | `lib/storage.ts` (`recordStoryOpened`), `app/api/stories/[id]/opened/route.ts`, §14 hierboven |
 | Accounts / gezin / abonnement (toekomst) | §13 hierboven |
+| Lange-termijnvisie (universum) | §16 hierboven |
+
+## 16. Lange-termijnvisie — The Nuvlo Universe
+
+**Nog niet bouwen.** Wel beschrijven — zodat elke nieuwe feature getoetst kan worden aan:
+*past dit in een levend universum van het kind, of is het een losse feature?*
+
+### Wat het universum wél is
+
+Elk kind bouwt langzaam een **persoonlijk universum**. Dat is geen spel en geen scorebord.
+Het is een groeiend geheugen van alles wat het kind al lezend heeft gemaakt:
+
+- helden  
+- vrienden / nevenpersonages  
+- werelden en plekken  
+- boeken  
+- relaties tussen die dingen  
+
+Elk afgerond boek wordt deel van dat universum. Latere verhalen mogen die elementen
+natuurlijk hergebruiken. De AI **verzint geen nieuw universum voor het kind** — de AI helpt
+het universum van het kind groeien. Het kind blijft altijd de maker.
+
+### Wat het níet mag voelen
+
+- Geen punten, streaks of “verzamel alles”-gamification  
+- Geen database-scherm (“personagebibliotheek” als kantoorterm)  
+- Geen wereldkaart die je moet “unlocken” voordat je mag lezen  
+
+Het moet voelen alsof Finn, zijn vrienden en zijn plekken gewoon *er zijn* — levend, niet als
+rijen in een tabel.
+
+### Taal naar het kind (later)
+
+Kinderen denken niet: *“Ik ga naar mijn personagebibliotheek.”* Ze denken: *“Finn.”*
+Daarom mag de huidige term **personagebibliotheek** (technische/code-naam, `SavedCharacter`)
+uiteindelijk in de UI uitfaseren naar iets als **Mijn Wereld** — één plek waar helden,
+vrienden, boeken en plekken samen leven. Geen herbouw van het datamodel; wél een
+andere presentatie. Tot die tijd blijft de code-term “personagebibliotheek” / `characters`
+gewoon bestaan (zie §4, §7).
+
+### Toetsvraag bij elke feature
+
+1. Helpt dit het kind **meer zelf te lezen**? (§14)  
+2. Past dit in een **levend universum**, of is het een losse gadget? (deze §)  
+3. Blijft de voorkant **simpel** terwijl de intelligentie achterin zit? (kopregel van dit document)
+
+Als het antwoord bij 1 of 2 “nee” is → niet bouwen (of later opnieuw bekijken).
+
+### Documentatie later opsplitsen (optioneel)
+
+Deze blueprint groeit. Als AI-context te zwaar wordt, mag hij later gesplitst worden in
+bijv. `PRODUCT_PHILOSOPHY.md`, `UX_GUIDELINES.md`, `AI_GUIDELINES.md`, `DATABASE.md`,
+`IMAGE_ENGINE.md`, `ROADMAP.md` — met deze blueprint als naslagwerk. **Nog niet gedaan**;
+één bron van waarheid is voor nu genoeg.
 
 ---
 *Dit document is een momentopname (juli 2026) en geen gegarandeerd actuele spec — bij twijfel
