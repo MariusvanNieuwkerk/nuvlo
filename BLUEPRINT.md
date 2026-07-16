@@ -10,7 +10,9 @@
 Nuvlo is een Nederlandstalige **lees- en verhaalbouw-app voor kinderen van 6 tot 11 jaar**.
 Kinderen lezen **zelfstandig** en bouwen hun eigen geïllustreerde avontuur: ze verzinnen een held,
 lezen scènes die eindigen op een cliffhanger, kiezen hoe het verdergaat, en zo groeit het boek
-hoofdstuk voor hoofdstuk — tot een warm, afgerond einde na ongeveer 14 hoofdstukken.
+hoofdstuk voor hoofdstuk — tot een afgerond einde na ongeveer 14 hoofdstukken. Hoe *zoet* of
+*spannend* dat einde aanvoelt, schaalt mee met de leeftijd van het kind (zie §5): jong = altijd
+warm en veilig; ouder = echte tegenslag en een bitterzoete of openere afloop mogen.
 
 **Belangrijk — wat Nuvlo níet is:** geen voorleesapp, geen bedtime-story-app, geen app waarin
 een ouder voorleest terwijl het kind alleen luistert. Het kind is de lezer én de mede-maker.
@@ -125,9 +127,28 @@ Twee functies vormen het hart van de app:
 
 Beide roepen Claude aan via **tool-use** (`lib/ai/tools.ts`): Claude *moet* antwoorden met een
 vast JSON-schema (geen vrije tekst), gestuurd door een uitgebreide systeemprompt
-(`lib/ai/system-prompt.ts`) met 16 harde regels — o.a. foutloos Nederlands, nooit echt eng,
-leesniveau schaalt met leeftijd, exact 3 keuzes, en hoe uiterlijken/wereld/nevenpersonages
-consistent te houden.
+(`lib/ai/system-prompt.ts`) met 16 harde regels — o.a. foutloos Nederlands, nooit echt eng/
+gewelddadig, exact 3 keuzes, en hoe uiterlijken/wereld/nevenpersonages consistent te houden.
+
+**Leeftijd stuurt twee knoppen** (beide in `lib/story-director.ts`, meegegeven in elke
+user-message naar Claude):
+
+| Knop | Functie | Wat het doet |
+|---|---|---|
+| Leesniveau | `readingLevelLabel(age)` | Zinslengte en woorden per bladzijde (6-7 / 8-9 / 10+) — zie systeemregel 3. |
+| Spanningsniveau | `tensionLevelLabel(age)` | Hoe de tegenstander en het einde zich mogen gedragen — zie systeemregel 2 + 8. |
+
+Spanningsniveaus in het kort:
+- **6-7 jaar** — tegenstander is vooral onhandig/eenzaam en draait om; niemand verliest echt iets;
+  einde altijd warm en veilig.
+- **8-9 jaar** — tegenstander mag oprecht dwars liggen; spanning mag oplopen; einde nog steeds warm.
+- **10-11 jaar** — echte tegenslag mag (plan mislukt, vriendschap op de proef); tegenstander hoeft
+  niet bekeerd te worden (mag ontsnappen of als dreiging blijven); einde mag bitterzoet; één klein
+  draadje mag open blijven zolang de kernvraag beantwoord is.
+
+De **veiligheidsgrens** is voor alle leeftijden hetzelfde: geen wapens, bloed, horror of echte
+pijn. Alleen de *emotionele* uitkomst wordt minder gegarandeerd zacht naarmate het kind ouder is.
+(Feedback-aanleiding: een 11-jarige vond eindes te "zoetsappig" — de slechterik werd altijd goed.)
 
 Pacing: het boek is gepland op **~14 hoofdstukken** (`CHAPTERS_TARGET` in `lib/progress.ts`,
 gedeeld met de voortgangsbalk-UI). Vanaf hoofdstuk 12 dringt de prompt aan op afronden, met een
@@ -209,12 +230,21 @@ Zelfde `BookPager`, maar dan read-only door een afgerond boek, met een link om v
 als het nog niet af is.
 
 ### De home — held-first (`app/page.tsx`, `components/home-hero-view.tsx`)
-Nuvlo opent op de **actieve held**, niet op een boekenplank. Het kind ziet: portret + naam,
-**Verder lezen** (of boek teruglezen), **Nieuw avontuur**, en een rij om van held te wisselen
+Nuvlo opent op de **actieve held**, niet op een boekenplank. Het kind ziet: groot portret + naam,
+**Verder lezen** (of “Boek teruglezen”), **Nieuw avontuur**, en een rij om van held te wisselen
 (of een nieuwe te maken). Daaronder staan alleen de boeken van díe held (`StoryCard`).
-Welke held actief is, onthoudt de browser in `localStorage` (`lib/active-hero.ts`); het
-helden-rooster komt uit opgeslagen helden + unieke held-namen in boeken (`lib/hero-roster.ts`).
-Per-boek-acties (titel, favoriet, delen, verwijderen) blijven in `components/story-card-menu.tsx`.
+
+- **Held bewerken** gebeurt via het potloodje op het grote portret (naam, uiterlijk, leesniveau /
+  leeftijd, of verwijderen) — geen aparte “Beheer”-lijst meer. Wereld staat níet onder de heldennaam
+  (die wisselt per boek).
+- **“Verder lezen”** pakt via `continueStoryForHero` (`lib/hero-roster.ts`) het eerste open boek
+  (`status === "bezig"`) van die held. De boekenlijst is gesorteerd op favoriet eerst, daarna
+  `updated_at` (meest recent). Geen open boek → bovenste boek überhaupt (vaak “teruglezen”).
+- **Held-wisselaar** (“Andere held”): op telefoon horizontaal scrollbaar; op groter scherm wrappen
+  extra helden naar een tweede regel.
+- Welke held actief is, onthoudt de browser in `localStorage` (`lib/active-hero.ts`); het
+  helden-rooster komt uit opgeslagen helden + unieke held-namen in boeken (`lib/hero-roster.ts`).
+- Per-boek-acties (titel, favoriet, delen, verwijderen) blijven in `components/story-card-menu.tsx`.
 
 ## 8. Database (Supabase / Postgres)
 
@@ -257,9 +287,11 @@ browser) en helpers als `lib/image-usage.ts` en `lib/side-character-images.ts`.
   genest-gestructureerde velden voor uiterlijk, wereld en nevenpersonages.
   Toolgebruik dwingt Claude tot geldige JSON, altijd voorspelbaar te verwerken.
 - **Systeemprompt**: `lib/ai/system-prompt.ts` — 16 genummerde harde regels (taal, veiligheid,
-  leeslengte per leeftijd, cliffhangers, akte-pacing, open draadjes, kind-eigen invoer verwerken,
-  gestructureerde uiterlijken, wanneer een nieuwe illustratie/nieuwe locatie/vormverandering
-  nodig is).
+  leeslengte én spanningsniveau per leeftijd, cliffhangers, akte-pacing, open draadjes,
+  kind-eigen invoer verwerken, gestructureerde uiterlijken, wanneer een nieuwe illustratie/
+  nieuwe locatie/vormverandering nodig is). Het concrete spanningsniveau per leeftijd staat in
+  `tensionLevelLabel` (§5) en wordt bij elke `startStory`/`nextScene`-aanroep in de
+  gebruikersboodschap herhaald.
 
 ### Beeld — fal.ai (Nano Banana 2)
 - **Module**: `lib/image.ts` — alle generatie-functies (`generateSceneImage`, `generatePortrait`,
@@ -270,7 +302,19 @@ browser) en helpers als `lib/image-usage.ts` en `lib/side-character-images.ts`.
 - **`isLiteModel`-check**: lite-modellen ondersteunen geen `resolution`-parameter; die wordt
   conditioneel weggelaten in `buildFormatInput`.
 
-## 10. UX-principes die overal terugkomen
+## 10. Merk & look
+
+Merkkleuren volgen het **wolk-boek-logo** (cream + diep teal):
+- Teal primaire actiekleur ≈ `#185068` (`--primary` in `app/globals.css`)
+- Cream achtergrond ≈ `#fdf3e7`
+- Logo: `public/nuvlo-logo.png` (transparante achtergrond); app-iconen `app/icon.png`,
+  `app/apple-icon.png`, `public/icon.png`; `theme_color` in `public/manifest.webmanifest`
+  en `app/layout.tsx`.
+- Licht = cream-lucht met zachte teal-gloed; donker = nachtelijke teal-hemel (geen paars/
+  oranje meer als merkkleur). Favoriet-sterren mogen goud/amber blijven — dat is semantiek,
+  geen merkaccent.
+
+## 11. UX-principes die overal terugkomen
 
 - **Nooit technisch jargon naar het kind.** Foutmeldingen worden altijd vertaald naar iets
   vriendelijks ("Het verhaal kon niet goed gemaakt worden. Probeer het nog eens.", nooit een
@@ -284,16 +328,16 @@ browser) en helpers als `lib/image-usage.ts` en `lib/side-character-images.ts`.
   wordt pas de VOLGENDE sessie onthuld (`hasUnseenPortrait`/`reward-reveal`-animatie in
   `components/hero-panel.tsx`) — een reden om terug te komen, geen instant-gratificatie-loop.
 - **De achtergrond is altijd de achtergrond, nooit een losse kaart.** Bewuste, herhaalde keuze
-  (zie §11) om UI-elementen zoveel mogelijk direct op de paginakleur te laten staan i.p.v. in
+  (zie §12) om UI-elementen zoveel mogelijk direct op de paginakleur te laten staan i.p.v. in
   witte kaarten — en om `.night-sky` (het achtergrond-verloop) zowel op `<html>` als `<body>`
   te zetten zodat er op geen schermformaat een naad/wit vlak kan ontstaan.
 
-## 11. Bekende afwegingen & valkuilen (voor toekomstig werk)
+## 12. Bekende afwegingen & valkuilen (voor toekomstig werk)
 
 - **Eén gedeeld kind-profiel (nu).** `children`-tabel heeft momenteel effectief altijd maar één
   rij (`getDefaultChild`/`updateDefaultChild` in `lib/storage.ts`) — er is nog geen multi-kind-
   of login-systeem. `authorName`/`authorAge` per boek bestaan wél al los daarvan (zie §4).
-  Het bedoelde model voor later staat in §12.
+  Het bedoelde model voor later staat in §13.
 - **iOS Safari is een structurele aandachtspunt.** Cascade layers (`@layer`, Tailwind v4),
   `oklch`-kleuren en `background-attachment: fixed` gaven eerder concrete, zichtbare bugs op
   oudere iPads. `postcss-cascade-layers` en sRGB-fallbacks vangen dit nu op; puur `oklch` zonder
@@ -311,7 +355,7 @@ browser) en helpers als `lib/image-usage.ts` en `lib/side-character-images.ts`.
 - **Alle Vercel-functies hebben `maxDuration = 60`** (Hobby-plan-maximum) op elke route die AI
   aanroept — zonder die regel kapt Vercel serverless functions na de standaard ~10s af.
 
-## 12. Accounts, kind-profielen & gezin-abonnement (toekomst)
+## 13. Accounts, kind-profielen & gezin-abonnement (toekomst)
 
 Nog **niet gebouwd**. Dit is het vaste productmodel voor wanneer Nuvlo accounts en betalen krijgt —
 makkelijk voor kinderen, veilig voor ouders, eenvoudig te begrijpen.
@@ -351,9 +395,9 @@ Het kind heeft **geen e-mail** nodig en geen eigen account met wachtwoord.
 3. Gezin-abonnement (Stripe) op het ouder-account  
 4. Ouder-PIN / ouder-instellingen  
 
-Tot die tijd blijft de app zoals nu: één gedeeld kind-profiel zonder login (zie §11).
+Tot die tijd blijft de app zoals nu: één gedeeld kind-profiel zonder login (zie §12).
 
-## 13. Toekomstplan: Curiosity-Driven Reading
+## 14. Toekomstplan: Curiosity-Driven Reading
 
 Product-richting (vastgelegd juli 2026): Nuvlo groeit langzaam uit tot een **curiosity-driven
 reading platform**. De kern is niet "AI maakt een verhaaltje" maar: *kinderen gaan zélf lezen
@@ -363,7 +407,7 @@ zich.
 
 **De ontwerpregel bij elke nieuwe feature:** *zorgt dit ervoor dat het kind méér zin krijgt om
 zelf te lezen?* Nee → parkeren. (Dit is precies waarom het item-unlock-beloningssysteem eerder
-is verwijderd, zie §11 — die vraag beantwoordde zichzelf met "nee".)
+is verwijderd, zie §12 — die vraag beantwoordde zichzelf met "nee".)
 
 **Positionering.** Nuvlo is *"a curiosity-driven reading app where children unlock their own
 adventure by reading"* — kinderen lezen en bouwen zelfstandig. Niet een AI-bedtime-story-app,
@@ -377,23 +421,33 @@ en gemaakt"*, niet een oneindige stroom content.
 
 **Roadmap-volgorde (bij twijfel wint de eerste, nog niet afgeronde stap):**
 1. **Leeslus perfectioneren** ← huidige focus
-2. Cliffhangers en keuzes verbeteren
-3. Tekstlengte/leeftijd verder afstemmen
+2. Cliffhangers en keuzes verbeteren (deels gedaan; blijft tunen op echte verhalen)
+3. ~~Tekstlengte/leeftijd afstemmen~~ — **gedaan** (leesniveau + spanningsniveau, zie §5); verder
+   alleen nog finetunen op feedback van echte kinderen
 4. Illustraties als beloning verfijnen
 5. Afgerond boek/PDF/cover verbeteren
-6. **Accounts + gezin-abonnement** (zie §12) — nodig vóór privé delen en betalen
-7. Privé delen met familie (vereist §12)
+6. **Accounts + gezin-abonnement** (zie §13) — nodig vóór privé delen en betalen
+7. Privé delen met familie (vereist §13)
 8. Vriendjes veilig laten lezen/reageren (alleen veilige, vaste reacties — geen vrije chat)
 9. Samen een boek maken (om de beurt lezen/kiezen, AI blijft regisseur)
 10. Gecureerde openbare bibliotheek (alleen na goedkeuring, geen echte namen/foto's)
 11. Schooldashboard (sober: gelezen hoofdstukken/minuten, geen ranglijsten of competitie)
 
-**Al gedaan richting stap 1-2 (deze sessie):**
+**Al gedaan richting stap 1-3:**
 - *Cliffhanger-/keuzekwaliteit aangescherpt* in `lib/ai/system-prompt.ts` (regels 4-5): concrete
   voorbeelden van goede cliffhangers (callback / zintuiglijke onthulling / gevolg van de eigen
   keuze) en van betekenisvolle keuzes (vertrouwen/moed/vriendschap raken) i.p.v. kale
   richting-keuzes — met expliciete tegenvoorbeelden, omdat een taalmodel concrete voorbeelden
   betrouwbaarder volgt dan abstracte woorden als "spannend".
+- *Spanningsniveau per leeftijd* (`tensionLevelLabel` in `lib/story-director.ts` +
+  systeemregels 2 en 8): 6-7 speels/veilig, 8-9 oplopende spanning, 10-11 echte tegenslag en
+  bitterzoet einde toegestaan — veiligheidsgrens (geen geweld/bloed/echte pijn) blijft voor
+  alle leeftijden gelijk. Aanleiding: feedback van een 11-jarige dat eindes te zoetsappig waren.
+- *Home held-first* met actieve held, “Verder lezen”, held-wisselaar, en bewerken via potlood
+  op het portret (`components/home-hero-view.tsx`, `lib/hero-roster.ts`).
+- *Nieuw-verhaal als 3-stappen-wizard* (`components/hero-form.tsx`); kracht/zwakte/vijand via
+  `lib/hero-defaults.ts`.
+- *Merk refresh*: cream + teal logo/thema (§10).
 - *Minimale leessignaal-meting (v1)*: twee nieuwe kolommen op `stories`
   (`last_read_at`, `read_session_count`), bijgewerkt via de atomaire RPC `record_story_opened`
   en aangeroepen vanuit `components/book-pager.tsx` zodra de lees-/boekpagina opent
@@ -414,9 +468,9 @@ dashboard of rapportage die dit toont, dat komt pas als er genoeg data is om iet
 voor het kind, geen echte horror, geen publieke profielen of vrije kind-kind-chat in de vroege
 fases, oudercontrole bij elke vorm van delen, zo min mogelijk persoonsgegevens, geen advertenties,
 geen agressieve engagement-mechanics — nieuwsgierigheid en eigenaarschap mogen de motor zijn,
-niet verslavende social mechanics. Zie ook §12 voor het account-/gezin-model.
+niet verslavende social mechanics. Zie ook §13 voor het account-/gezin-model.
 
-## 14. Snel navigeren in de code
+## 15. Snel navigeren in de code
 
 | Wil je... | Kijk in... |
 |---|---|
@@ -427,10 +481,10 @@ niet verslavende social mechanics. Zie ook §12 voor het account-/gezin-model.
 | Boek aanmaken | `app/nieuw-verhaal/page.tsx`, `components/hero-form.tsx`, `app/api/stories/route.ts` |
 | Personagebibliotheek | `lib/types.ts` (`SavedCharacter`), `app/api/characters/**`, `components/save-character-button.tsx` |
 | Home / actieve held | `components/home-hero-view.tsx`, `lib/hero-roster.ts`, `lib/active-hero.ts` |
-| Styling/thema/lettertype | `app/globals.css`, `app/layout.tsx` |
+| Merk / thema / lettertype | `app/globals.css`, `app/layout.tsx`, `public/nuvlo-logo.png`, §10 hierboven |
 | Eenmalige reparatie-/testscripts | `scripts/*.ts` (draaien via `NODE_OPTIONS="--conditions=react-server" npx tsx scripts/...`) |
-| Leessignaal-meting / productrichting | `lib/storage.ts` (`recordStoryOpened`), `app/api/stories/[id]/opened/route.ts`, §13 hierboven |
-| Accounts / gezin / abonnement (toekomst) | §12 hierboven |
+| Leessignaal-meting / productrichting | `lib/storage.ts` (`recordStoryOpened`), `app/api/stories/[id]/opened/route.ts`, §14 hierboven |
+| Accounts / gezin / abonnement (toekomst) | §13 hierboven |
 
 ---
 *Dit document is een momentopname (juli 2026) en geen gegarandeerd actuele spec — bij twijfel
