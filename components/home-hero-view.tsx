@@ -41,7 +41,7 @@ function HeroPortrait({
       )}
     >
       {hero.portraitUrl ? (
-        <Image src={hero.portraitUrl} alt={hero.name} fill className="object-cover" sizes="176px" />
+        <Image src={hero.portraitUrl} alt={hero.name} fill className="object-cover object-top" sizes="176px" />
       ) : (
         <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/25 dark:to-primary/10">
           <Sparkles className={cn("text-primary/70 dark:text-primary/80", size === "lg" ? "size-12" : "size-5")} />

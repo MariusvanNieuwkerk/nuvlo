@@ -25,15 +25,17 @@
 //
 // BEELDCONSISTENTIE — referentiebeelden (KOSTEN-AFWEGING):
 // Puur tekst-naar-plaatje (elke illustratie los) is niet betrouwbaar genoeg: hetzelfde
-// personage kan er per plaat toch anders uitzien. Daarom geven we het held-portret
-// (character.portraitUrl) als referentie mee aan Nano Banana 2's edit-endpoint.
-// BEWUST teruggeschroefd: er werden vroeger óók losse ankerbeelden van de wereld en van elk
-// nevenpersonage gemaakt (elk een aparte, dure fal-call, plus een vision-verify-lus). Dat
-// bleek veel te duur en te traag. Nu geldt op het runtime-pad: max ÉÉN scène-illustratie per
-// hoofdstuk, met alléén het held-portret als anker (1 referentie, 1 call). De wereld en
-// nevenpersonages blijven wél in de TEKST van de prompt staan (dat is gratis). De wereld-/
-// nevenpersonage-ankergeneratoren bestaan nog uitsluitend voor offline gebruik (het
-// consistentie-controlescript), niet meer tijdens het lezen/kiezen.
+// personage ziet er per plaat toch anders uit. Daarom gaan er ankerBEELDEN mee naar het
+// edit-endpoint. Wat er op het runtime-pad (lezen/kiezen) precies gebeurt:
+// - HELD: character.portraitUrl gaat altijd mee als referentie. Dat beeld is bewust een
+//   personage-referentie van hoofd tot knieën, geen gezichts-close-up — zie generatePortrait.
+// - NEVENPERSONAGES: elk personage dat in déze scène te zien is krijgt eenmalig een eigen
+//   ankerbeeld (zie lib/side-character-images.ts, quota-beschermd) dat daarna gratis in elke
+//   volgende scène hergebruikt wordt.
+// - WERELD: GEEN ankerbeeld op het runtime-pad (de route geeft hier null door) — de omgeving
+//   gaat alleen als TEKST mee. generateWorldReferenceImage bestaat nog wel, maar wordt
+//   uitsluitend offline gebruikt (scripts/check-image-consistency.ts). Dit is de plek om te
+//   kijken als omgevingen tussen hoofdstukken blijven schuiven.
 //
 // Model-keuze: we gebruikten eerst fal-ai/flux-pro/kontext voor de beeld-naar-beeld stap.
 // Kontext is een lokaal PIXEL-EDIT-model — gemaakt voor kleine, gerichte aanpassingen in
@@ -354,13 +356,21 @@ export async function generateSceneImage(
   return { url, verified: true };
 }
 
-// Een los portret van de held (geen scène), gebruikt voor de uitgestelde beloning op de
-// boekenplank. "moment" beschrijft kort waar het verhaal nu staat, zodat het portret mee
-// evolueert met het avontuur.
+// Het held-beeld: tegelijk het zichtbare "portret" van het kind (home, boekenplank) én —
+// belangrijker — het ANKERBEELD dat bij elke scène-illustratie als referentie meegaat.
 //
-// previousPortraitUrl: als de held al een portret had, gebruiken we dat als referentie
-// zodat het nieuwe portret duidelijk hetzelfde personage blijft — anders (het allereerste
-// portret) tekenen we vanaf nul.
+// BEWUST GEEN GEZICHTS-CLOSE-UP MEER. Dat was het eerst wél, en dat is precies waarom
+// kinderen hun held per hoofdstuk zagen veranderen: op een close-up staat alles onder de
+// schouders niet, dus kleding, accessoires en lichaamsbouw moest het beeldmodel bij elke
+// scène opnieuw verzinnen. Nu is dit een personage-referentiebeeld: rechtop, van hoofd tot
+// knieën, zodat outfit + accessoires zichtbaar vastliggen. Bewust NIET ten voeten uit — dan
+// wordt het hoofd zo klein dat het als rond avatartje op de home niet meer herkenbaar is.
+// De UI snijdt deze beelden bovenaan bij (object-top), zodat het gezicht in de ronde
+// avatars gewoon in beeld blijft.
+//
+// "moment" beschrijft kort waar het verhaal nu staat, zodat het portret mee kan evolueren
+// met het avontuur. previousPortraitUrl: had de held al een beeld, dan gebruiken we dat als
+// referentie zodat het duidelijk hetzelfde personage blijft — anders tekenen we vanaf nul.
 export async function generatePortrait(
   appearance: CharacterAppearance,
   moment: string,
@@ -369,11 +379,11 @@ export async function generatePortrait(
 ): Promise<ImageResult> {
   // Eén generatie zonder vision-verificatie (zie generateSceneImage): kosten/snelheid gaan
   // voor een laatste procentje trefzekerheid.
-  const prompt = `Portret (close-up, alleen het personage, vriendelijke uitstraling, neutrale eenvoudige achtergrond) van een kinderboekheld. Uiterlijk (volg dit LETTERLIJK en volledig, elk kledingstuk en accessoire moet duidelijk zichtbaar zijn): ${describeCharacterAppearance(appearance)}. Huidige status in het verhaal: ${moment}.`;
+  const prompt = `Personage-referentiebeeld van een kinderboekheld: één enkel personage, rechtop staand, van het hoofd tot de knieën volledig in beeld, naar de kijker toe gedraaid, vriendelijke uitstraling, op een neutrale egale achtergrond zonder scène, decor of andere personages. Het hoofd staat in de bovenste helft van het beeld. Uiterlijk (volg dit LETTERLIJK en volledig, elk kledingstuk en accessoire moet duidelijk en herkenbaar zichtbaar zijn): ${describeCharacterAppearance(appearance)}. Huidige status in het verhaal: ${moment}.`;
 
   const url = previousPortraitUrl
-    ? await requestImageFromReference(prompt, [previousPortraitUrl], styleHint, "4:3")
-    : await requestImage(prompt, styleHint, "4:3");
+    ? await requestImageFromReference(prompt, [previousPortraitUrl], styleHint, "3:4")
+    : await requestImage(prompt, styleHint, "3:4");
   return { url, verified: true };
 }
 

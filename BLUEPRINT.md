@@ -187,7 +187,7 @@ anders uit. De oplossing bestaat uit twee lagen:
    prompt staat, en een herhaald "personage-sheet" werkt als een steviger anker dan wanneer het
    steeds ergens anders opduikt.
 
-Twee bewust ingebouwde correcties op terugkerende problemen:
+Drie bewust ingebouwde correcties op terugkerende problemen:
 - **Elk hoofdstuk zijn eigen plaatje.** Er bestond een kostenbesparende "hergebruik de vorige
   illustratie"-optie (`shouldGenerateFreshImage`); die staat nu uit (`MAX_CONSECUTIVE_IMAGE_SKIPS
   = 0`) omdat kinderen het opviel als twee hoofdstukken achter elkaar precies dezelfde tekening
@@ -196,13 +196,26 @@ Twee bewust ingebouwde correcties op terugkerende problemen:
   (gekrompen, een dier, betoverd), vult Claude `heroTemporaryAppearance` — dat vervangt de
   "houd het uiterlijk exact aan"-instructie én laat het held-portret als referentie weg, zodat de
   held niet per ongeluk twéé keer in beeld komt (normale vorm + nieuwe vorm naast elkaar).
+- **Het held-anker is géén gezichts-close-up.** `generatePortrait` maakte eerst een close-up;
+  daardoor stond alles onder de schouders niet op het ankerbeeld en moest het beeldmodel kleding,
+  accessoires en lichaamsbouw bij élke scène opnieuw verzinnen — precies de klacht "mijn held
+  verandert per hoofdstuk". Het is nu een personage-referentiebeeld van hoofd tot knieën (3:4).
+  Bewust niet ten voeten uit: dan wordt het hoofd te klein voor het ronde avatartje op de home.
+  De UI snijdt deze beelden bovenaan bij (`object-top`), zodat het gezicht zichtbaar blijft.
 
-**Model & kosten.** `IMAGE_MODEL`/`IMAGE_EDIT_MODEL` zijn omgeschakelbaar via env-vars. Default
-is `fal-ai/nano-banana-2` (mooiste resultaat); de goedkopere/snellere `google/nano-banana-2-lite`
-familie kan zonder codewijziging ingesteld worden (let op de `google/`-namespace, niet `fal-ai/`).
-Een dagelijkse harde limiet per kind (`MAX_IMAGES_PER_DAY_PER_CHILD`) wordt atomair afgedwongen
-via de Postgres-functie `claim_image_quota` (zie §8) — bestand tegen gelijktijdige aanvragen op
-Vercel's serverless platform.
+**Model & kosten.** `IMAGE_MODEL`/`IMAGE_EDIT_MODEL` zijn omgeschakelbaar via env-vars, en staan
+(lokaal én op Vercel) op **`fal-ai/nano-banana-2`** — de echte scène-composer, ~$0,07/plaatje.
+De goedkopere `google/nano-banana-2-lite` (~$0,03, sneller) heeft hier een tijd gestaan en is
+bewust teruggedraaid: lite is een schetsmachine voor grote volumes en houdt dezelfde
+personage-identiteit merkbaar slechter vast over meerdere platen. Consistentie weegt hier
+zwaarder dan de halve prijs. (Let bij een eventuele terugschakeling op de `google/`-namespace,
+niet `fal-ai/`.) Een dagelijkse harde limiet per kind (`MAX_IMAGES_PER_DAY_PER_CHILD`) wordt
+atomair afgedwongen via de Postgres-functie `claim_image_quota` (zie §8) — bestand tegen
+gelijktijdige aanvragen op Vercel's serverless platform.
+
+**Nog open bij inconsistentie** (volgende knoppen, nog niet gedaan): de wereld heeft op het
+leespad géén ankerbeeld (alleen tekst — de route geeft `worldReferenceImageUrl` als `null` door),
+en er is op dat pad geen vision-verificatie meer, dus een mislukte plaat wordt nooit opgemerkt.
 
 **Verificatie is bewust ALLEEN offline.** `lib/ai/vision-verify.ts` + `generateWithVerification`
 checken met een vision-model of een harde-eisen-checklist (bv. een gevraagd accessoire) écht op
