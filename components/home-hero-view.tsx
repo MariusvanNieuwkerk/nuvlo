@@ -333,7 +333,7 @@ export function HomeHeroView({
                   type="button"
                   disabled={saving || deleting}
                   onClick={() => void saveHeroEdits(activeHero)}
-                  className="min-h-16 w-full rounded-2xl bg-primary px-6 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 md:min-h-12 md:flex-1 md:py-3 md:text-base"
+                  className="min-h-12 w-full rounded-2xl bg-primary px-6 py-3 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 md:flex-1"
                 >
                   {saving ? "Opslaan…" : "Opslaan"}
                 </button>
