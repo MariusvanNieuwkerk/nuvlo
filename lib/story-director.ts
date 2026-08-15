@@ -417,8 +417,13 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
   for (const c of existingSideCharacters ?? []) mergedByName.set(c.name.toLowerCase(), c);
   const sideCharacters = Array.from(mergedByName.values());
 
+  const title =
+    typeof result.title === "string" && result.title.trim()
+      ? result.title.trim()
+      : `${hero.name} in ${hero.world}`;
+
   return {
-    title: assertNonEmptyString(result.title, "title"),
+    title,
     bible: {
       aktes: aktes.length ? aktes : [`Het avontuur van ${hero.name} in ${hero.world}.`],
       openThreads: cleanStringArray(result.openThreads),
