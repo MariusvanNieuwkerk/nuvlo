@@ -290,12 +290,8 @@ export function HeroForm({
     if (step === 4) setStep(3);
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (step !== 4) {
-      goNext();
-      return;
-    }
+  async function startAdventure() {
+    if (step !== 4 || submitting) return;
     if (!canSubmit) {
       setError("Nog niet alles is ingevuld.");
       return;
@@ -379,7 +375,12 @@ export function HeroForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-6 sm:gap-8">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+      }}
+      className="flex flex-col gap-6 sm:gap-8"
+    >
       <StepDots current={step} />
 
       {step === 1 && (
@@ -692,8 +693,9 @@ export function HeroForm({
           </button>
         ) : (
           <button
-            type="submit"
+            type="button"
             disabled={!canSubmit || submitting}
+            onClick={() => void startAdventure()}
             className="min-h-16 w-full rounded-2xl bg-primary px-6 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 sm:min-h-16 sm:flex-1 sm:text-xl"
           >
             {submitting ? "Het verhaal wordt geschreven…" : "Begin het avontuur ✨"}
