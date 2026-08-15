@@ -683,21 +683,21 @@ export function HeroForm({
           </Button>
         )}
         {step < 4 ? (
-          <Button
+          <button
             type="button"
             onClick={goNext}
-            className="h-14 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 sm:h-16 sm:text-xl"
+            className="min-h-16 w-full rounded-2xl bg-primary px-6 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] sm:min-h-16 sm:flex-1 sm:text-xl"
           >
             Verder
-          </Button>
+          </button>
         ) : (
-          <Button
+          <button
             type="submit"
             disabled={!canSubmit || submitting}
-            className="h-14 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 sm:h-16 sm:text-xl"
+            className="min-h-16 w-full rounded-2xl bg-primary px-6 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 sm:min-h-16 sm:flex-1 sm:text-xl"
           >
             {submitting ? "Het verhaal wordt geschreven…" : "Begin het avontuur ✨"}
-          </Button>
+          </button>
         )}
       </div>
     </form>
