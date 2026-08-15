@@ -137,7 +137,7 @@ function tensionLevelLabel(age: number): string {
   if (age <= 9) {
     return "8-9 jaar: de tegenstander mag oprecht dwars liggen en hoeft niet meteen om te draaien — laat de spanning oplopen tot het even echt onzeker aanvoelt wie er wint. Het einde is nog steeds warm, maar het mag onderweg wat pittiger en minder voorspelbaar zijn dan voor jonge kinderen.";
   }
-  return "10-11 jaar: sta ECHTE tegenslag toe. De held mag iets voelbaars verliezen (een belofte die breekt, een vriendschap die op de proef staat, een plan dat eerst mislukt), en de tegenstander hoeft NIET bekeerd of verslagen te worden — hij mag ontsnappen, gelijk krijgen op een deelpunt, of als dreiging blijven bestaan. Het einde mag bitterzoet zijn: warm genoeg om prettig te sluiten, maar niet elk draadje hoeft perfect opgelost te worden. Blijf wel altijd binnen de veiligheidsgrens uit systeemregel 2 — het gaat om emotionele, verhalende tegenslag, niet om echt geweld.";
+  return "10-11 jaar: sta ECHTE tegenslag toe. De held mag iets voelbaars verliezen (een belofte die breekt, een vriendschap die op de proef staat, een plan dat eerst mislukt), en de tegenstander hoeft NIET bekeerd of verslagen te worden — hij mag ontsnappen, gelijk krijgen op een deelpunt, of als dreiging blijven bestaan. Het einde mag bitterzoet zijn: warm genoeg om prettig te sluiten, maar niet elk draadje hoeft perfect opgelost te worden. VERBODEN cliché op deze leeftijd: de tegenstander blijkt alleen eenzaam/onhandig en wordt in de laatste scène vriend. Dat is het 6-7-patroon — gebruik het hier niet als standaardafloop. Blijf wel altijd binnen de veiligheidsgrens uit systeemregel 2 — het gaat om emotionele, verhalende tegenslag, niet om echt geweld.";
 }
 
 function expectedAkte(chapterN: number): number {
@@ -362,7 +362,7 @@ Tegenstander: ${hero.enemy}
 Genre: ${hero.genre}
 ${appearanceNote}${existingSideNote}
 
-Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze held, wereld en tegenstander) en een korte titel. Schrijf daarna hoofdstuk 1: de openingsscène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde en 3 keuzes voor het kind.`;
+Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze held, wereld en tegenstander — de AKTES moeten het spanningsniveau hierboven volgen, dus bij 10-11 geen bijbel waarin de tegenstander vanzelf vriend wordt) en een korte titel. Schrijf daarna hoofdstuk 1: de openingsscène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde en 3 keuzes voor het kind.`;
 
   const result = await callStoryTool<StartStoryToolOutput>({
     tool: START_STORY_TOOL,
@@ -442,13 +442,18 @@ export async function nextScene(input: NextSceneInput): Promise<NextSceneResult>
   // Oplopende druk om af te ronden: vanaf hoofdstuk 12 rustig uitfaden, vanaf 14 sterk
   // aandringen op de finale. Zo eindigt het verhaal netjes rond ~14 i.p.v. door te denderen.
   let pacingNote = "";
+  const finaleTone =
+    age >= 10
+      ? "Rond de kernvraag af volgens het spanningsniveau (bitterzoet mag; de tegenstander hoeft geen vriend te worden)."
+      : age >= 8
+        ? "Rond de bestaande draadjes af; het einde blijft warm, maar de tegenstander hoeft niet om te draaien."
+        : "Rond alle open draadjes nu warm af.";
   if (forceFinale) {
-    pacingNote =
-      "\nDit MOET de allerlaatste scène worden: rond alle open draadjes nu warm af (isFinale = true, lege keuzes-lijst, geen cliffhanger).";
+    pacingNote = `\nDit MOET de allerlaatste scène worden: ${finaleTone} (isFinale = true, lege keuzes-lijst, geen cliffhanger).`;
   } else if (nextN >= CHAPTERS_TOTAL) {
-    pacingNote = `\nHet verhaal is al lang (hoofdstuk ${nextN}). Maak dit bij voorkeur de finale (isFinale = true), tenzij er echt nog één klein draadje open is — rond dan nu alles af zonder nieuwe problemen te introduceren.`;
+    pacingNote = `\nHet verhaal is al lang (hoofdstuk ${nextN}). Maak dit bij voorkeur de finale (isFinale = true), tenzij er echt nog één klein draadje open is. ${finaleTone} Geen nieuwe problemen introduceren.`;
   } else if (nextN >= CHAPTERS_TOTAL - 2) {
-    pacingNote = `\nWe naderen het einde (rond hoofdstuk ${CHAPTERS_TOTAL}). Introduceer GEEN nieuwe grote problemen meer; werk toe naar de ontknoping en rond open draadjes af.`;
+    pacingNote = `\nWe naderen het einde (rond hoofdstuk ${CHAPTERS_TOTAL}). Introduceer GEEN nieuwe grote problemen meer; werk toe naar de ontknoping. ${finaleTone}`;
   }
 
   const userMessage = `Dit wordt hoofdstuk ${nextN}. Richtlijn: dit hoofdstuk hoort ongeveer in akte ${expectedAkte(nextN)} van de verhaalbijbel te zitten, en het verhaal rondt idealiter rond hoofdstuk ${CHAPTERS_TOTAL} netjes af. Leesniveau: ${readingLevelLabel(age)}.

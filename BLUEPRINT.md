@@ -153,7 +153,10 @@ Spanningsniveaus in het kort:
 - **8-9 jaar** — tegenstander mag oprecht dwars liggen; spanning mag oplopen; einde nog steeds warm.
 - **10-11 jaar** — echte tegenslag mag (plan mislukt, vriendschap op de proef); tegenstander hoeft
   niet bekeerd te worden (mag ontsnappen of als dreiging blijven); einde mag bitterzoet; één klein
-  draadje mag open blijven zolang de kernvraag beantwoord is.
+  draadje mag open blijven zolang de kernvraag beantwoord is. Verboden cliché: de slechterik
+  “was alleen eenzaam” en wordt in de laatste scène vriend (dat is het 6-7-patroon).
+  Regel 1 zegt bewust níet meer “altijd positief van toon” — die zin overschreef eerder de
+  spanningsregel, waardoor zelfs 10+ nog zoet eindigde.
 
 De **veiligheidsgrens** is voor alle leeftijden hetzelfde: geen wapens, bloed, horror of echte
 pijn. Alleen de *emotionele* uitkomst wordt minder gegarandeerd zacht naarmate het kind ouder is.
@@ -202,6 +205,9 @@ Drie bewust ingebouwde correcties op terugkerende problemen:
   verandert per hoofdstuk". Het is nu een personage-referentiebeeld van hoofd tot knieën (3:4).
   Bewust niet ten voeten uit: dan wordt het hoofd te klein voor het ronde avatartje op de home.
   De UI snijdt deze beelden bovenaan bij (`object-top`), zodat het gezicht zichtbaar blijft.
+  Bestaande helden (Player, Thijmen, Verity, Robloxgast123, Papa) kregen in augustus 2026 een
+  nieuw anker via `scripts/refresh-hero-portraits.ts` — anders bleven nieuwe boeken het oude
+  close-up hergebruiken. Oude hoofdstuk-plaatjes in afgeronde boeken blijven zoals ze zijn.
 
 **Model & kosten.** `IMAGE_MODEL`/`IMAGE_EDIT_MODEL` zijn omgeschakelbaar via env-vars, en staan
 (lokaal én op Vercel) op **`fal-ai/nano-banana-2`** — de echte scène-composer, ~$0,07/plaatje.
