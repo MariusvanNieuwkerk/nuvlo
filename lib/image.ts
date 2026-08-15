@@ -27,8 +27,9 @@
 // Puur tekst-naar-plaatje (elke illustratie los) is niet betrouwbaar genoeg: hetzelfde
 // personage ziet er per plaat toch anders uit. Daarom gaan er ankerBEELDEN mee naar het
 // edit-endpoint. Wat er op het runtime-pad (lezen/kiezen) precies gebeurt:
-// - HELD: character.portraitUrl gaat altijd mee als referentie. Dat beeld is bewust een
-//   personage-referentie van hoofd tot knieën, geen gezichts-close-up — zie generatePortrait.
+// - HELD: character.portraitUrl gaat altijd mee als referentie. Dat beeld is een vierkant
+//   buste-portret (hoofd + schouders + borst) — groot genoeg voor de ronde avatars, en met
+//   kleding/accessoires nog zichtbaar voor latere scènes. Zie generatePortrait.
 // - NEVENPERSONAGES: elk personage dat in déze scène te zien is krijgt eenmalig een eigen
 //   ankerbeeld (zie lib/side-character-images.ts, quota-beschermd) dat daarna gratis in elke
 //   volgende scène hergebruikt wordt.
@@ -356,35 +357,65 @@ export async function generateSceneImage(
   return { url, verified: true };
 }
 
-// Het held-beeld: tegelijk het zichtbare "portret" van het kind (home, boekenplank) én —
-// belangrijker — het ANKERBEELD dat bij elke scène-illustratie als referentie meegaat.
+// Het held-beeld: tegelijk het ronde avatartje (home, boekenplank) én het ANKERBEELD dat bij
+// elke scène-illustratie als referentie meegaat.
 //
-// BEWUST GEEN GEZICHTS-CLOSE-UP MEER. Dat was het eerst wél, en dat is precies waarom
-// kinderen hun held per hoofdstuk zagen veranderen: op een close-up staat alles onder de
-// schouders niet, dus kleding, accessoires en lichaamsbouw moest het beeldmodel bij elke
-// scène opnieuw verzinnen. Nu is dit een personage-referentiebeeld: rechtop, van hoofd tot
-// knieën, zodat outfit + accessoires zichtbaar vastliggen. Bewust NIET ten voeten uit — dan
-// wordt het hoofd zo klein dat het als rond avatartje op de home niet meer herkenbaar is.
-// De UI snijdt deze beelden bovenaan bij (object-top), zodat het gezicht in de ronde
-// avatars gewoon in beeld blijft.
+// Dit is een vierkant BUSTE-portret (hoofd + schouders + borst), geen wijde scène en geen
+// gezicht-alleen-close-up. Een scène als anker maakte de cirkels onleesbaar (held te klein).
+// Een gezicht-close-up liet kleding per hoofdstuk opnieuw verzinnen. De buste houdt het
+// gezicht groot in de cirkel én laat outfit/accessoires nog zien voor latere scènes.
 //
-// "moment" beschrijft kort waar het verhaal nu staat, zodat het portret mee kan evolueren
-// met het avontuur. previousPortraitUrl: had de held al een beeld, dan gebruiken we dat als
-// referentie zodat het duidelijk hetzelfde personage blijft — anders tekenen we vanaf nul.
+// BELANGRIJK: we gebruiken hier NIET requestImageFromReference. Die helper dwingt een
+// "volledige nieuwe scène" af — precies wat een portret niet mag worden. Had de held al
+// een beeld, dan gaat dat wél mee als identiteits-referentie, maar met een eigen prompt
+// die compositie/landschap van het oude beeld bewust weggooit.
+//
+// "moment" beschrijft kort waar het verhaal nu staat. previousPortraitUrl: had de held al
+// een beeld, dan blijft het hetzelfde personage — anders tekenen we vanaf nul.
 export async function generatePortrait(
   appearance: CharacterAppearance,
   moment: string,
   styleHint: string | undefined,
   previousPortraitUrl?: string | null,
 ): Promise<ImageResult> {
-  // Eén generatie zonder vision-verificatie (zie generateSceneImage): kosten/snelheid gaan
-  // voor een laatste procentje trefzekerheid.
-  const prompt = `Personage-referentiebeeld van een kinderboekheld: één enkel personage, rechtop staand, van het hoofd tot de knieën volledig in beeld, naar de kijker toe gedraaid, vriendelijke uitstraling, op een neutrale egale achtergrond zonder scène, decor of andere personages. Het hoofd staat in de bovenste helft van het beeld. Uiterlijk (volg dit LETTERLIJK en volledig, elk kledingstuk en accessoire moet duidelijk en herkenbaar zichtbaar zijn): ${describeCharacterAppearance(appearance)}. Huidige status in het verhaal: ${moment}.`;
+  const prompt = `Square avatar portrait of a children's-book hero. ONE character only. Tight bust shot from the chest up: head, face, shoulders and chest fill at least 75% of the frame. The face is large, centered, looking toward the viewer, clearly readable in a small circle. Soft plain background (one color or gentle gradient). NO landscape, NO mountains, NO sky vista, NO wide scene, NO other characters, NO full-body shot, NO tiny figure standing in a world. Appearance (follow literally; clothes and accessories on the chest/shoulders must be visible): ${describeCharacterAppearance(appearance)}. Story moment: ${moment}.`;
 
-  const url = previousPortraitUrl
-    ? await requestImageFromReference(prompt, [previousPortraitUrl], styleHint, "3:4")
-    : await requestImage(prompt, styleHint, "3:4");
+  const url = await requestPortraitImage(prompt, styleHint, previousPortraitUrl);
   return { url, verified: true };
+}
+
+// Portret-generatie los van requestImageFromReference, omdat die helper altijd "teken een
+// complete nieuwe scène" meegeeft — daardoor werden eerdere portret-refreshs landschappen.
+async function requestPortraitImage(
+  prompt: string,
+  styleHint: string | undefined,
+  previousPortraitUrl?: string | null,
+): Promise<string | null> {
+  if (!ensureConfigured()) {
+    console.warn("FAL_KEY ontbreekt — illustratie wordt overgeslagen.");
+    return null;
+  }
+
+  const { prefix, suffix } = buildStyleBlock(styleHint);
+  const aspectRatio: FalAspectRatio = "1:1";
+
+  if (previousPortraitUrl && EDIT_MODEL) {
+    try {
+      const result = await fal.subscribe(EDIT_MODEL, {
+        input: {
+          prompt: `${prefix} The reference image is ONLY for this character's identity (face, hair, clothes, colors). Draw a NEW tight square bust portrait of that SAME character. Head, face, shoulders and chest fill the frame. Face large and centered. Soft plain background. Do NOT copy the reference composition, landscape, camera, or scenery. No wide scene, no tiny figure in a landscape, no full-body shot. ${prompt} ${suffix}`,
+          image_urls: [previousPortraitUrl],
+          ...buildFormatInput(EDIT_MODEL, aspectRatio),
+        },
+      });
+      const url = (result.data as { images?: { url: string }[] })?.images?.[0]?.url;
+      if (url) return url;
+    } catch (err) {
+      logFalError("portret-referentie", EDIT_MODEL, err);
+    }
+  }
+
+  return requestImage(prompt, styleHint, aspectRatio);
 }
 
 // Eén vast referentiebeeld van de wereld zelf, los van elk personage — het tweede

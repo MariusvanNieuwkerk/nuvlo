@@ -45,12 +45,7 @@ function HeroPortrait({
           src={hero.portraitUrl}
           alt={hero.name}
           fill
-          className={cn(
-            "object-cover object-bottom",
-            // Portretten zijn nu een hele scène; de held staat onderin. Inzoomen vanaf
-            // onderen vult de cirkel weer met het gezicht, zoals de oude close-ups.
-            size === "sm" ? "scale-[2.6] origin-bottom" : "scale-125 origin-bottom",
-          )}
+          className="object-cover object-center"
           sizes={size === "lg" ? "176px" : "64px"}
         />
       ) : (

@@ -1,7 +1,5 @@
-// Vernieuwt oude close-up held-portretten naar een figuur van hoofd tot knieën.
-// Die close-ups waren het anker voor elke scène — kleding/lijf werd daardoor per
-// hoofdstuk opnieuw verzonnen. Nieuwe boeken hergebruiken het bibliotheek-portret,
-// dus zonder deze refresh blijft het oude probleem meeliften.
+// Vernieuwt held-portretten naar een vierkant buste-beeld (hoofd + schouders + borst)
+// dat wél in de ronde avatars past. Oude landschap-portretten maakten de cirkels leeg.
 //
 //   NODE_OPTIONS="--conditions=react-server" npx tsx scripts/refresh-hero-portraits.ts
 //

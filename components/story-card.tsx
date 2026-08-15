@@ -49,7 +49,7 @@ export function StoryCard({ story }: { story: Story }) {
             zacht sterretje als het portret sinds de vorige sessie veranderd is (nog niet gezien). */}
         {portraitUrl && (
           <span className="absolute bottom-2.5 left-2.5 flex size-9 items-center justify-center overflow-hidden rounded-full bg-white/90 shadow-md ring-2 ring-white/80">
-            <Image src={portraitUrl} alt={`${story.hero.name}`} width={36} height={36} className="size-full object-cover object-top" />
+            <Image src={portraitUrl} alt={`${story.hero.name}`} width={36} height={36} className="size-full object-cover object-center" />
             {hasUnseenPortrait && (
               <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-primary ring-2 ring-white" />
             )}
