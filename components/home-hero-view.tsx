@@ -333,7 +333,7 @@ export function HomeHeroView({
                   type="button"
                   disabled={saving || deleting}
                   onClick={() => void saveHeroEdits(activeHero)}
-                  className="h-14 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 sm:h-16"
+                  className="!h-16 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 sm:!h-12 sm:text-base"
                 >
                   {saving ? "Opslaan…" : "Opslaan"}
                 </Button>
