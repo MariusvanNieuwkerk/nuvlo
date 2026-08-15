@@ -298,13 +298,10 @@ export function HeroForm({
     }
     setSubmitting(true);
     setError(null);
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 50000);
     try {
       const res = await fetch("/api/stories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
         body: JSON.stringify({
           authorName: form.authorName.trim(),
           hero: {
@@ -328,7 +325,11 @@ export function HeroForm({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Er ging iets mis. Probeer het nog eens.");
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : "Het verhaal lukte niet. Tik nog eens op de knop.",
+        );
       }
       const data = await res.json();
       if (selectedRosterId) {
@@ -338,17 +339,10 @@ export function HeroForm({
       }
       router.push(`/verhaal/${data.story.id}/lezen`);
     } catch (err) {
-      const timedOut = err instanceof DOMException && err.name === "AbortError";
       setError(
-        timedOut
-          ? "Het duurde te lang. Tik nog eens op de knop."
-          : err instanceof Error
-            ? err.message
-            : "Er ging iets mis. Probeer het nog eens.",
+        err instanceof Error ? err.message : "Het verhaal lukte niet. Tik nog eens op de knop.",
       );
       setSubmitting(false);
-    } finally {
-      window.clearTimeout(timeout);
     }
   }
 
@@ -698,7 +692,7 @@ export function HeroForm({
             onClick={() => void startAdventure()}
             className="min-h-16 w-full rounded-2xl bg-primary px-6 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 sm:min-h-16 sm:flex-1 sm:text-xl"
           >
-            {submitting ? "Het verhaal wordt geschreven…" : "Begin het avontuur ✨"}
+            {submitting ? "Even geduld, het verhaal wordt geschreven…" : "Begin het avontuur ✨"}
           </button>
         )}
       </div>

@@ -7,17 +7,13 @@ import {
   updateDefaultChild,
 } from "@/lib/storage";
 import { startStory } from "@/lib/story-director";
-import { generatePortrait } from "@/lib/image";
-import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { getImageStyle } from "@/lib/image-styles";
 import { fillHeroDefaults } from "@/lib/hero-defaults";
 import { cleanChildOutline, outlineHasContent } from "@/lib/story-outline";
 import type { Genre, Hero, SideCharacter } from "@/lib/types";
 
-// Een nieuw verhaal aanmaken doet het meeste AI-werk in één request: tekst-generatie én
-// meerdere fal.ai-beeldcalls (held-portret, omslag én de eerste scène-illustratie). Dat duurt
-// makkelijk tientallen seconden; zonder deze regel kapt Vercel de functie na ~10s af en mislukt
-// het aanmaken. 60s is het maximum op het Hobby-plan.
+// Starten doet alleen Claude (tekst). Plaatjes komen erna. Zonder maxDuration kapt Vercel
+// de functie na ~10s af. 60s is het maximum op het Hobby-plan.
 export const maxDuration = 60;
 
 const VALID_GENRES: Genre[] = [
@@ -180,24 +176,11 @@ export async function POST(request: Request) {
 
   const bible = { ...result.bible };
 
-  // Alleen het held-portret hier (bestaand hergebruiken, of één tekening bij een nieuwe held).
-  // De openingsillustratie komt erna via het image-endpoint, terwijl het kind al leest.
+  // Geen tekeningen bij het starten — alleen tekst. Anders duurt het te lang en ziet het
+  // kind "het duurde te lang". Bestaand portret hergebruiken is gratis. Nieuwe plaatjes
+  // komen erna, terwijl het kind al leest.
   if (existingCharacter?.portraitUrl) {
     character.portraitUrl = existingCharacter.portraitUrl;
-  } else {
-    try {
-      if (await tryClaimImageQuota(child.id)) {
-        const portrait = await generatePortrait(
-          character.appearance,
-          "het avontuur begint net",
-          character.imageStyleHint,
-        );
-        character.portraitUrl = portrait.url;
-        if (!portrait.url) await releaseImageQuota(child.id);
-      }
-    } catch (err) {
-      console.error("Portret bij start mislukt, verhaal gaat door:", err);
-    }
   }
 
   const story = await createStory({
