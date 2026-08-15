@@ -32,7 +32,7 @@ function HeroPortrait({
   hero: Pick<HeroRosterEntry, "name" | "portraitUrl">;
   size: "lg" | "sm";
 }) {
-  const dim = size === "lg" ? "size-36 sm:size-44" : "size-20 sm:size-24";
+  const dim = size === "lg" ? "size-36 sm:size-44" : "size-14 sm:size-16";
   return (
     <span
       className={cn(
@@ -46,12 +46,12 @@ function HeroPortrait({
           alt={hero.name}
           fill
           className={cn(
-            "object-cover object-top",
-            // Ankerbeelden zijn hoofd-tot-knieën; in het kleine bolletje zoomen we in
-            // op het gezicht zodat de held herkenbaar blijft.
-            size === "sm" && "scale-150 origin-top",
+            "object-cover object-bottom",
+            // Portretten zijn nu een hele scène; de held staat onderin. Inzoomen vanaf
+            // onderen vult de cirkel weer met het gezicht, zoals de oude close-ups.
+            size === "sm" ? "scale-[2.6] origin-bottom" : "scale-125 origin-bottom",
           )}
-          sizes={size === "lg" ? "176px" : "96px"}
+          sizes={size === "lg" ? "176px" : "64px"}
         />
       ) : (
         <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/25 dark:to-primary/10">
@@ -328,15 +328,15 @@ export function HomeHeroView({
               {editError && (
                 <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{editError}</p>
               )}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Button
+              <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                <button
                   type="button"
                   disabled={saving || deleting}
                   onClick={() => void saveHeroEdits(activeHero)}
-                  className="!h-16 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 sm:!h-12 sm:text-base"
+                  className="min-h-16 w-full rounded-2xl bg-primary px-6 py-4 text-lg font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 md:min-h-12 md:flex-1 md:py-3 md:text-base"
                 >
                   {saving ? "Opslaan…" : "Opslaan"}
-                </Button>
+                </button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -397,7 +397,7 @@ export function HomeHeroView({
                 aria-pressed={selected}
                 aria-label={`Kies ${hero.name}`}
                 className={cn(
-                  "flex w-20 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 transition-all sm:w-24",
+                  "flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 transition-all sm:w-20",
                   selected ? "opacity-100" : "opacity-70 hover:opacity-100",
                 )}
               >
@@ -411,7 +411,7 @@ export function HomeHeroView({
                 </span>
                 <span
                   className={cn(
-                    "line-clamp-2 w-full text-center text-xs font-bold leading-tight sm:text-sm",
+                    "line-clamp-2 w-full text-center text-[11px] font-bold leading-tight sm:text-xs",
                     selected ? "text-foreground" : "text-foreground/55",
                   )}
                 >
@@ -423,12 +423,12 @@ export function HomeHeroView({
           <Link
             href="/nieuw-verhaal"
             aria-label="Nieuwe held"
-            className="flex w-20 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-24"
+            className="flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-20"
           >
-            <span className="flex size-20 items-center justify-center rounded-full border-2 border-dashed border-primary/40 bg-primary/10 sm:size-24">
-              <Plus className="size-7 text-primary dark:text-primary" strokeWidth={2.5} />
+            <span className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-primary/40 bg-primary/10 sm:size-16">
+              <Plus className="size-6 text-primary dark:text-primary" strokeWidth={2.5} />
             </span>
-            <span className="line-clamp-2 w-full text-center text-xs font-bold leading-tight text-foreground/55 sm:text-sm">
+            <span className="line-clamp-2 w-full text-center text-[11px] font-bold leading-tight text-foreground/55 sm:text-xs">
               Nieuw
             </span>
           </Link>
