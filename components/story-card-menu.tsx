@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Story } from "@/lib/types";
+import { formatNameInWorld } from "@/lib/dutch-title";
 
 export function StoryCardMenu({ story }: { story: Story }) {
   const router = useRouter();
@@ -56,7 +57,7 @@ export function StoryCardMenu({ story }: { story: Story }) {
       setOpen(false);
       router.refresh();
     } catch {
-      setRenameError("Opslaan mislukte. Probeer het nog eens.");
+      setRenameError("Opslaan is mislukt. Probeer het nog eens.");
     } finally {
       setBusy(false);
     }
@@ -93,7 +94,7 @@ export function StoryCardMenu({ story }: { story: Story }) {
   async function share(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     e.stopPropagation();
-    const text = `Lees mee met "${story.title}" — het verhaal van ${story.hero.name} in ${story.hero.world}! 📖✨`;
+    const text = `Lees mee met "${story.title}" — het verhaal van ${formatNameInWorld(story.hero.name, story.hero.world)}! 📖✨`;
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         await navigator.share({ title: story.title, text });

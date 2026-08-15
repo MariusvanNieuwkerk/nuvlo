@@ -131,7 +131,7 @@ export function HomeHeroView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ age, name: child.name }),
       });
-      if (!childRes.ok) throw new Error("Leesniveau opslaan mislukte.");
+      if (!childRes.ok) throw new Error("Leesniveau opslaan is mislukt.");
       const childData = await childRes.json();
       setChild(childData.child);
 
@@ -143,7 +143,7 @@ export function HomeHeroView({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? "Opslaan mislukte.");
+          throw new Error(data.error ?? "Opslaan is mislukt.");
         }
         const data = await res.json();
         const updated = data.character as SavedCharacter;
@@ -164,7 +164,7 @@ export function HomeHeroView({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? "Opslaan mislukte.");
+          throw new Error(data.error ?? "Opslaan is mislukt.");
         }
         const data = await res.json();
         const created = data.character as SavedCharacter;
@@ -174,7 +174,7 @@ export function HomeHeroView({
       setEditing(false);
       router.refresh();
     } catch (err) {
-      setEditError(err instanceof Error ? err.message : "Opslaan mislukte.");
+      setEditError(err instanceof Error ? err.message : "Opslaan is mislukt.");
     } finally {
       setSaving(false);
     }
@@ -196,14 +196,14 @@ export function HomeHeroView({
     setEditError(null);
     try {
       const res = await fetch(`/api/characters/${hero.savedCharacterId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Verwijderen mislukte.");
+      if (!res.ok) throw new Error("Verwijderen is mislukt.");
       setCharacters((prev) => prev.filter((c) => c.id !== hero.savedCharacterId));
       setEditing(false);
       const next = roster.find((h) => h.id !== hero.id);
       if (next) selectHero(next.id);
       router.refresh();
     } catch (err) {
-      setEditError(err instanceof Error ? err.message : "Verwijderen mislukte.");
+      setEditError(err instanceof Error ? err.message : "Verwijderen is mislukt.");
     } finally {
       setDeleting(false);
     }
@@ -379,7 +379,7 @@ export function HomeHeroView({
 
       <section className="flex flex-col gap-3 sm:gap-3.5">
         <h2 className="text-center text-sm font-semibold text-foreground/45 sm:text-base">
-          Andere held
+          Andere helden
         </h2>
         <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:justify-center sm:gap-4 sm:overflow-visible">
           {roster.map((hero) => {

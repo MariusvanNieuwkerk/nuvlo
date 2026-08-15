@@ -6,6 +6,7 @@ import { HeroPanel } from "@/components/hero-panel";
 import { SideCharacterSaver } from "@/components/side-character-saver";
 import { EditableStoryTitle } from "@/components/editable-story-title";
 import { getAlreadySavedForStory, getDefaultChild, getStory } from "@/lib/storage";
+import { formatNameInWorld } from "@/lib/dutch-title";
 
 // Altijd vers renderen: het verhaal groeit met elke keuze, dus nooit uit de cache tonen.
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export default async function LezenPage({
           <EditableStoryTitle storyId={story.id} title={story.title} />
         </p>
         <h1 className="font-heading text-xl font-extrabold text-foreground sm:text-2xl md:text-3xl">
-          {story.hero.name} in {story.hero.world}
+          {formatNameInWorld(story.hero.name, story.hero.world)}
         </h1>
       </div>
 

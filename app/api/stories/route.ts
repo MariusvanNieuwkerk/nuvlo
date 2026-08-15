@@ -1,12 +1,17 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import {
   createStory,
   getCharacter,
   getDefaultChild,
+  getStory,
   registerStoryForCharacter,
+  saveStory,
   updateDefaultChild,
 } from "@/lib/storage";
 import { startStory } from "@/lib/story-director";
+import { generatePortrait } from "@/lib/image";
+import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { getImageStyle } from "@/lib/image-styles";
 import { fillHeroDefaults } from "@/lib/hero-defaults";
 import { cleanChildOutline, outlineHasContent } from "@/lib/story-outline";
@@ -204,6 +209,39 @@ export async function POST(request: Request) {
     await registerStoryForCharacter(existingCharacter.id, story.id);
   }
   await Promise.all(sideCharacterIds.map((id) => registerStoryForCharacter(id, story.id)));
+
+  // Portret van een nieuwe held ná het antwoord, zodat starten niet weer vastloopt.
+  if (!story.character.portraitUrl) {
+    const storyId = story.id;
+    const childId = child.id;
+    after(async () => {
+      try {
+        if (!(await tryClaimImageQuota(childId))) return;
+        const fresh = await getStory(storyId);
+        if (!fresh || fresh.character.portraitUrl) {
+          await releaseImageQuota(childId);
+          return;
+        }
+        const portrait = await generatePortrait(
+          fresh.character.appearance,
+          "het avontuur begint net",
+          fresh.character.imageStyleHint,
+        );
+        if (!portrait.url) {
+          await releaseImageQuota(childId);
+          return;
+        }
+        const latest = await getStory(storyId);
+        if (!latest) return;
+        await saveStory({
+          ...latest,
+          character: { ...latest.character, portraitUrl: portrait.url },
+        });
+      } catch (err) {
+        console.error("Achtergrond-portret mislukt:", err);
+      }
+    });
+  }
 
   return NextResponse.json({ story }, { status: 201 });
 }

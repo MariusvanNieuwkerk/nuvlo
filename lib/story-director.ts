@@ -30,6 +30,7 @@ import {
   outlineHasContent,
   type ChildStoryOutline,
 } from "@/lib/story-outline";
+import { cleanStoryTitle, formatNameInWorld } from "@/lib/dutch-title";
 
 // Eén gedeelde bron voor het richtgetal (zie lib/progress.ts) — zo kunnen de pacing/finale-
 // logica hier en de kindvriendelijke voortgangsbalk nooit uit elkaar lopen.
@@ -371,7 +372,7 @@ Tegenstander: ${hero.enemy}
 Genre: ${hero.genre}
 ${appearanceNote}${existingSideNote}${outlineNote}
 
-Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze held, wereld, tegenstander én de hoofdlijn van het kind — de AKTES moeten het spanningsniveau hierboven volgen, dus bij 10-11 geen bijbel waarin de tegenstander vanzelf vriend wordt) en een korte titel. Schrijf daarna hoofdstuk 1: de openingsscène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde en 3 keuzes voor het kind.`;
+Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze held, wereld, tegenstander én de hoofdlijn van het kind — de AKTES moeten het spanningsniveau hierboven volgen, dus bij 10-11 geen bijbel waarin de tegenstander vanzelf vriend wordt) en een korte titel in foutloos Nederlands (geen dubbele woorden zoals "in in"). Schrijf daarna hoofdstuk 1: de openingsscène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde en 3 keuzes voor het kind.`;
 
   const result = await callStoryTool<StartStoryToolOutput>({
     tool: START_STORY_TOOL,
@@ -417,10 +418,11 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
   for (const c of existingSideCharacters ?? []) mergedByName.set(c.name.toLowerCase(), c);
   const sideCharacters = Array.from(mergedByName.values());
 
-  const title =
+  const title = cleanStoryTitle(
     typeof result.title === "string" && result.title.trim()
       ? result.title.trim()
-      : `${hero.name} in ${hero.world}`;
+      : formatNameInWorld(hero.name, hero.world),
+  );
 
   return {
     title,

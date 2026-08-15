@@ -166,7 +166,7 @@ export function HeroForm({
       setCharactersError(
         timedOut
           ? "Het laden duurt te lang. Controleer je internet en probeer het opnieuw."
-          : "Laden mislukte. Probeer het opnieuw.",
+          : "Laden is mislukt. Probeer het opnieuw.",
       );
     } finally {
       clearTimeout(timeout);
@@ -337,7 +337,7 @@ export function HeroForm({
       } else {
         writeActiveHeroId(`name:${form.name.trim().toLowerCase()}`);
       }
-      router.push(`/verhaal/${data.story.id}/kaft`);
+      router.push(`/verhaal/${data.story.id}/lezen`);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Het verhaal lukte niet. Tik nog eens op de knop.",

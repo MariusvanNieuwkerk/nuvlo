@@ -59,7 +59,7 @@ export function EditableStoryTitle({
       setEditing(false);
       router.refresh();
     } catch {
-      setError("Opslaan mislukte. Probeer het nog eens.");
+      setError("Opslaan is mislukt. Probeer het nog eens.");
     } finally {
       setSaving(false);
     }

@@ -54,12 +54,12 @@ export function SaveCharacterButton({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Opslaan mislukte");
+        throw new Error(data.error ?? "Opslaan is mislukt");
       }
       setState("done");
       onSaved?.();
     } catch (err) {
-      setErrorText(err instanceof Error ? err.message : "Opslaan mislukte");
+      setErrorText(err instanceof Error ? err.message : "Opslaan is mislukt");
       setState("error");
     }
   }
