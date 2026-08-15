@@ -337,7 +337,7 @@ export function HeroForm({
       } else {
         writeActiveHeroId(`name:${form.name.trim().toLowerCase()}`);
       }
-      router.push(`/verhaal/${data.story.id}/lezen`);
+      router.push(`/verhaal/${data.story.id}/kaft`);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Het verhaal lukte niet. Tik nog eens op de knop.",
