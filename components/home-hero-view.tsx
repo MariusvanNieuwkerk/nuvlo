@@ -32,7 +32,7 @@ function HeroPortrait({
   hero: Pick<HeroRosterEntry, "name" | "portraitUrl">;
   size: "lg" | "sm";
 }) {
-  const dim = size === "lg" ? "size-36 sm:size-44" : "size-14 sm:size-16";
+  const dim = size === "lg" ? "size-36 sm:size-44" : "size-20 sm:size-24";
   return (
     <span
       className={cn(
@@ -41,7 +41,18 @@ function HeroPortrait({
       )}
     >
       {hero.portraitUrl ? (
-        <Image src={hero.portraitUrl} alt={hero.name} fill className="object-cover object-top" sizes="176px" />
+        <Image
+          src={hero.portraitUrl}
+          alt={hero.name}
+          fill
+          className={cn(
+            "object-cover object-top",
+            // Ankerbeelden zijn hoofd-tot-knieën; in het kleine bolletje zoomen we in
+            // op het gezicht zodat de held herkenbaar blijft.
+            size === "sm" && "scale-150 origin-top",
+          )}
+          sizes={size === "lg" ? "176px" : "96px"}
+        />
       ) : (
         <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/25 dark:to-primary/10">
           <Sparkles className={cn("text-primary/70 dark:text-primary/80", size === "lg" ? "size-12" : "size-5")} />
@@ -386,7 +397,7 @@ export function HomeHeroView({
                 aria-pressed={selected}
                 aria-label={`Kies ${hero.name}`}
                 className={cn(
-                  "flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 transition-all sm:w-20",
+                  "flex w-20 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 transition-all sm:w-24",
                   selected ? "opacity-100" : "opacity-70 hover:opacity-100",
                 )}
               >
@@ -400,7 +411,7 @@ export function HomeHeroView({
                 </span>
                 <span
                   className={cn(
-                    "line-clamp-2 w-full text-center text-[11px] font-bold leading-tight sm:text-xs",
+                    "line-clamp-2 w-full text-center text-xs font-bold leading-tight sm:text-sm",
                     selected ? "text-foreground" : "text-foreground/55",
                   )}
                 >
@@ -412,12 +423,12 @@ export function HomeHeroView({
           <Link
             href="/nieuw-verhaal"
             aria-label="Nieuwe held"
-            className="flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-20"
+            className="flex w-20 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-24"
           >
-            <span className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-primary/40 bg-primary/10 sm:size-16">
-              <Plus className="size-6 text-primary dark:text-primary" strokeWidth={2.5} />
+            <span className="flex size-20 items-center justify-center rounded-full border-2 border-dashed border-primary/40 bg-primary/10 sm:size-24">
+              <Plus className="size-7 text-primary dark:text-primary" strokeWidth={2.5} />
             </span>
-            <span className="line-clamp-2 w-full text-center text-[11px] font-bold leading-tight text-foreground/55 sm:text-xs">
+            <span className="line-clamp-2 w-full text-center text-xs font-bold leading-tight text-foreground/55 sm:text-sm">
               Nieuw
             </span>
           </Link>
