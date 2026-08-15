@@ -49,10 +49,14 @@ type FormState = {
   genre: Genre | null;
   appearance: string;
   styleId: ImageStyleId;
+  goal: string;
+  enemy: string;
+  companions: string;
+  freeform: string;
 };
 
 type StartMode = "new" | "existing";
-type WizardStep = 1 | 2 | 3;
+type WizardStep = 1 | 2 | 3 | 4;
 
 const INPUT_CARD =
   "bg-white/85 dark:bg-white/10 border-2 border-primary/35 shadow-sm focus-visible:border-primary focus-visible:ring-primary/40";
@@ -83,6 +87,10 @@ export function HeroForm({
     genre: null,
     appearance: "",
     styleId: DEFAULT_IMAGE_STYLE_ID,
+    goal: "",
+    enemy: "",
+    companions: "",
+    freeform: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -268,6 +276,10 @@ export function HeroForm({
         return;
       }
       setStep(3);
+      return;
+    }
+    if (step === 3) {
+      setStep(4);
     }
   }
 
@@ -275,11 +287,12 @@ export function HeroForm({
     setError(null);
     if (step === 2) setStep(1);
     if (step === 3) setStep(2);
+    if (step === 4) setStep(3);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (step !== 3) {
+    if (step !== 4) {
       goNext();
       return;
     }
@@ -289,17 +302,19 @@ export function HeroForm({
     }
     setSubmitting(true);
     setError(null);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 50000);
     try {
       const res = await fetch("/api/stories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           authorName: form.authorName.trim(),
           hero: {
             name: form.name.trim(),
             world: form.world.trim(),
             genre: form.genre,
-            // Kracht/zwakte/vijand vult de server in per genre — UX vraagt ze niet meer.
           },
           age: Number(form.age),
           appearance: form.appearance.trim(),
@@ -307,11 +322,17 @@ export function HeroForm({
           existingCharacterId: selectedCharacterId ?? undefined,
           existingSideCharacterIds:
             selectedSideCharacterIds.length > 0 ? selectedSideCharacterIds : undefined,
+          outline: {
+            goal: form.goal.trim(),
+            enemy: form.enemy.trim(),
+            companions: form.companions.trim(),
+            freeform: form.freeform.trim(),
+          },
         }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Er ging iets mis.");
+        throw new Error(data.error ?? "Er ging iets mis. Probeer het nog eens.");
       }
       const data = await res.json();
       if (selectedRosterId) {
@@ -321,8 +342,17 @@ export function HeroForm({
       }
       router.push(`/verhaal/${data.story.id}/lezen`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Er ging iets mis.");
+      const timedOut = err instanceof DOMException && err.name === "AbortError";
+      setError(
+        timedOut
+          ? "Het duurde te lang. Tik nog eens op de knop."
+          : err instanceof Error
+            ? err.message
+            : "Er ging iets mis. Probeer het nog eens.",
+      );
       setSubmitting(false);
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -554,6 +584,51 @@ export function HeroForm({
       {step === 3 && (
         <StepSection
           badge={3}
+          title="Jouw verhaal"
+          subtitle="Vul in wat je wilt. Wat je opschrijft, gebeurt. De rest verzinnen we."
+        >
+          <Field label="Wat wil de held?">
+            <Input
+              value={form.goal}
+              onChange={(e) => update("goal", e.target.value)}
+              placeholder="Bijv. het gouden zwaard terugvinden"
+              maxLength={200}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+          <Field label="Wie is de boef?">
+            <Input
+              value={form.enemy}
+              onChange={(e) => update("enemy", e.target.value)}
+              placeholder="Bijv. een dief in het woud"
+              maxLength={200}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+          <Field label="Wie gaat mee, en wat kan die?">
+            <Input
+              value={form.companions}
+              onChange={(e) => update("companions", e.target.value)}
+              placeholder="Bijv. Verity, ze kan kleuren toveren"
+              maxLength={250}
+              className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+          <Field label="Vertel zelf hoe het verhaal gaat">
+            <Textarea
+              value={form.freeform}
+              onChange={(e) => update("freeform", e.target.value)}
+              placeholder="Schrijf hier alles wat je nog wilt. Mag ook leeg."
+              maxLength={800}
+              className={cn("min-h-[120px] rounded-xl text-base sm:min-h-[140px] sm:text-lg", INPUT_CARD)}
+            />
+          </Field>
+        </StepSection>
+      )}
+
+      {step === 4 && (
+        <StepSection
+          badge={4}
           title="Kies een tekenstijl"
           subtitle="In welke stijl moeten de plaatjes getekend worden?"
         >
@@ -607,7 +682,7 @@ export function HeroForm({
             Terug
           </Button>
         )}
-        {step < 3 ? (
+        {step < 4 ? (
           <Button
             type="button"
             onClick={goNext}
@@ -621,7 +696,7 @@ export function HeroForm({
             disabled={!canSubmit || submitting}
             className="h-14 flex-1 rounded-2xl bg-primary text-lg font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 sm:h-16 sm:text-xl"
           >
-            {submitting ? "Het verhaal begint…" : "Begin het avontuur ✨"}
+            {submitting ? "Het verhaal wordt geschreven…" : "Begin het avontuur ✨"}
           </Button>
         )}
       </div>
@@ -631,8 +706,8 @@ export function HeroForm({
 
 function StepDots({ current }: { current: WizardStep }) {
   return (
-    <div className="flex items-center justify-center gap-2" aria-label={`Stap ${current} van 3`}>
-      {([1, 2, 3] as WizardStep[]).map((n) => (
+    <div className="flex items-center justify-center gap-2" aria-label={`Stap ${current} van 4`}>
+      {([1, 2, 3, 4] as WizardStep[]).map((n) => (
         <span
           key={n}
           className={cn(

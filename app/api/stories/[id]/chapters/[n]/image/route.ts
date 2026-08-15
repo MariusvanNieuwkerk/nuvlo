@@ -3,6 +3,7 @@ import {
   getDefaultChild,
   getStory,
   reopenChapterImagePending,
+  saveStory,
   updateChapterImageAtomic,
 } from "@/lib/storage";
 import { generateSceneImage } from "@/lib/image";
@@ -152,9 +153,13 @@ export async function POST(
 
   // Atomaire write-back: alleen schrijven als het hoofdstuk intussen nog imagePending=true
   // heeft (iemand anders was ons net voor → 0 rijen → verse staat teruglezen en tonen).
-  const updated = await updateChapterImageAtomic(id, n, sceneImageUrl, updatedBible);
+  let updated = await updateChapterImageAtomic(id, n, sceneImageUrl, updatedBible);
   if (!updated) {
     return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
+  }
+  // Eerste plaatje = ook de kaft, zodat de boekenplank niet leeg blijft.
+  if (n === 1 && sceneImageUrl && !updated.coverUrl) {
+    updated = await saveStory({ ...updated, coverUrl: sceneImageUrl });
   }
   return NextResponse.json({ story: updated });
 }

@@ -7,11 +7,11 @@ import {
   updateDefaultChild,
 } from "@/lib/storage";
 import { startStory } from "@/lib/story-director";
-import { generateSceneImage, generatePortrait } from "@/lib/image";
+import { generatePortrait } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
-import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
 import { getImageStyle } from "@/lib/image-styles";
 import { fillHeroDefaults } from "@/lib/hero-defaults";
+import { cleanChildOutline, outlineHasContent } from "@/lib/story-outline";
 import type { Genre, Hero, SideCharacter } from "@/lib/types";
 
 // Een nieuw verhaal aanmaken doet het meeste AI-werk in één request: tekst-generatie én
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
 
-  const { hero, age, authorName, appearance, styleId, existingCharacterId, existingSideCharacterIds } =
+  const { hero, age, authorName, appearance, styleId, existingCharacterId, existingSideCharacterIds, outline: rawOutline } =
     body as {
       hero?: Partial<Hero>;
       age?: number;
@@ -45,7 +45,9 @@ export async function POST(request: Request) {
       styleId?: string;
       existingCharacterId?: string;
       existingSideCharacterIds?: string[];
+      outline?: unknown;
     };
+  const outline = cleanChildOutline(rawOutline);
 
   if (
     !hero ||
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
     genre: hero.genre,
     power: hero.power,
     weakness: hero.weakness,
-    enemy: hero.enemy,
+    enemy: outline.enemy || hero.enemy,
   });
 
   const child = await getDefaultChild();
@@ -145,6 +147,7 @@ export async function POST(request: Request) {
           }
         : undefined,
       existingSideCharacters: existingSideCharacters.length > 0 ? existingSideCharacters : undefined,
+      outline: outlineHasContent(outline) ? outline : undefined,
     });
   } catch (err) {
     console.error(err);
@@ -152,10 +155,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
-  // Directe beloning: de illustratie van de openingsscène meteen tonen. Plus het eerste
-  // held-portret — dat mag meteen zichtbaar zijn, dat is nog geen "uitgestelde" beloning,
-  // maar simpelweg het resultaat van het net gekozen uiterlijk.
+  // Eerst alleen tekst opslaan, plaatjes erna (zoals bij verder lezen). Anders duurt
+  // starten te lang (Claude + meerdere tekeningen) en kapt Vercel de request af.
   const chapter = { ...result.chapter };
+  chapter.imageUrl = null;
+  chapter.imagePending = true;
+  chapter.sceneCharacterNames = result.sceneCharacters.map((c) => c.name);
   const character = { ...result.character };
 
   // De expliciet gekozen tekenstijl-tegel is altijd betrouwbaarder dan Claude's eigen
@@ -175,71 +180,25 @@ export async function POST(request: Request) {
 
   const bible = { ...result.bible };
 
-  // KOSTEN-AFWEGING bij het aanmaken: 1) het held-portret (het goedkope consistentie-anker),
-  // 2) eventueel één ankerbeeld per nevenpersonage dat al in de openingsscène voorkomt óf
-  // expliciet gekozen is als bijfiguur voor dit boek (bij hergebruik van een bestaande bijfiguur
-  // met al een portret: 0 extra calls), en 3) de openingsscène zelf met die ankers als
-  // referentie. Het wereld-referentiebeeld blijft weg (kostte een aparte call), net als de
-  // vision-verify-retries.
-  // De cover wordt niet apart gegenereerd maar HERGEBRUIKT de openingsscène-illustratie — dat
-  // scheelt nog een call, en de boekenplank toont die kaart toch in 4:3, precies het formaat
-  // van de scène. Lukt de scène niet (geen quota / fal-fout), dan blijft coverUrl null en valt
-  // de boekenplank terug op de vaste genre-kleur.
-  //
-  // HERGEBRUIK-ROUTE: bij een bestaande held hebben we al een portret in de bibliotheek —
-  // dat nemen we direct over (geen fal-call voor het portret). Dat scheelt precies één call
-  // per nieuw boek met een bekende held, en het portret blijft visueel consistent tussen
-  // boeken in dezelfde "reeks".
+  // Alleen het held-portret hier (bestaand hergebruiken, of één tekening bij een nieuwe held).
+  // De openingsillustratie komt erna via het image-endpoint, terwijl het kind al leest.
   if (existingCharacter?.portraitUrl) {
     character.portraitUrl = existingCharacter.portraitUrl;
-  } else if (await tryClaimImageQuota(child.id)) {
-    const portrait = await generatePortrait(character.appearance, "het avontuur begint net", character.imageStyleHint);
-    character.portraitUrl = portrait.url;
-    if (!portrait.url) await releaseImageQuota(child.id);
+  } else {
+    try {
+      if (await tryClaimImageQuota(child.id)) {
+        const portrait = await generatePortrait(
+          character.appearance,
+          "het avontuur begint net",
+          character.imageStyleHint,
+        );
+        character.portraitUrl = portrait.url;
+        if (!portrait.url) await releaseImageQuota(child.id);
+      }
+    } catch (err) {
+      console.error("Portret bij start mislukt, verhaal gaat door:", err);
+    }
   }
-
-  // Elk nevenpersonage dat een eigen ankerbeeld nodig heeft: zowel de personages die al in de
-  // openingsscène voorkomen, ALS elke expliciet gekozen bestaande bijfiguur — ook als die (nog)
-  // niet zelf in hoofdstuk 1 te zien is. Zo is een gekozen bijfiguur meteen gegarandeerd van een
-  // eigen plaatje, i.p.v. pas te wachten tot hij toevallig in een scène verschijnt.
-  const sceneCharacterNames = new Set(result.sceneCharacters.map((c) => c.name.toLowerCase()));
-  const chosenSideNames = new Set(existingSideCharacters.map((c) => c.name.toLowerCase()));
-  const needingReferences = bible.sideCharacters.filter(
-    (c) => sceneCharacterNames.has(c.name.toLowerCase()) || chosenSideNames.has(c.name.toLowerCase()),
-  );
-
-  const refs = await ensureSceneCharacterReferences(
-    child.id,
-    bible.sideCharacters,
-    needingReferences,
-    character.imageStyleHint,
-  );
-  bible.sideCharacters = refs.registry;
-
-  // De openingsillustratie zelf toont alleen de personages die ECHT in die scène voorkomen
-  // (niet elke gekozen bijfiguur zomaar erbij plakken — dat zou het plaatje kunnen overladen
-  // met mensen die niet in de tekst van hoofdstuk 1 genoemd worden).
-  const sceneCharactersForImage = refs.sceneCharacters.filter((c) =>
-    sceneCharacterNames.has(c.name.toLowerCase()),
-  );
-
-  if (await tryClaimImageQuota(child.id)) {
-    const scene = await generateSceneImage(
-      chapter.imagePrompt,
-      character.appearance,
-      character.imageStyleHint,
-      bible.worldAppearance,
-      sceneCharactersForImage,
-      character.portraitUrl,
-      null,
-      chapter.heroTemporaryAppearance,
-    );
-    chapter.imageUrl = scene.url;
-    if (!scene.url) await releaseImageQuota(child.id);
-  }
-
-  // Cover = de openingsscène-illustratie hergebruiken (geen extra fal-call).
-  const coverUrl: string | null = chapter.imageUrl;
 
   const story = await createStory({
     childId: child.id,
@@ -252,7 +211,7 @@ export async function POST(request: Request) {
     summary: result.summary,
     status: "bezig",
     chapters: [chapter],
-    coverUrl,
+    coverUrl: null,
     favorite: false,
   });
 

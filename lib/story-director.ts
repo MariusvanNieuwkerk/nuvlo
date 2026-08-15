@@ -25,6 +25,11 @@ import {
 } from "@/lib/appearance";
 import type { Chapter, CharacterSheet, Hero, SideCharacter, Story, StoryBible } from "@/lib/types";
 import { CHAPTERS_TARGET } from "@/lib/progress";
+import {
+  formatOutlineForPrompt,
+  outlineHasContent,
+  type ChildStoryOutline,
+} from "@/lib/story-outline";
 
 // Eén gedeelde bron voor het richtgetal (zie lib/progress.ts) — zo kunnen de pacing/finale-
 // logica hier en de kindvriendelijke voortgangsbalk nooit uit elkaar lopen.
@@ -49,6 +54,8 @@ export type StartStoryInput = {
   // in DIT verhaal terug te laten komen. Hun uiterlijk staat — net als bij existingCharacter —
   // VAST en wordt nooit door Claude herschreven (zie de merge in startStory hieronder).
   existingSideCharacters?: SideCharacter[];
+  // Wat het kind zelf invulde over de hoofdlijn. Lege velden = vrij verzinnen.
+  outline?: ChildStoryOutline;
 };
 
 export type StartStoryResult = {
@@ -327,7 +334,7 @@ async function callStoryTool<T>(options: {
 }
 
 export async function startStory(input: StartStoryInput): Promise<StartStoryResult> {
-  const { hero, age, appearance, existingCharacter, existingSideCharacters } = input;
+  const { hero, age, appearance, existingCharacter, existingSideCharacters, outline } = input;
 
   // Bij hergebruik van een opgeslagen held staat het uiterlijk vast — dan willen we niet dat
   // Claude het opnieuw "vriendelijker herschrijft" (de kans dat details dan verschuiven is
@@ -345,12 +352,14 @@ Tekenstijl (imageStyleHint) staat ook vast: "${existingCharacter.imageStyleHint}
   // pas later, maar hoeft ze niet zelf opnieuw te verzinnen.
   const existingSideNote =
     existingSideCharacters && existingSideCharacters.length > 0
-      ? `\n\nDeze nevenpersonages bestaan al en mogen (naar eigen inzicht, hoeft niet meteen) in dit verhaal terugkeren — hun uiterlijk staat VAST en moet je EXACT overnemen in sideCharacters, nooit herschrijven: ${existingSideCharacters
+      ? `\n\nDeze nevenpersonages koos het kind zelf. Ze MOETEN in dit verhaal voorkomen (liefst al in hoofdstuk 1). Hun uiterlijk staat VAST en moet je EXACT overnemen in sideCharacters, nooit herschrijven: ${existingSideCharacters
           .map((c) => `${c.name} (${c.appearance.freeform}${c.appearance.distinguishingFeature ? `, kenmerk: ${c.appearance.distinguishingFeature}` : ""})`)
           .join(" | ")}`
       : "";
 
-  const userMessage = `Verzin de start van een nieuw verhaal voor een kind van ${age} jaar (leesniveau: ${readingLevelLabel(age)}).
+  const outlineNote = outline ? formatOutlineForPrompt(outline) : "";
+
+  const userMessage = `Schrijf de start van een nieuw verhaal voor een kind van ${age} jaar (leesniveau: ${readingLevelLabel(age)}). Dit is HET VERHAAL VAN HET KIND — volg wat het kind zelf bedacht.
 
 Spanningsniveau (zie systeemregel 2): ${tensionLevelLabel(age)}
 
@@ -360,9 +369,9 @@ Superkracht: ${hero.power}
 Zwakte: ${hero.weakness}
 Tegenstander: ${hero.enemy}
 Genre: ${hero.genre}
-${appearanceNote}${existingSideNote}
+${appearanceNote}${existingSideNote}${outlineNote}
 
-Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze held, wereld en tegenstander — de AKTES moeten het spanningsniveau hierboven volgen, dus bij 10-11 geen bijbel waarin de tegenstander vanzelf vriend wordt) en een korte titel. Schrijf daarna hoofdstuk 1: de openingsscène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde en 3 keuzes voor het kind.`;
+Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze held, wereld, tegenstander én de hoofdlijn van het kind — de AKTES moeten het spanningsniveau hierboven volgen, dus bij 10-11 geen bijbel waarin de tegenstander vanzelf vriend wordt) en een korte titel. Schrijf daarna hoofdstuk 1: de openingsscène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde en 3 keuzes voor het kind.`;
 
   const result = await callStoryTool<StartStoryToolOutput>({
     tool: START_STORY_TOOL,
@@ -416,6 +425,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
       worldAppearance,
       worldReferenceImageUrl: null,
       sideCharacters,
+      childOutline: outlineHasContent(outline) ? outline : undefined,
     },
     character: {
       appearance: cleanedAppearance,
@@ -482,6 +492,11 @@ Bekende nevenpersonages met hun vaste uiterlijk (nooit een bestaand uiterlijk wi
 Vorige scène: ${(previousChapter?.pages ?? []).join("\n\n")}
 
 Het kind koos (dit kan een van de aangeboden opties zijn, of een eigen, zelf getypt idee): "${choice}"
+${
+    story.bible.childOutline && outlineHasContent(story.bible.childOutline)
+      ? formatOutlineForPrompt(story.bible.childOutline)
+      : ""
+  }
 ${pacingNote}
 Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte per bladzijde volgens het leesniveau — zie systeemregel 3), met de cliffhanger op de laatste bladzijde. Verwerk de keuze van het kind zichtbaar op de eerste bladzijde. Werk de samenvatting en de open draadjes bij.`;
 

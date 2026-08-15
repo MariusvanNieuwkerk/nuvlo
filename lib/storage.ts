@@ -17,6 +17,7 @@ import {
   cleanSideCharacterAppearance,
   cleanWorldAppearance,
 } from "@/lib/appearance";
+import { cleanChildOutline, outlineHasContent } from "@/lib/story-outline";
 
 // Eén gedeelde service-role client. Wordt lui gemaakt bij de eerste aanroep; als de env-
 // vars ontbreken geven we een duidelijke fout (server-start crasht dan niet, alleen de
@@ -101,6 +102,9 @@ function normalizeStory(story: Story): Story {
         referenceImageUrl: c.referenceImageUrl ?? null,
         dismissed: c.dismissed ?? false,
       })),
+      childOutline: outlineHasContent(bible.childOutline)
+        ? cleanChildOutline(bible.childOutline)
+        : undefined,
     },
   };
 }

@@ -8,6 +8,9 @@
 // velden zijn dat niet.
 
 import type { CharacterAppearance, SideCharacterAppearance, WorldAppearance } from "@/lib/appearance";
+import type { ChildStoryOutline } from "@/lib/story-outline";
+
+export type { ChildStoryOutline };
 
 export type Genre =
   | "avontuur"
@@ -84,6 +87,9 @@ export type StoryBible = {
   // zien. null zolang dit nog niet gegenereerd is (of voor oudere verhalen).
   worldReferenceImageUrl: string | null;
   sideCharacters: SideCharacter[]; // bekende nevenpersonages met hun vaste uiterlijk
+  // Wat het kind zelf invulde bij de start. Lege velden = de AI mocht dat stuk verzinnen.
+  // Ontbreekt bij oudere boeken.
+  childOutline?: ChildStoryOutline;
 };
 
 export type Chapter = {

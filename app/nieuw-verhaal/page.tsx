@@ -21,7 +21,7 @@ export default async function NieuwVerhaalPage({
           Nieuw avontuur
         </h1>
         <p className="text-base text-foreground/60 sm:text-lg">
-          Drie korte stappen — daarna begint jouw verhaal.
+          Jij bedenkt het verhaal. Wij schrijven het op.
         </p>
       </div>
       <HeroForm
