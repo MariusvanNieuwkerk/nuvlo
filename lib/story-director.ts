@@ -51,7 +51,8 @@ export type StartStoryInput = {
     imageStyleHint: string;
     name: string;
   };
-  // Gekozen tekenstijl-tegel. Wint van Claude én van de oude stijl van een hergebruikte held.
+  // Tekenstijl van dit boek. Bij een bestaande held is dit de stijl uit de bibliotheek.
+  // Bij een nieuwe held de gekozen tegel. Wint van Claude's eigen inschatting.
   imageStyleHint?: string;
   // Optioneel: nevenpersonages uit de personagens-bibliotheek die het kind expliciet koos om
   // in DIT verhaal terug te laten komen. Hun uiterlijk staat — net als bij existingCharacter —

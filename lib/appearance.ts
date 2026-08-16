@@ -116,6 +116,31 @@ export function requiredCharacterAttributes(appearance: CharacterAppearance): st
   return attrs.filter((a) => a.trim().length > 0);
 }
 
+// Checklist voor "is dit nog dezelfde figuur?" — haar/kleding van de held plus het
+// vaste kenmerk van elk nevenpersonage. Zonder deze lijst slaat verificatie over
+// (lege checklist = altijd OK) en kan een robot stilletjes een ander wezen worden.
+export function requiredSceneIdentityAttributes(
+  appearance: CharacterAppearance,
+  sceneCharacters: { name: string; appearance: SideCharacterAppearance }[] = [],
+  heroName?: string,
+): string[] {
+  const hero = heroName?.trim() || "de held";
+  const attrs: string[] = [];
+  if (appearance.hair.trim()) attrs.push(`${hero} heeft dit haar: ${appearance.hair}`);
+  if (appearance.outfit.trim()) attrs.push(`${hero} draagt deze kleding: ${appearance.outfit}`);
+  if (appearance.distinguishingFeature.trim()) {
+    attrs.push(`${hero} heeft dit kenmerk: ${appearance.distinguishingFeature}`);
+  }
+  for (const character of sceneCharacters) {
+    const name = character.name.trim();
+    if (!name) continue;
+    const look =
+      character.appearance.distinguishingFeature.trim() || character.appearance.freeform.trim();
+    if (look) attrs.push(`${name} is zichtbaar en ziet er zo uit: ${look}`);
+  }
+  return attrs;
+}
+
 // Bouwt een Nederlandse beschrijving die ELK gestructureerd veld apart en expliciet
 // benoemt (in plaats van te vertrouwen op één lange zin), en herhaalt het belangrijkste
 // kenmerk aan het eind als geheugensteun — hetzelfde principe als de stijl-hint die al

@@ -6,6 +6,7 @@ import {
   getDefaultChild,
   getStory,
   registerStoryForCharacter,
+  saveCharacter,
   saveStory,
   updateDefaultChild,
 } from "@/lib/storage";
@@ -116,9 +117,9 @@ export async function POST(request: Request) {
   const existingSideSavedCharacters = (
     await Promise.all(sideCharacterIds.map((id) => getCharacter(id)))
   ).filter((c): c is NonNullable<typeof c> => Boolean(c));
-  // De gekozen tegel wint altijd — ook als de held uit de bibliotheek een andere stijl had.
-  const chosenStyle = getImageStyle(styleId);
-  const storyStyleHint = chosenStyle?.imageStyleHint ?? existingCharacter?.imageStyleHint;
+  // Stijl hoort bij de held: bestaande held → bibliotheekstijl. Nieuwe held → gekozen tegel.
+  const chosenStyle = existingCharacter ? undefined : getImageStyle(styleId);
+  const storyStyleHint = existingCharacter?.imageStyleHint ?? chosenStyle?.imageStyleHint;
   // Vertaal naar het (eenvoudigere) SideCharacter-uiterlijk-formaat van de verhaalbijbel.
   // Oude portretten in een ándere stijl laten we weg: anders trekken die de nieuwe tekening
   // terug naar de oude look.
@@ -168,20 +169,16 @@ export async function POST(request: Request) {
   chapter.imagePending = true;
   chapter.sceneCharacterNames = result.sceneCharacters.map((c) => c.name);
   const character = { ...result.character };
-  if (chosenStyle) {
+  if (existingCharacter) {
+    character.imageStyleHint = existingCharacter.imageStyleHint;
+    if (existingCharacter.portraitUrl) {
+      character.portraitUrl = existingCharacter.portraitUrl;
+    }
+  } else if (chosenStyle) {
     character.imageStyleHint = chosenStyle.imageStyleHint;
   }
 
   const bible = { ...result.bible };
-  const reuseSavedPortrait =
-    Boolean(existingCharacter?.portraitUrl) &&
-    sameImageStyle(existingCharacter?.imageStyleHint, character.imageStyleHint);
-
-  // Zelfde stijl? Dan is het oude portret gratis herbruikbaar. Andere stijl? Nieuw tekenen,
-  // anders blijft de held in zijn oude look staan.
-  if (reuseSavedPortrait && existingCharacter?.portraitUrl) {
-    character.portraitUrl = existingCharacter.portraitUrl;
-  }
 
   const story = await createStory({
     childId: child.id,
@@ -203,12 +200,26 @@ export async function POST(request: Request) {
   if (existingCharacter) {
     await registerStoryForCharacter(existingCharacter.id, story.id);
   }
+  let newHeroId: string | null = null;
+  if (!existingCharacter) {
+    const savedHero = await saveCharacter({
+      childId: child.id,
+      name: fullHero.name,
+      kind: "hero",
+      appearance: character.appearance,
+      imageStyleHint: character.imageStyleHint,
+      portraitUrl: character.portraitUrl,
+      sourceStoryIds: [story.id],
+    });
+    newHeroId = savedHero.id;
+  }
   await Promise.all(sideCharacterIds.map((id) => registerStoryForCharacter(id, story.id)));
 
   // Portret van een nieuwe held ná het antwoord, zodat starten niet weer vastloopt.
   if (!story.character.portraitUrl) {
     const storyId = story.id;
     const childId = child.id;
+    const heroIdToUpdate = newHeroId;
     after(async () => {
       try {
         if (!(await tryClaimImageQuota(childId))) return;
@@ -221,7 +232,6 @@ export async function POST(request: Request) {
           fresh.character.appearance,
           "het avontuur begint net",
           fresh.character.imageStyleHint,
-          existingCharacter?.portraitUrl,
         );
         if (!portrait.url) {
           await releaseImageQuota(childId);
@@ -233,6 +243,23 @@ export async function POST(request: Request) {
           ...latest,
           character: { ...latest.character, portraitUrl: portrait.url },
         });
+        if (heroIdToUpdate) {
+          const savedHero = await getCharacter(heroIdToUpdate);
+          if (savedHero && !savedHero.portraitUrl) {
+            await saveCharacter({
+              id: savedHero.id,
+              childId: savedHero.childId,
+              name: savedHero.name,
+              kind: savedHero.kind,
+              appearance: savedHero.appearance,
+              imageStyleHint: savedHero.imageStyleHint,
+              portraitUrl: portrait.url,
+              sourceStoryIds: savedHero.sourceStoryIds,
+              seriesNote: savedHero.seriesNote,
+              notes: savedHero.notes,
+            });
+          }
+        }
       } catch (err) {
         console.error("Achtergrond-portret mislukt:", err);
       }

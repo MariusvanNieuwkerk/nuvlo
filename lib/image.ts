@@ -52,6 +52,7 @@ import {
   describeCharacterAppearance,
   describeWorldAppearance,
   lockedIdentityRule,
+  requiredSceneIdentityAttributes,
   type CharacterAppearance,
   type WorldAppearance,
 } from "@/lib/appearance";
@@ -228,7 +229,7 @@ async function requestImageFromReference(
   try {
     const result = await fal.subscribe(EDIT_MODEL, {
       input: {
-        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is ONE locked identity. Copy WHO that character is (face, hair, body shape, clothes, colors). Do NOT copy the art style, shading, or medium of the reference images — redraw everything in the mandatory art style. Do not invent a second version of the same character. Do not recolor clothes. Then draw a completely NEW full scene: do NOT copy reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose and place may change; identity never changes. ${prompt} ${suffix}`,
+        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is ONE locked identity. Copy that character EXACTLY (face, hair, body shape, colors, clothes). Do not invent a second version of the same character. Do not recolor clothes. Do not redesign. Then draw a completely NEW full scene: do NOT copy reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose and place may change; identity never changes. ${prompt} ${suffix}`,
         image_urls: referenceImageUrls,
         ...buildFormatInput(EDIT_MODEL, aspectRatio),
       },
@@ -241,13 +242,9 @@ async function requestImageFromReference(
   }
 }
 
-// De generatie-en-verificatie-loop: een echte feedback-loop die na het genereren met een
-// vision-model checkt of de harde-eisen-checklist écht op de afbeelding staat, en zo niet
-// opnieuw probeert. BELANGRIJK (kosten/snelheid): deze loop zit NIET meer op het runtime-pad
-// (choice/fase B/nieuw verhaal) — die genereren nu bewust één keer zonder verificatie, want
-// elke verify + hergeneratie is een extra (dure, trage) call. De loop blijft alléén over voor
-// de wereld-/nevenpersonage-ankerbeelden, die nog uitsluitend offline gebruikt worden
-// (scripts/check-image-consistency.ts), niet tijdens het lezen/kiezen.
+// De generatie-en-verificatie-loop: na het tekenen checkt een vision-model of de figuren
+// nog hetzelfde uitzien. Zo niet: één herkansing. Zit weer op het leespad — kwaliteit
+// van herkenbare personages weegt zwaarder dan de extra call.
 async function generateWithVerification(
   requiredAttributes: string[],
   subjectLabel: string,
@@ -362,12 +359,9 @@ export async function generateSceneImage(
     });
   }
   if (!heroTemporaryAppearance && previousSceneImageUrl) {
-    const hasCharacterRefs = labeledRefs.some((item) => item.label.includes("kopieer"));
     labeledRefs.push({
       url: previousSceneImageUrl,
-      label: hasCharacterRefs
-        ? "de vorige scène — alleen sfeer en plek; personage-uiterlijk komt UIT de personage-referenties hierboven, niet uit dit plaatje"
-        : "vorige scène — zelfde personages, nieuwe houding en plek, niemand herontwerpen",
+      label: "vorige scène — zelfde personages, nieuwe houding en plek, niemand herontwerpen",
     });
   }
 
@@ -376,15 +370,15 @@ export async function generateSceneImage(
     .map((item, i) => `Reference image ${i + 1} is ${item.label}.`)
     .join(" ");
 
-  // BEWUST één generatie zonder vision-verificatie: dit zit op het kritieke leespad en elke
-  // verify + hergeneratie is een extra dure/trage call. De beste poging wordt gebruikt.
   const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. De scène mag houding en plek veranderen, niet het uiterlijk. Scène (alleen actie en plek, geen nieuwe kleding, geen extra personages): ${imagePrompt}.`;
+  const identityAttrs = requiredSceneIdentityAttributes(appearance, namedSides, heroLabel);
 
-  const url =
-    referenceUrls.length > 0
-      ? await requestImageFromReference(prompt, referenceUrls, styleHint, "4:3", referenceLegend)
-      : await requestImage(prompt, styleHint, "4:3");
-  return { url, verified: true };
+  return generateWithVerification(identityAttrs, `scène met ${heroLabel}`, async (missing) => {
+    const reinforced = `${prompt}${reinforcementNote(missing)}`;
+    return referenceUrls.length > 0
+      ? requestImageFromReference(reinforced, referenceUrls, styleHint, "4:3", referenceLegend)
+      : requestImage(reinforced, styleHint, "4:3");
+  });
 }
 
 // Het held-beeld: tegelijk het ronde avatartje (home, boekenplank) én het ANKERBEELD dat bij
@@ -433,7 +427,7 @@ async function requestPortraitImage(
     try {
       const result = await fal.subscribe(EDIT_MODEL, {
         input: {
-          prompt: `${prefix} The reference image is ONLY for this character's identity (face, hair, clothes, colors). Draw a NEW tight square bust portrait of that SAME character, fully redrawn in the mandatory art style. Do NOT copy the art style of the reference. Head, face, shoulders and chest fill the frame. Face large and centered. Soft plain background. Do NOT copy the reference composition, landscape, camera, or scenery. No wide scene, no tiny figure in a landscape, no full-body shot. ${prompt} ${suffix}`,
+          prompt: `${prefix} The reference image is ONLY for this character's identity (face, hair, clothes, colors). Draw a NEW tight square bust portrait of that SAME character. Copy the look exactly. Head, face, shoulders and chest fill the frame. Face large and centered. Soft plain background. Do NOT copy the reference composition, landscape, camera, or scenery. No wide scene, no tiny figure in a landscape, no full-body shot. ${prompt} ${suffix}`,
           image_urls: [previousPortraitUrl],
           ...buildFormatInput(EDIT_MODEL, aspectRatio),
         },
@@ -485,7 +479,7 @@ export async function generateSideCharacterReferenceImage(
   // scène-illustratie zelf (daar telt consistentie het meest). Dit scheelt fase B per
   // nieuw nevenpersonage een vision-call plus mogelijke hergeneraties. Het kenmerk gaat nog wél
   // nadrukkelijk in de prompt mee, zodat het anker het zoveel mogelijk toont.
-  const requiredAttributes: string[] = [];
+  const requiredAttributes = feature ? [feature] : [];
   const featureLine = feature ? ` Het kenmerk dat NOOIT mag ontbreken en duidelijk zichtbaar moet zijn: ${feature}.` : "";
 
   return generateWithVerification(requiredAttributes, `referentiebeeld van nevenpersonage ${character.name}`, async (missing) => {

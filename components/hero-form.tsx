@@ -264,6 +264,8 @@ export function HeroForm({
         world: "",
         styleId: DEFAULT_IMAGE_STYLE_ID,
       }));
+    } else if (step === 4) {
+      setStep(3);
     }
   }
 
@@ -292,6 +294,9 @@ export function HeroForm({
       : form.name.trim().length > 0 && form.appearance.trim().length > 0);
   const step2Valid = form.world.trim().length > 0 && Boolean(form.genre);
   const canSubmit = step1Valid && step2Valid;
+  // Bestaande held: stijl hoort al bij het personage, geen tegel meer. Nieuwe held: stap 4.
+  const usingExistingHero = Boolean(selectedRosterId);
+  const lastStep: WizardStep = usingExistingHero ? 3 : 4;
 
   function goNext() {
     setError(null);
@@ -315,7 +320,7 @@ export function HeroForm({
       setStep(3);
       return;
     }
-    if (step === 3) {
+    if (step === 3 && !usingExistingHero) {
       setStep(4);
     }
   }
@@ -328,7 +333,7 @@ export function HeroForm({
   }
 
   async function startAdventure() {
-    if (step !== 4 || submitting) return;
+    if (step !== lastStep || submitting) return;
     if (!canSubmit) {
       setError("Nog niet alles is ingevuld.");
       return;
@@ -348,7 +353,7 @@ export function HeroForm({
           },
           age: Number(form.age),
           appearance: form.appearance.trim(),
-          styleId: form.styleId,
+          styleId: selectedCharacterId ? undefined : form.styleId,
           existingCharacterId: selectedCharacterId ?? undefined,
           existingSideCharacterIds:
             selectedSideCharacterIds.length > 0 ? selectedSideCharacterIds : undefined,
@@ -412,7 +417,7 @@ export function HeroForm({
       }}
       className="flex flex-col gap-6 sm:gap-8"
     >
-      <StepDots current={step} />
+      <StepDots current={step} total={lastStep} />
 
       {step === 1 && (
         <div className="flex flex-col gap-6 sm:gap-8">
@@ -717,7 +722,7 @@ export function HeroForm({
             Terug
           </Button>
         )}
-        {step < 4 ? (
+        {step < lastStep ? (
           <button
             type="button"
             onClick={goNext}
@@ -740,10 +745,11 @@ export function HeroForm({
   );
 }
 
-function StepDots({ current }: { current: WizardStep }) {
+function StepDots({ current, total }: { current: WizardStep; total: WizardStep }) {
+  const steps = (total === 3 ? [1, 2, 3] : [1, 2, 3, 4]) as WizardStep[];
   return (
-    <div className="flex items-center justify-center gap-2" aria-label={`Stap ${current} van 4`}>
-      {([1, 2, 3, 4] as WizardStep[]).map((n) => (
+    <div className="flex items-center justify-center gap-2" aria-label={`Stap ${current} van ${total}`}>
+      {steps.map((n) => (
         <span
           key={n}
           className={cn(
