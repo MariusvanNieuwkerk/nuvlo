@@ -109,7 +109,6 @@ export function HeroForm({
   initialAppliedRef.current = initialApplied;
 
   const [selectedSideCharacterIds, setSelectedSideCharacterIds] = useState<string[]>([]);
-  const [showSidePick, setShowSidePick] = useState(false);
 
   const heroRoster = useMemo(
     () => buildHeroRoster(characters, initialStories),
@@ -244,7 +243,8 @@ export function HeroForm({
 
   const selectedEntry = heroRoster.find((h) => h.id === selectedRosterId) ?? null;
   const selectedCharacterId = selectedEntry?.savedCharacterId ?? null;
-  const sideCandidates = characters.filter((c) => c.kind === "side");
+  // Iedereen uit de bibliotheek mag mee, behalve de held van DIT boek.
+  const companionCandidates = characters.filter((c) => c.id !== selectedCharacterId);
 
   const childValid =
     form.authorName.trim().length > 0 && Number(form.age) >= 4 && Number(form.age) <= 14;
@@ -538,41 +538,6 @@ export function HeroForm({
               </div>
             </div>
           </StepSection>
-
-          {sideCandidates.length > 0 && (
-            <section className="flex flex-col gap-2.5 sm:gap-3">
-              <button
-                type="button"
-                onClick={() => setShowSidePick((v) => !v)}
-                className="text-left text-sm font-semibold text-foreground/70 underline-offset-2 hover:underline sm:text-base"
-              >
-                {showSidePick ? "Bijfiguren verbergen" : "Neem iemand mee? (optioneel)"}
-                {selectedSideCharacterIds.length > 0 && !showSidePick
-                  ? ` · ${selectedSideCharacterIds.length} gekozen`
-                  : ""}
-              </button>
-              {showSidePick && (
-                <>
-                  <p className="text-sm text-foreground/60">
-                    Tik personages aan die ook mogen meespelen.
-                  </p>
-                  {renderLoadStatus()}
-                  <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-                    {sideCandidates.map((c) => (
-                      <CharacterOptionTile
-                        key={c.id}
-                        character={c}
-                        selected={selectedSideCharacterIds.includes(c.id)}
-                        onToggle={() => toggleSideCharacter(c.id)}
-                        onDelete={() => void handleDeleteCharacter(c)}
-                        deleting={deletingCharacterId === c.id}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </section>
-          )}
         </div>
       )}
 
@@ -600,7 +565,28 @@ export function HeroForm({
               className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
             />
           </Field>
-          <Field label="Wie gaat er mee, en wat kan die?">
+          <div className="flex flex-col gap-2.5 sm:gap-3">
+            <p className="text-sm font-semibold text-foreground/80 sm:text-base">
+              Wie gaat er mee?
+            </p>
+            <p className="text-sm text-foreground/60">
+              Tik wie je al kent. Of typ zelf iemand.
+            </p>
+            {renderLoadStatus()}
+            {companionCandidates.length > 0 && (
+              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
+                {companionCandidates.map((c) => (
+                  <CharacterOptionTile
+                    key={c.id}
+                    character={c}
+                    selected={selectedSideCharacterIds.includes(c.id)}
+                    onToggle={() => toggleSideCharacter(c.id)}
+                    onDelete={() => void handleDeleteCharacter(c)}
+                    deleting={deletingCharacterId === c.id}
+                  />
+                ))}
+              </div>
+            )}
             <Input
               value={form.companions}
               onChange={(e) => update("companions", e.target.value)}
@@ -608,7 +594,7 @@ export function HeroForm({
               maxLength={250}
               className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
             />
-          </Field>
+          </div>
           <Field label="Vertel zelf hoe het verhaal gaat">
             <Textarea
               value={form.freeform}
