@@ -88,6 +88,7 @@ export function HomeHeroView({
   const [editError, setEditError] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editAppearance, setEditAppearance] = useState("");
+  const [editSkills, setEditSkills] = useState("");
   const [editAge, setEditAge] = useState("8");
 
   useEffect(() => {
@@ -105,6 +106,7 @@ export function HomeHeroView({
   function openEditor(hero: HeroRosterEntry) {
     setEditName(hero.name);
     setEditAppearance(hero.appearanceFreeform);
+    setEditSkills(hero.skills);
     setEditAge(String(child.age));
     setEditError(null);
     setEditing(true);
@@ -113,6 +115,7 @@ export function HomeHeroView({
   async function saveHeroEdits(hero: HeroRosterEntry) {
     const name = editName.trim();
     const appearance = editAppearance.trim();
+    const skills = editSkills.trim();
     const age = Number(editAge);
     if (!name || !appearance) {
       setEditError("Vul de naam in en beschrijf hoe de held eruitziet.");
@@ -139,7 +142,7 @@ export function HomeHeroView({
         const res = await fetch(`/api/characters/${hero.savedCharacterId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, appearance }),
+          body: JSON.stringify({ name, appearance, skills }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -160,6 +163,7 @@ export function HomeHeroView({
             appearance,
             imageStyleHint: hero.imageStyleHint,
             portraitUrl: hero.portraitUrl,
+            skills: skills || undefined,
           }),
         });
         if (!res.ok) {
@@ -302,6 +306,18 @@ export function HomeHeroView({
                   onChange={(e) => setEditAppearance(e.target.value)}
                   maxLength={250}
                   className={cn("min-h-[80px] rounded-xl text-base", INPUT_CARD)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-sm font-semibold text-foreground/80">
+                  Superkrachten of skills
+                </Label>
+                <Textarea
+                  value={editSkills}
+                  onChange={(e) => setEditSkills(e.target.value)}
+                  placeholder="Mag leeg. Bijv. supersterk, of heel goed bouwen"
+                  maxLength={200}
+                  className={cn("min-h-[72px] rounded-xl text-base", INPUT_CARD)}
                 />
               </div>
               <div className="flex flex-col gap-1.5">

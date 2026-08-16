@@ -69,6 +69,7 @@ async function main() {
       sourceStoryIds: hero.sourceStoryIds,
       seriesNote: hero.seriesNote,
       notes: hero.notes,
+      skills: hero.skills,
     });
     console.log("  bibliotheek bijgewerkt");
     console.log(" ", result.url);

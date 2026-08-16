@@ -48,6 +48,7 @@ type FormState = {
   world: string;
   genre: Genre | null;
   appearance: string;
+  skills: string;
   styleId: ImageStyleId;
   goal: string;
   enemy: string;
@@ -109,6 +110,7 @@ export function HeroForm({
     world: "",
     genre: null,
     appearance: "",
+    skills: "",
     styleId: DEFAULT_IMAGE_STYLE_ID,
     goal: "",
     enemy: "",
@@ -147,6 +149,7 @@ export function HeroForm({
       ...prev,
       name: entry.name,
       appearance: entry.appearanceFreeform,
+      skills: entry.skills,
       styleId: getImageStyleByHint(entry.imageStyleHint).id,
       // Wereld mag alvast uit het vorige boek komen — kind kan het in stap 2 nog wijzigen.
       world: prev.world || entry.worldHint || "",
@@ -180,6 +183,7 @@ export function HeroForm({
             ...prev,
             name: found.name,
             appearance: found.appearanceFreeform,
+            skills: found.skills,
             styleId: getImageStyleByHint(found.imageStyleHint).id,
             world: prev.world || found.worldHint || "",
           }));
@@ -239,7 +243,7 @@ export function HeroForm({
       setSelectedSideCharacterIds((prev) => prev.filter((x) => x !== c.id));
       if (selectedRosterId === c.id) {
         setSelectedRosterId(null);
-        setForm((prev) => ({ ...prev, name: "", appearance: "" }));
+        setForm((prev) => ({ ...prev, name: "", appearance: "", skills: "" }));
       }
     } catch {
       window.alert("Verwijderen is niet gelukt. Probeer het nog eens.");
@@ -261,6 +265,7 @@ export function HeroForm({
         ...prev,
         name: "",
         appearance: "",
+        skills: "",
         world: "",
         styleId: DEFAULT_IMAGE_STYLE_ID,
       }));
@@ -350,6 +355,7 @@ export function HeroForm({
             name: form.name.trim(),
             world: form.world.trim(),
             genre: form.genre,
+            power: form.skills.trim() || undefined,
           },
           age: Number(form.age),
           appearance: form.appearance.trim(),
@@ -528,6 +534,15 @@ export function HeroForm({
                     placeholder="Bijv. groene krullen, een cape vol sterren..."
                     maxLength={250}
                     className={cn("min-h-[88px] rounded-xl text-base sm:min-h-[100px] sm:text-lg", INPUT_CARD)}
+                  />
+                </Field>
+                <Field label="Superkrachten of skills (mag leeg)">
+                  <Textarea
+                    value={form.skills}
+                    onChange={(e) => update("skills", e.target.value)}
+                    placeholder="Bijv. supersterk, of heel goed bouwen"
+                    maxLength={200}
+                    className={cn("min-h-[72px] rounded-xl text-base sm:min-h-[88px] sm:text-lg", INPUT_CARD)}
                   />
                 </Field>
               </div>

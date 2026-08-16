@@ -51,7 +51,11 @@ export type StartStoryInput = {
     appearance: CharacterAppearance;
     imageStyleHint: string;
     name: string;
+    skills?: string;
   };
+  // Ingevuld als het kind (of de bibliotheek) zelf een kracht/skill aangaf. Dan mag Claude
+  // geen andere superkracht verzinnen.
+  lockedSkills?: string;
   // Tekenstijl van dit boek. Bij een bestaande held is dit de stijl uit de bibliotheek.
   // Bij een nieuwe held de gekozen tegel. Wint van Claude's eigen inschatting.
   imageStyleHint?: string;
@@ -343,6 +347,7 @@ async function callStoryTool<T>(options: {
 
 export async function startStory(input: StartStoryInput): Promise<StartStoryResult> {
   const { hero, age, appearance, existingCharacter, existingSideCharacters, outline } = input;
+  const lockedSkills = input.lockedSkills?.trim() || existingCharacter?.skills?.trim() || "";
   const lockedStyleHint = input.imageStyleHint?.trim() || existingCharacter?.imageStyleHint;
 
   // Bij hergebruik van een opgeslagen held staat het uiterlijk vast — dan willen we niet dat
@@ -377,7 +382,9 @@ Spanningsniveau (zie systeemregel 2): ${tensionLevelLabel(age)}
 
 Held: ${hero.name}
 Wereld: ${hero.world}
-Superkracht: ${hero.power}
+${lockedSkills
+    ? `Superkracht/skills staan VAST (het kind koos dit — gebruik ze zichtbaar in het verhaal, verzín geen andere kracht): ${lockedSkills}`
+    : `Superkracht: ${hero.power}`}
 Zwakte: ${hero.weakness}
 Tegenstander: ${hero.enemy}
 Genre: ${hero.genre}
@@ -485,6 +492,7 @@ export async function nextScene(input: NextSceneInput): Promise<NextSceneResult>
 Spanningsniveau (zie systeemregel 2): ${tensionLevelLabel(age)}
 
 Held: ${hero.name} (kracht: ${hero.power}, zwakte: ${hero.weakness}), tegenstander: ${hero.enemy}, wereld: ${hero.world}.
+Gebruik de kracht/skills van de held als het bij de keuze past. Verzin geen andere superkracht.
 
 Vast uiterlijk van ${hero.name} (nooit wijzigen, ook geen andere kledingkleuren — het imagePrompt van deze scène hoeft dit niet te herhalen en mag GEEN andere kleding of kleuren noemen): ${describeCharacterAppearance(story.character.appearance)}
 

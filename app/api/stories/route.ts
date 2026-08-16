@@ -78,17 +78,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Kracht/zwakte/vijand vraagt de UX niet meer (te veel typen). Ontbreken ze, dan vullen
-  // we kindvriendelijke defaults per genre — Claude krijgt zo wél genoeg houvast.
-  const fullHero: Hero = fillHeroDefaults({
-    name: hero.name,
-    world: hero.world,
-    genre: hero.genre,
-    power: hero.power,
-    weakness: hero.weakness,
-    enemy: outline.enemy || hero.enemy,
-  });
-
   const child = await getDefaultChild();
   await updateDefaultChild(authorName, age);
 
@@ -106,6 +95,18 @@ export async function POST(request: Request) {
       );
     }
   }
+
+  // Skills van de held winnen van een genre-default. Leeg = Claude krijgt een vriendelijke
+  // standaardkracht, zodat het verhaal wél houvast heeft.
+  const childSkills = existingCharacter?.skills?.trim() || hero.power?.trim() || undefined;
+  const fullHero: Hero = fillHeroDefaults({
+    name: hero.name,
+    world: hero.world,
+    genre: hero.genre,
+    power: childSkills,
+    weakness: hero.weakness,
+    enemy: outline.enemy || hero.enemy,
+  });
 
   // Nevenpersonages die het kind expliciet koos om in dit boek te laten terugkeren (los van de
   // held-keuze hierboven — je mag dus tegelijk een held ÉN één of meer bijfiguren kiezen). Een
@@ -148,8 +149,10 @@ export async function POST(request: Request) {
             appearance: existingCharacter.appearance,
             imageStyleHint: existingCharacter.imageStyleHint,
             name: existingCharacter.name,
+            skills: existingCharacter.skills,
           }
         : undefined,
+      lockedSkills: childSkills,
       existingSideCharacters: existingSideCharacters.length > 0 ? existingSideCharacters : undefined,
       imageStyleHint: storyStyleHint,
       outline: outlineHasContent(outline) ? outline : undefined,
@@ -208,6 +211,7 @@ export async function POST(request: Request) {
       imageStyleHint: character.imageStyleHint,
       portraitUrl: character.portraitUrl,
       sourceStoryIds: [story.id],
+      skills: childSkills,
     });
     newHeroId = savedHero.id;
   }
@@ -255,6 +259,7 @@ export async function POST(request: Request) {
               sourceStoryIds: savedHero.sourceStoryIds,
               seriesNote: savedHero.seriesNote,
               notes: savedHero.notes,
+              skills: savedHero.skills,
             });
           }
         }

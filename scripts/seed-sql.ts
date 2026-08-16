@@ -66,7 +66,7 @@ async function main() {
     const txt = (v: unknown) =>
       v === null || v === undefined ? "null" : `'${String(v).replace(/'/g, "''")}'`;
     lines.push(
-      `insert into characters (id, child_id, name, kind, appearance, image_style_hint, portrait_url, source_story_ids, series_note, notes, created_at) values ('${c.id}', '${c.childId}', ${txt(c.name)}, ${txt(c.kind)}, ${json(c.appearance)}, ${txt(c.imageStyleHint)}, ${txt(c.portraitUrl)}, '${JSON.stringify(c.sourceStoryIds ?? []).replace(/'/g, "''")}'::uuid[], ${txt(c.seriesNote)}, ${txt(c.notes)}, '${c.createdAt}') on conflict (id) do nothing;`,
+      `insert into characters (id, child_id, name, kind, appearance, image_style_hint, portrait_url, source_story_ids, series_note, notes, skills, created_at) values ('${c.id}', '${c.childId}', ${txt(c.name)}, ${txt(c.kind)}, ${json(c.appearance)}, ${txt(c.imageStyleHint)}, ${txt(c.portraitUrl)}, '${JSON.stringify(c.sourceStoryIds ?? []).replace(/'/g, "''")}'::uuid[], ${txt(c.seriesNote)}, ${txt(c.notes)}, ${txt((c as { skills?: string }).skills)}, '${c.createdAt}') on conflict (id) do nothing;`,
     );
   }
 

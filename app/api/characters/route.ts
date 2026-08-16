@@ -27,7 +27,7 @@ export async function GET() {
 //
 // Body:
 //   { name, kind: "hero"|"side", fromStoryId?, appearance?, imageStyleHint?, portraitUrl?,
-//     seriesNote?, notes? }
+//     seriesNote?, notes?, skills? }
 // `fromStoryId` is de hoofdreden dat dit endpoint niet zomaar een create is: het haalt het
 // gestructureerde uiterlijk EN het portret uit het bronverhaal, zodat we niet opnieuw een
 // fal-call hoeven te doen voor het ankerbeeld — kostentechnisch de echte winst van hergebruik.
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
 
-  const { name, kind, fromStoryId, appearance, imageStyleHint, styleId, portraitUrl, seriesNote, notes } =
+  const { name, kind, fromStoryId, appearance, imageStyleHint, styleId, portraitUrl, seriesNote, notes, skills } =
     body as {
       name?: string;
       kind?: string;
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       portraitUrl?: string | null;
       seriesNote?: string;
       notes?: string;
+      skills?: string;
     };
 
   if (!name || !name.trim()) {
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
   let resolvedAppearance: unknown = appearance;
   let resolvedImageStyleHint = chosenStyle?.imageStyleHint ?? imageStyleHint;
   let resolvedPortraitUrl = portraitUrl ?? null;
+  let resolvedSkills = typeof skills === "string" && skills.trim() ? skills.trim().slice(0, 200) : undefined;
 
   if (fromStoryId) {
     const story = await getStory(fromStoryId);
@@ -127,6 +129,7 @@ export async function POST(request: Request) {
     portraitUrl: resolvedPortraitUrl,
     seriesNote,
     notes,
+    skills: resolvedSkills,
     // Als het personage uit een verhaal komt, registreren we dat meteen in de audit-trail.
     sourceStoryIds: fromStoryId ? [fromStoryId] : [],
   });
@@ -163,6 +166,7 @@ export async function POST(request: Request) {
           sourceStoryIds: latest.sourceStoryIds,
           seriesNote: latest.seriesNote,
           notes: latest.notes,
+          skills: latest.skills,
         });
       } catch (err) {
         console.error("Achtergrond-portret voor nieuwe held mislukt:", err);

@@ -129,6 +129,8 @@ function normalizeSavedCharacter(raw: unknown): SavedCharacter {
     typeof r.seriesNote === "string" && r.seriesNote.trim() ? r.seriesNote.trim() : undefined;
   const notes =
     typeof r.notes === "string" && r.notes.trim() ? r.notes.trim() : undefined;
+  const skills =
+    typeof r.skills === "string" && r.skills.trim() ? r.skills.trim() : undefined;
   const createdAt = typeof r.createdAt === "string" && r.createdAt ? r.createdAt : new Date().toISOString();
   return {
     id,
@@ -141,6 +143,7 @@ function normalizeSavedCharacter(raw: unknown): SavedCharacter {
     sourceStoryIds,
     seriesNote,
     notes,
+    skills,
     createdAt,
   };
 }
@@ -217,6 +220,7 @@ type CharacterRow = {
   source_story_ids: string[];
   series_note: string | null;
   notes: string | null;
+  skills: string | null;
   created_at: string;
 };
 
@@ -232,6 +236,7 @@ function rowToCharacter(row: CharacterRow): SavedCharacter {
     sourceStoryIds: row.source_story_ids ?? [],
     seriesNote: row.series_note ?? undefined,
     notes: row.notes ?? undefined,
+    skills: row.skills ?? undefined,
     createdAt: row.created_at,
   });
 }
@@ -248,6 +253,7 @@ function characterToRow(c: SavedCharacter): Omit<CharacterRow, "created_at"> {
     source_story_ids: c.sourceStoryIds,
     series_note: c.seriesNote ?? null,
     notes: c.notes ?? null,
+    skills: c.skills ?? null,
   };
 }
 
@@ -635,6 +641,7 @@ export type SaveCharacterInput = {
   sourceStoryIds?: string[];
   seriesNote?: string;
   notes?: string;
+  skills?: string;
 };
 
 // Upsert op id. Atomaar in Postgres (één INSERT ... ON CONFLICT DO UPDATE) — geen lock
@@ -654,6 +661,7 @@ export async function saveCharacter(input: SaveCharacterInput & { id?: string })
       : [],
     seriesNote: input.seriesNote?.trim() || undefined,
     notes: input.notes?.trim() || undefined,
+    skills: input.skills?.trim() || undefined,
     createdAt: new Date().toISOString(),
   };
 

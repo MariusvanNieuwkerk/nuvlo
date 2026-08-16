@@ -20,6 +20,7 @@ export function NewCharacterForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [appearance, setAppearance] = useState("");
+  const [skills, setSkills] = useState("");
   const [styleId, setStyleId] = useState<ImageStyleId>(DEFAULT_IMAGE_STYLE_ID);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export function NewCharacterForm() {
           name: name.trim(),
           kind: "hero",
           appearance: appearance.trim(),
+          skills: skills.trim() || undefined,
           styleId,
         }),
       });
@@ -94,6 +96,23 @@ export function NewCharacterForm() {
           placeholder="Bijv. groene krullen, rood trainingspak en grijze sneakers"
           maxLength={400}
           className={cn("min-h-[120px] rounded-xl text-base sm:min-h-[140px] sm:text-lg", INPUT_CARD)}
+        />
+      </section>
+
+      <section className="flex flex-col gap-2.5 sm:gap-3">
+        <Label htmlFor="hero-skills" className="text-base font-bold sm:text-lg">
+          Superkrachten of skills
+        </Label>
+        <p className="text-sm text-foreground/55 sm:text-base">
+          Mag leeg. Wat je hier zet, kan je held in elk nieuw verhaal.
+        </p>
+        <Textarea
+          id="hero-skills"
+          value={skills}
+          onChange={(e) => setSkills(e.target.value)}
+          placeholder="Bijv. supersterk, kan praten met dieren, of heel goed bouwen"
+          maxLength={200}
+          className={cn("min-h-[88px] rounded-xl text-base sm:min-h-[100px] sm:text-lg", INPUT_CARD)}
         />
       </section>
 

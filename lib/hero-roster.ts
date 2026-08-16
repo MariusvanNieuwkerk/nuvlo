@@ -18,6 +18,7 @@ export type HeroRosterEntry = {
   // Uiterlijk + tekenstijl om een story-held opnieuw te kunnen kiezen zonder bibliotheek-id.
   appearanceFreeform: string;
   imageStyleHint: string;
+  skills: string;
 };
 
 function normName(name: string): string {
@@ -68,6 +69,7 @@ export function buildHeroRoster(
     lastStoryAt: string | null;
     appearanceFreeform: string;
     imageStyleHint: string;
+    skills: string;
   } {
     const list = byNameStories.get(normName(name)) ?? [];
     // stories komen al favorite/updated_at-gesorteerd binnen; eerste = meest recent.
@@ -80,6 +82,7 @@ export function buildHeroRoster(
       imageStyleHint:
         latest?.character.imageStyleHint ??
         "flat colorful 2D children's picture-book illustration style",
+      skills: latest?.hero.power?.trim() ?? "",
     };
   }
 
@@ -96,6 +99,7 @@ export function buildHeroRoster(
       lastStoryAt: meta.lastStoryAt,
       appearanceFreeform: c.appearance.freeform || meta.appearanceFreeform,
       imageStyleHint: c.imageStyleHint || meta.imageStyleHint,
+      skills: c.skills || "",
     };
   });
 
@@ -114,6 +118,7 @@ export function buildHeroRoster(
       lastStoryAt: latest.updatedAt,
       appearanceFreeform: meta.appearanceFreeform,
       imageStyleHint: meta.imageStyleHint,
+      skills: meta.skills,
     });
   }
 

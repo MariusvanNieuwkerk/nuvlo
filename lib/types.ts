@@ -206,5 +206,8 @@ export type SavedCharacter = {
   // Geen aparte Series-entity — KIS: dit is puur een string die getoond mag worden.
   seriesNote?: string;
   notes?: string; // vrije ruimte, bv. "opgeslagen vanuit boek X" — niet getoond, wel debugbaar
+  // Optioneel: wat de held kan (superkracht of skill). Leeg = Claude mag per boek een
+  // genre-default gebruiken. Gevuld = vast bij deze held, in elk nieuw verhaal.
+  skills?: string;
   createdAt: string;
 };

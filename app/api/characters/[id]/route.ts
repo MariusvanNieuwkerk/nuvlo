@@ -18,10 +18,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   return NextResponse.json({ ok: true });
 }
 
-// PATCH /api/characters/[id] → naam en/of uiterlijk van een opgeslagen held bijwerken.
+// PATCH /api/characters/[id] → naam, uiterlijk en/of skills van een opgeslagen held bijwerken.
 // Bewust geen nieuw portret genereren hier (kosten): het bestaande plaatje blijft tot een
-// volgend boek. Body: { name?, appearance? } — appearance mag een string (freeform) of
-// een object zijn.
+// volgend boek. Body: { name?, appearance?, skills? } — appearance mag een string (freeform) of
+// een object zijn. skills mag leeg zijn om het veld te wissen.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const existing = await getCharacter(id);
@@ -34,7 +34,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
 
-  const { name, appearance } = body as { name?: string; appearance?: unknown };
+  const { name, appearance, skills } = body as {
+    name?: string;
+    appearance?: unknown;
+    skills?: string;
+  };
   const nextName = typeof name === "string" && name.trim() ? name.trim() : existing.name;
   if (nextName.length > 40) {
     return NextResponse.json({ error: "Naam is te lang." }, { status: 400 });
@@ -63,6 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     sourceStoryIds: existing.sourceStoryIds,
     seriesNote: existing.seriesNote,
     notes: existing.notes,
+    skills: typeof skills === "string" ? skills.trim().slice(0, 200) : existing.skills,
   });
 
   return NextResponse.json({ character: saved });
