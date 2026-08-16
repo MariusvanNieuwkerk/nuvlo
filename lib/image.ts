@@ -137,8 +137,8 @@ const NO_PHOTO_RULE = "Colorful digital illustration for a children's book — N
 function buildStyleBlock(styleHint: string | undefined): { prefix: string; suffix: string } {
   const hint = styleHint?.trim() || "flat colorful 2D children's picture-book illustration style";
   return {
-    prefix: `${NO_PHOTO_RULE} Art style: ${hint}.`,
-    suffix: `Remember, the art style MUST be: ${hint}. Follow this style strictly and consistently. Cheerful, warm mood. IMPORTANT: absolutely no text, letters, titles, logos, or writing anywhere in the image, not even small or in the background.`,
+    prefix: `${NO_PHOTO_RULE} MANDATORY art style for the ENTIRE image (characters and background): ${hint}. Do not use any other illustration style.`,
+    suffix: `FINAL CHECK: the whole image is only in this art style: ${hint}. Cheerful, warm mood. IMPORTANT: absolutely no text, letters, titles, logos, or writing anywhere in the image, not even small or in the background.`,
   };
 }
 
@@ -228,7 +228,7 @@ async function requestImageFromReference(
   try {
     const result = await fal.subscribe(EDIT_MODEL, {
       input: {
-        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is ONE locked identity. Copy that character EXACTLY (face, body shape, colors, clothes). Do not invent a second version of the same character. Do not recolor clothes. Then draw a completely NEW full scene: do NOT copy reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose and place may change; identity never changes. ${prompt} ${suffix}`,
+        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is ONE locked identity. Copy WHO that character is (face, hair, body shape, clothes, colors). Do NOT copy the art style, shading, or medium of the reference images — redraw everything in the mandatory art style. Do not invent a second version of the same character. Do not recolor clothes. Then draw a completely NEW full scene: do NOT copy reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose and place may change; identity never changes. ${prompt} ${suffix}`,
         image_urls: referenceImageUrls,
         ...buildFormatInput(EDIT_MODEL, aspectRatio),
       },
@@ -433,7 +433,7 @@ async function requestPortraitImage(
     try {
       const result = await fal.subscribe(EDIT_MODEL, {
         input: {
-          prompt: `${prefix} The reference image is ONLY for this character's identity (face, hair, clothes, colors). Draw a NEW tight square bust portrait of that SAME character. Head, face, shoulders and chest fill the frame. Face large and centered. Soft plain background. Do NOT copy the reference composition, landscape, camera, or scenery. No wide scene, no tiny figure in a landscape, no full-body shot. ${prompt} ${suffix}`,
+          prompt: `${prefix} The reference image is ONLY for this character's identity (face, hair, clothes, colors). Draw a NEW tight square bust portrait of that SAME character, fully redrawn in the mandatory art style. Do NOT copy the art style of the reference. Head, face, shoulders and chest fill the frame. Face large and centered. Soft plain background. Do NOT copy the reference composition, landscape, camera, or scenery. No wide scene, no tiny figure in a landscape, no full-body shot. ${prompt} ${suffix}`,
           image_urls: [previousPortraitUrl],
           ...buildFormatInput(EDIT_MODEL, aspectRatio),
         },

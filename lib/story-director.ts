@@ -51,6 +51,8 @@ export type StartStoryInput = {
     imageStyleHint: string;
     name: string;
   };
+  // Gekozen tekenstijl-tegel. Wint van Claude én van de oude stijl van een hergebruikte held.
+  imageStyleHint?: string;
   // Optioneel: nevenpersonages uit de personagens-bibliotheek die het kind expliciet koos om
   // in DIT verhaal terug te laten komen. Hun uiterlijk staat — net als bij existingCharacter —
   // VAST en wordt nooit door Claude herschreven (zie de merge in startStory hieronder).
@@ -339,16 +341,20 @@ async function callStoryTool<T>(options: {
 
 export async function startStory(input: StartStoryInput): Promise<StartStoryResult> {
   const { hero, age, appearance, existingCharacter, existingSideCharacters, outline } = input;
+  const lockedStyleHint = input.imageStyleHint?.trim() || existingCharacter?.imageStyleHint;
 
   // Bij hergebruik van een opgeslagen held staat het uiterlijk vast — dan willen we niet dat
   // Claude het opnieuw "vriendelijker herschrijft" (de kans dat details dan verschuiven is
   // precies de reden dat we de bibliotheek hebben). We geven Claude de appearance als harde
   // context mee en vragen het NIET meer om een eigen characterAppearance te verzinnen.
+  const styleNote = lockedStyleHint
+    ? `Tekenstijl (imageStyleHint) staat VAST op: "${lockedStyleHint}". Schrijf dit LETTERLIJK over in imageStyleHint.`
+    : "";
   const appearanceNote = existingCharacter
     ? `Het uiterlijk van de held staat VAST (hergebruik uit de personagens-bibliotheek) en mag NIET veranderd worden — schrijf characterAppearance EXACT over zoals hieronder beschreven:
 ${describeCharacterAppearance(existingCharacter.appearance)}
-Tekenstijl (imageStyleHint) staat ook vast: "${existingCharacter.imageStyleHint}".`
-    : `Uiterlijk van de held, zoals het kind dat zelf aangaf (voor later gebruik in illustraties, niet letterlijk in de tekst noemen — schrijf dit eventueel netjes over in characterAppearance): ${appearance}`;
+${styleNote}`
+    : `Uiterlijk van de held, zoals het kind dat zelf aangaf (voor later gebruik in illustraties, niet letterlijk in de tekst noemen — schrijf dit eventueel netjes over in characterAppearance): ${appearance}${styleNote ? `\n${styleNote}` : ""}`;
 
   // Het kind koos vooraf al één of meer bestaande nevenpersonages die in dit nieuwe boek
   // mogen terugkeren. Hun uiterlijk staat vast (wordt in code hieronder ook afgedwongen, voor
@@ -405,11 +411,10 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
   const cleanedAppearance: CharacterAppearance = existingCharacter
     ? cleanCharacterAppearance(existingCharacter.appearance, appearance)
     : cleanCharacterAppearance(result.characterAppearance, appearance);
-  const styleHint = existingCharacter
-    ? existingCharacter.imageStyleHint
-    : typeof result.imageStyleHint === "string" && result.imageStyleHint.trim()
+  const styleHint = lockedStyleHint
+    || (typeof result.imageStyleHint === "string" && result.imageStyleHint.trim()
       ? result.imageStyleHint.trim()
-      : "flat colorful 2D children's picture-book illustration style";
+      : "flat colorful 2D children's picture-book illustration style");
   const worldAppearance = cleanWorldAppearance(result.worldAppearance);
   const claudeSideCharacters = cleanSideCharacters(result.sideCharacters);
 

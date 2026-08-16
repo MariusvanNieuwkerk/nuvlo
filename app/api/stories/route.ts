@@ -12,7 +12,7 @@ import {
 import { startStory } from "@/lib/story-director";
 import { generatePortrait } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
-import { getImageStyle } from "@/lib/image-styles";
+import { getImageStyle, sameImageStyle } from "@/lib/image-styles";
 import { fillHeroDefaults } from "@/lib/hero-defaults";
 import { cleanChildOutline, outlineHasContent } from "@/lib/story-outline";
 import type { Genre, Hero, SideCharacter } from "@/lib/types";
@@ -116,16 +116,20 @@ export async function POST(request: Request) {
   const existingSideSavedCharacters = (
     await Promise.all(sideCharacterIds.map((id) => getCharacter(id)))
   ).filter((c): c is NonNullable<typeof c> => Boolean(c));
-  // Vertaal naar het (eenvoudigere) SideCharacter-uiterlijk-formaat van de verhaalbijbel. Hun
-  // bestaande portret (indien er al één is) doet meteen dienst als vast ankerbeeld — dat is
-  // precies waarom hergebruik van een bijfiguur nooit een gegarandeerde eigen fal-call kost.
+  // De gekozen tegel wint altijd — ook als de held uit de bibliotheek een andere stijl had.
+  const chosenStyle = getImageStyle(styleId);
+  const storyStyleHint = chosenStyle?.imageStyleHint ?? existingCharacter?.imageStyleHint;
+  // Vertaal naar het (eenvoudigere) SideCharacter-uiterlijk-formaat van de verhaalbijbel.
+  // Oude portretten in een ándere stijl laten we weg: anders trekken die de nieuwe tekening
+  // terug naar de oude look.
   const existingSideCharacters: SideCharacter[] = existingSideSavedCharacters.map((c) => ({
     name: c.name,
     appearance: {
       freeform: c.appearance.freeform,
       distinguishingFeature: c.appearance.distinguishingFeature,
     },
-    referenceImageUrl: c.portraitUrl ?? null,
+    referenceImageUrl:
+      c.portraitUrl && sameImageStyle(c.imageStyleHint, storyStyleHint) ? c.portraitUrl : null,
   }));
 
   // appearance-tekst is alleen verplicht wanneer we geen bestaande held hergebruiken — in
@@ -148,6 +152,7 @@ export async function POST(request: Request) {
           }
         : undefined,
       existingSideCharacters: existingSideCharacters.length > 0 ? existingSideCharacters : undefined,
+      imageStyleHint: storyStyleHint,
       outline: outlineHasContent(outline) ? outline : undefined,
     });
   } catch (err) {
@@ -163,28 +168,18 @@ export async function POST(request: Request) {
   chapter.imagePending = true;
   chapter.sceneCharacterNames = result.sceneCharacters.map((c) => c.name);
   const character = { ...result.character };
-
-  // De expliciet gekozen tekenstijl-tegel is altijd betrouwbaarder dan Claude's eigen
-  // inschatting (zie lib/image-styles.ts) — die blijft alleen als terugval bestaan voor
-  // wanneer styleId onverwacht ontbreekt of ongeldig is. Bij hergebruik van een opgeslagen
-  // held moet de stijl van de bibliotheek het echter ALTIJD winnen (vast uiterlijk hoort
-  // bij een vaste stijl) — daarom overschrijven we existingCharacter.imageStyleHint pas
-  // ná het gekozen styleId, zodat de tegel-keuze van het kind (die tijdens hergebruik
-  // expliciet voor-gevuld staat op de stijl van de held) niet per ongeluk weer vervlakt.
-  const chosenStyle = getImageStyle(styleId);
   if (chosenStyle) {
     character.imageStyleHint = chosenStyle.imageStyleHint;
   }
-  if (existingCharacter) {
-    character.imageStyleHint = existingCharacter.imageStyleHint;
-  }
 
   const bible = { ...result.bible };
+  const reuseSavedPortrait =
+    Boolean(existingCharacter?.portraitUrl) &&
+    sameImageStyle(existingCharacter?.imageStyleHint, character.imageStyleHint);
 
-  // Geen tekeningen bij het starten — alleen tekst. Anders duurt het te lang en ziet het
-  // kind "het duurde te lang". Bestaand portret hergebruiken is gratis. Nieuwe plaatjes
-  // komen erna, terwijl het kind al leest.
-  if (existingCharacter?.portraitUrl) {
+  // Zelfde stijl? Dan is het oude portret gratis herbruikbaar. Andere stijl? Nieuw tekenen,
+  // anders blijft de held in zijn oude look staan.
+  if (reuseSavedPortrait && existingCharacter?.portraitUrl) {
     character.portraitUrl = existingCharacter.portraitUrl;
   }
 
@@ -226,6 +221,7 @@ export async function POST(request: Request) {
           fresh.character.appearance,
           "het avontuur begint net",
           fresh.character.imageStyleHint,
+          existingCharacter?.portraitUrl,
         );
         if (!portrait.url) {
           await releaseImageQuota(childId);

@@ -60,7 +60,7 @@ export const IMAGE_STYLES: ImageStyleOption[] = [
     icon: Pickaxe,
     swatch: "bg-lime-200",
     imageStyleHint:
-      "Minecraft voxel art style, blocky cubic shapes, sharp 90-degree edges, NOT round, NOT smooth, bright cheerful colors",
+      "MUST be Minecraft voxel art: cubic blocky bodies, 90-degree edges, pixel-block limbs, NOT round, NOT smooth, NOT anime, NOT painterly, bright cheerful colors",
   },
   {
     id: "roblox",
@@ -68,7 +68,7 @@ export const IMAGE_STYLES: ImageStyleOption[] = [
     icon: Box,
     swatch: "bg-sky-200",
     imageStyleHint:
-      "Roblox-style blocky plastic toy-figure art, chunky cylindrical limbs, smooth glossy plastic look, simple blocky head, bright toy colors",
+      "MUST look like official Roblox avatar art: cylindrical plastic toy limbs, blocky torso, simple blocky head, glossy plastic material, NOT realistic anatomy, NOT anime eyes, NOT painterly storybook, bright toy colors",
   },
   {
     id: "anime",
@@ -140,4 +140,8 @@ export function getImageStyleByHint(hint: string | null | undefined): ImageStyle
     (s) => s.id !== DEFAULT_IMAGE_STYLE_ID && needle.includes(s.id),
   );
   return partial ?? fallback;
+}
+
+export function sameImageStyle(a?: string | null, b?: string | null): boolean {
+  return getImageStyleByHint(a).id === getImageStyleByHint(b).id;
 }
