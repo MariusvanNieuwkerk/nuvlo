@@ -122,18 +122,25 @@ export function requiredCharacterAttributes(appearance: CharacterAppearance): st
 // prefix+suffix herhaald wordt in lib/image.ts.
 export function describeCharacterAppearance(appearance: CharacterAppearance): string {
   const parts: string[] = [];
-  if (appearance.freeform) parts.push(`Volledige beschrijving: ${appearance.freeform}`);
-  if (appearance.hair) parts.push(`Haar: ${appearance.hair}`);
-  if (appearance.outfit) parts.push(`Kleding: ${appearance.outfit}`);
-  if (appearance.skinOrFurTone) parts.push(`Huid-/vachtkleur: ${appearance.skinOrFurTone}`);
+  // Kleding/kleur vooraan: beeldmodellen wegen het begin van de prompt zwaarder, en juist
+  // die kleuren schoven eerder per hoofdstuk. Daarna de rest, als extra anker.
+  if (appearance.outfit) parts.push(`Kleding en kleuren (NOOIT veranderen): ${appearance.outfit}`);
+  if (appearance.hair) parts.push(`Haar (NOOIT veranderen): ${appearance.hair}`);
+  if (appearance.skinOrFurTone) parts.push(`Huid-/vachtkleur (NOOIT veranderen): ${appearance.skinOrFurTone}`);
   if (appearance.accessories.length) {
     parts.push(`Accessoires (VERPLICHT, elk apart en duidelijk zichtbaar tekenen): ${appearance.accessories.join(", ")}`);
   }
   if (appearance.companion) parts.push(`Vast gezelschap, altijd mee te tekenen: ${appearance.companion}`);
+  if (appearance.freeform) parts.push(`Volledige beschrijving: ${appearance.freeform}`);
   const reminder = appearance.distinguishingFeature
     ? ` Het kenmerk dat NOOIT mag ontbreken: ${appearance.distinguishingFeature}.`
     : "";
   return parts.join(". ") + (parts.length ? "." : "") + reminder;
+}
+
+// Extra, korte slotzin voor het beeldmodel: identiteit wint altijd van de scènetekst.
+export function lockedIdentityRule(): string {
+  return "VAST UITERLIJK: zelfde gezicht, haar, kleding en kleuren in ELKE plaat. Als de scène andere kleding of kleuren noemt, negeer dat. Alleen houding, plek en actie mogen veranderen.";
 }
 
 export function describeWorldAppearance(world: WorldAppearance): string {

@@ -6,7 +6,7 @@ import {
   saveStory,
   updateChapterImageAtomic,
 } from "@/lib/storage";
-import { generateSceneImage } from "@/lib/image";
+import { generatePortrait, generateSceneImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
 
@@ -122,18 +122,53 @@ export async function POST(
       // sceneImageUrl null → de lees-UI toont de "geen tekening"-placeholder.
       quotaClaimedForScene = await tryClaimImageQuota(child.id);
       if (quotaClaimedForScene) {
-        // Scène-illustratie met het held-portret én de zojuist opgehaalde/aangemaakte
-        // nevenpersonage-ankers als referentie. Faalt de fal-call (bv. 403/geen tegoed) →
-        // url null, quota teruggeven.
+        // Zonder portret verzint elke scène nieuwe kledingkleuren. Het portret wordt bij
+        // een nieuwe held op de achtergrond gemaakt — als het er nog niet is, maken we het
+        // hier eerst en slaan we het meteen op, zodat latere hoofdstukken hetzelfde anker
+        // gebruiken.
+        let portraitUrl = character.portraitUrl;
+        if (!portraitUrl && !chapter.heroTemporaryAppearance) {
+          const latest = await getStory(id);
+          portraitUrl = latest?.character.portraitUrl ?? null;
+          if (!portraitUrl && latest) {
+            const portrait = await generatePortrait(
+              latest.character.appearance,
+              "het avontuur begint net",
+              latest.character.imageStyleHint,
+            );
+            if (portrait.url) {
+              const afterPortrait = await getStory(id);
+              if (afterPortrait?.character.portraitUrl) {
+                portraitUrl = afterPortrait.character.portraitUrl;
+              } else if (afterPortrait) {
+                portraitUrl = portrait.url;
+                await saveStory({
+                  ...afterPortrait,
+                  character: { ...afterPortrait.character, portraitUrl },
+                });
+              } else {
+                portraitUrl = portrait.url;
+              }
+            }
+          }
+        }
+
+        const previousSceneUrl =
+          story.chapters
+            .filter((c) => c.n < n && c.imageUrl)
+            .sort((a, b) => a.n - b.n)
+            .at(-1)?.imageUrl ?? null;
+
         const scene = await generateSceneImage(
           chapter.imagePrompt,
           character.appearance,
           character.imageStyleHint,
           bible.worldAppearance,
           refs.sceneCharacters,
-          character.portraitUrl,
+          portraitUrl,
           null,
           chapter.heroTemporaryAppearance,
+          previousSceneUrl,
         );
         if (scene.url) {
           sceneImageUrl = scene.url;

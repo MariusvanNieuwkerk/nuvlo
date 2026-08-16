@@ -51,6 +51,7 @@ import { fal } from "@fal-ai/client";
 import {
   describeCharacterAppearance,
   describeWorldAppearance,
+  lockedIdentityRule,
   type CharacterAppearance,
   type WorldAppearance,
 } from "@/lib/appearance";
@@ -226,7 +227,7 @@ async function requestImageFromReference(
   try {
     const result = await fal.subscribe(EDIT_MODEL, {
       input: {
-        prompt: `${prefix} De meegegeven referentiebeelden tonen ALLEEN de vaste IDENTITEIT (het personage en/of de wereld) — kopieer die identiteit exact, inclusief elk kledingstuk, accessoire en herkenningspunt. Teken daarnaast een compleet NIEUWE, volledige scène: gebruik NIET zomaar de compositie, camerastandpunt of achtergrond van een referentiebeeld, en geef zeker geen simpele close-up van het gezicht terug als de scène iets anders beschrijft. De omgeving, houding, actie en framing moeten volledig overeenkomen met de scènebeschrijving hieronder, ook als dat een heel andere compositie is dan op de referentiebeelden. ${prompt} ${suffix}`,
+        prompt: `${prefix} The reference images show LOCKED character identity only. Copy face, hair, outfit and colors EXACTLY — do not recolor clothes, do not invent a new costume. Then draw a completely NEW full scene: do NOT copy the reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose, place and action follow the scene text; identity never changes. ${prompt} ${suffix}`,
         image_urls: referenceImageUrls,
         ...buildFormatInput(EDIT_MODEL, aspectRatio),
       },
@@ -308,20 +309,21 @@ export async function generateSceneImage(
   // het held-portret als referentiebeeld weg — dat portret toont namelijk de NORMALE vorm,
   // en zou het model juist terugtrekken richting die normale vorm.
   heroTemporaryAppearance?: string | null,
+  // Vorige scène-plaat: extra identiteitsanker (volle figuur, dus ook broek/schoenen),
+  // zodat kledingkleuren niet per hoofdstuk opnieuw verzonnen worden.
+  previousSceneImageUrl?: string | null,
 ): Promise<ImageResult> {
   // De vaste identiteits-/wereldbeschrijving komt vóóraan en altijd in dezelfde woorden —
   // beeldmodellen hechten meer gewicht aan wat vroeg in de prompt staat, en een letterlijk
   // herhaald "personage-sheet" werkt als een steviger anker dan wanneer het steeds ergens
-  // anders (en soms in andere woorden) in de prompt opduikt. De TEKST-beschrijving van
-  // nevenpersonages en wereld gaat nog gewoon mee (dat is gratis — geen extra call); alleen
-  // hun aparte ankerBEELDEN maken we niet meer aan (dat kostte per stuk een fal-call).
+  // anders (en soms in andere woorden) in de prompt opduikt.
   const sideCharacterLines = (sceneCharacters ?? [])
     .filter((c) => c.name.trim() && c.appearance.freeform.trim())
-    .map((c) => `${c.name} ziet er zo uit: ${c.appearance.freeform}${c.appearance.distinguishingFeature ? ` (kenmerk dat nooit mag ontbreken: ${c.appearance.distinguishingFeature})` : ""}`)
+    .map((c) => `VAST uiterlijk van ${c.name} (nooit herkleuren of herontwerpen): ${c.appearance.freeform}${c.appearance.distinguishingFeature ? ` (kenmerk dat nooit mag ontbreken: ${c.appearance.distinguishingFeature})` : ""}`)
     .join(" ");
   const heroLine = heroTemporaryAppearance
     ? `BELANGRIJK, tijdelijke vorm: in DEZE ene illustratie ziet de hoofdpersoon er NIET normaal uit, maar zo: ${heroTemporaryAppearance}. Dit is nog STEEDS hetzelfde personage — er is maar ÉÉN wezen in deze illustratie. Teken NOOIT ook de normale/originele vorm van het personage erbij als los, tweede figuur ernaast; laat die normale vorm hier volledig weg.`
-    : `De hoofdpersoon ziet er zo uit: ${describeCharacterAppearance(appearance)}. Houd dit uiterlijk exact aan, ook als eerdere platen er iets anders uitzagen.`;
+    : `De hoofdpersoon ziet er zo uit: ${describeCharacterAppearance(appearance)}. ${lockedIdentityRule()}`;
   const fixedFacts = [
     heroLine,
     sideCharacterLines,
@@ -339,16 +341,20 @@ export async function generateSceneImage(
   // (zie de parameterbeschrijving hierboven) — anders trekt dat beeld het model terug naar
   // de normale vorm, precies het probleem dat we hier oplossen.
   const effectivePortraitRef = heroTemporaryAppearance ? null : referencePortraitUrl;
+  const previousSceneRef = heroTemporaryAppearance ? null : previousSceneImageUrl;
   const sideCharacterReferenceUrls = (sceneCharacters ?? [])
     .map((c) => c.referenceImageUrl)
     .filter((u): u is string => Boolean(u));
-  const referenceUrls = [effectivePortraitRef, worldReferenceImageUrl, ...sideCharacterReferenceUrls].filter(
-    (u): u is string => Boolean(u),
-  );
+  const referenceUrls = [
+    effectivePortraitRef,
+    previousSceneRef,
+    worldReferenceImageUrl,
+    ...sideCharacterReferenceUrls,
+  ].filter((u): u is string => Boolean(u));
 
   // BEWUST één generatie zonder vision-verificatie: dit zit op het kritieke leespad en elke
   // verify + hergeneratie is een extra dure/trage call. De beste poging wordt gebruikt.
-  const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. Scène: ${imagePrompt}.`;
+  const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. De scène mag houding en plek veranderen, niet het uiterlijk. Scène (alleen actie en plek, geen nieuwe kleding): ${imagePrompt}.`;
 
   const url =
     referenceUrls.length > 0
@@ -378,7 +384,7 @@ export async function generatePortrait(
   styleHint: string | undefined,
   previousPortraitUrl?: string | null,
 ): Promise<ImageResult> {
-  const prompt = `Square avatar portrait of a children's-book hero. ONE character only. Tight bust shot from the chest up: head, face, shoulders and chest fill at least 75% of the frame. The face is large, centered, looking toward the viewer, clearly readable in a small circle. Soft plain background (one color or gentle gradient). NO landscape, NO mountains, NO sky vista, NO wide scene, NO other characters, NO full-body shot, NO tiny figure standing in a world. Appearance (follow literally; clothes and accessories on the chest/shoulders must be visible): ${describeCharacterAppearance(appearance)}. Story moment: ${moment}.`;
+  const prompt = `Square avatar portrait of a children's-book hero. ONE character only. Tight bust shot from the chest up: head, face, shoulders and chest fill at least 75% of the frame. The face is large, centered, looking toward the viewer, clearly readable in a small circle. Soft plain background (one color or gentle gradient). NO landscape, NO mountains, NO sky vista, NO wide scene, NO other characters, NO full-body shot, NO tiny figure standing in a world. Appearance (follow literally; outfit colors on the chest/shoulders must be clearly visible — this portrait is the identity lock for later scenes): ${describeCharacterAppearance(appearance)}. ${lockedIdentityRule()} Story moment: ${moment}.`;
 
   const url = await requestPortraitImage(prompt, styleHint, previousPortraitUrl);
   return { url, verified: true };
@@ -459,7 +465,7 @@ export async function generateSideCharacterReferenceImage(
   const featureLine = feature ? ` Het kenmerk dat NOOIT mag ontbreken en duidelijk zichtbaar moet zijn: ${feature}.` : "";
 
   return generateWithVerification(requiredAttributes, `referentiebeeld van nevenpersonage ${character.name}`, async (missing) => {
-    const prompt = `Schoon referentiebeeld van ÉÉN enkel figuur, het hele wezen goed in beeld (geen close-up van alleen een detail), vriendelijke uitstraling, op een neutrale, egale achtergrond zonder verdere scène of andere personages. Dit is ${character.name}. Uiterlijk (volg dit LETTERLIJK en volledig): ${character.appearance.freeform}.${featureLine}${reinforcementNote(missing)}`;
+    const prompt = `Schoon referentiebeeld van ÉÉN enkel figuur, het hele wezen goed in beeld (geen close-up van alleen een detail), vriendelijke uitstraling, op een neutrale, egale achtergrond zonder verdere scène of andere personages. Dit is ${character.name}. VAST uiterlijk (volg LETTERLIJK, zelfde kleuren, nooit herontwerpen): ${character.appearance.freeform}.${featureLine}${reinforcementNote(missing)}`;
 
     if (previousReferenceUrl) {
       return requestImageFromReference(prompt, [previousReferenceUrl], styleHint, "3:4");

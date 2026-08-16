@@ -482,7 +482,7 @@ Spanningsniveau (zie systeemregel 2): ${tensionLevelLabel(age)}
 
 Held: ${hero.name} (kracht: ${hero.power}, zwakte: ${hero.weakness}), tegenstander: ${hero.enemy}, wereld: ${hero.world}.
 
-Vast uiterlijk van ${hero.name} (nooit wijzigen — het imagePrompt van deze scène hoeft dit niet te herhalen, dat voegt de illustratie-code er zelf al aan toe): ${describeCharacterAppearance(story.character.appearance)}
+Vast uiterlijk van ${hero.name} (nooit wijzigen, ook geen andere kledingkleuren — het imagePrompt van deze scène hoeft dit niet te herhalen en mag GEEN andere kleding of kleuren noemen): ${describeCharacterAppearance(story.character.appearance)}
 
 Verhaalbijbel (geheim, nooit letterlijk aan het kind tonen):
 ${story.bible.aktes.map((akte, i) => `Akte ${i + 1}: ${akte}`).join("\n")}
