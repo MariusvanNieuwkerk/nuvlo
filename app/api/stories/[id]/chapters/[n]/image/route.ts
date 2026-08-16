@@ -8,7 +8,7 @@ import {
 } from "@/lib/storage";
 import { generatePortrait, generateSceneImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
-import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
+import { ensureSceneCharacterReferences, lastImageShowingCharacter } from "@/lib/side-character-images";
 
 // Het tekenmodel (fal.ai / nano-banana-2) doet vaak 20–60s over één illustratie. Zonder deze
 // regel kapt Vercel de functie al na de lage standaardlimiet (~10s) af: de fal-call is dan nog
@@ -110,11 +110,17 @@ export async function POST(
     try {
       // Zorg dat elk nevenpersonage in déze scène een ankerbeeld heeft (maakt er hooguit één
       // per nog-onbekend personage aan, met quota-bescherming — zie lib/side-character-images.ts).
+      const identitySourceByName: Record<string, string> = {};
+      for (const sceneChar of sceneCharactersInScene) {
+        const source = lastImageShowingCharacter(story.chapters, sceneChar.name, n);
+        if (source) identitySourceByName[sceneChar.name.toLowerCase()] = source;
+      }
       const refs = await ensureSceneCharacterReferences(
         child.id,
         bible.sideCharacters,
         sceneCharactersInScene,
         character.imageStyleHint,
+        identitySourceByName,
       );
       updatedBible = { ...bible, sideCharacters: refs.registry };
 
@@ -169,6 +175,7 @@ export async function POST(
           null,
           chapter.heroTemporaryAppearance,
           previousSceneUrl,
+          story.hero.name,
         );
         if (scene.url) {
           sceneImageUrl = scene.url;

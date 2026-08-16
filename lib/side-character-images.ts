@@ -31,11 +31,31 @@ export type EnsureSideCharacterRefsResult = {
 //
 // Bij uitgeputte quota: die ene ankeraanmaak wordt overgeslagen (het personage blijft
 // tekst-only voor nu, geen crash, geen blokkade) en de volgende keer proberen we het weer.
+
+// Laatste plaatje waarop dit personage al te zien was. Gebruikt als identiteitsbron
+// als er nog geen eigen ankerbeeld is — anders verzint het model een tweede robot.
+export function lastImageShowingCharacter(
+  chapters: { n: number; imageUrl: string | null; sceneCharacterNames?: string[] }[],
+  characterName: string,
+  beforeChapterN: number,
+): string | null {
+  const name = characterName.trim().toLowerCase();
+  if (!name) return null;
+  const match = chapters
+    .filter((chapter) => chapter.n < beforeChapterN && chapter.imageUrl)
+    .filter((chapter) =>
+      (chapter.sceneCharacterNames ?? []).some((entry) => entry.toLowerCase() === name),
+    )
+    .sort((a, b) => b.n - a.n)[0];
+  return match?.imageUrl ?? null;
+}
+
 export async function ensureSceneCharacterReferences(
   childId: string,
   registry: SideCharacter[],
   sceneCharacters: SideCharacter[],
   styleHint: string | undefined,
+  identitySourceByName?: Record<string, string>,
 ): Promise<EnsureSideCharacterRefsResult> {
   // Kopie van de registry, geïndexeerd op (kleine-letter) naam, zodat we een nieuw anker
   // meteen op de juiste registry-entry kunnen terugschrijven.
@@ -67,7 +87,8 @@ export async function ensureSceneCharacterReferences(
 
   await Promise.all(
     toGenerate.map(async (known) => {
-      const ref = await generateSideCharacterReferenceImage(known, styleHint, null);
+      const identitySource = identitySourceByName?.[known.name.toLowerCase()] ?? null;
+      const ref = await generateSideCharacterReferenceImage(known, styleHint, identitySource);
       if (ref.url) {
         known.referenceImageUrl = ref.url;
       } else {

@@ -209,6 +209,7 @@ async function requestImageFromReference(
   referenceImageUrls: string[],
   styleHint: string | undefined,
   aspectRatio: FalAspectRatio = "4:3",
+  referenceLegend?: string,
 ): Promise<string | null> {
   if (!ensureConfigured()) {
     console.warn("FAL_KEY ontbreekt — illustratie wordt overgeslagen.");
@@ -227,7 +228,7 @@ async function requestImageFromReference(
   try {
     const result = await fal.subscribe(EDIT_MODEL, {
       input: {
-        prompt: `${prefix} The reference images show LOCKED character identity only. Copy face, hair, outfit and colors EXACTLY — do not recolor clothes, do not invent a new costume. Then draw a completely NEW full scene: do NOT copy the reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose, place and action follow the scene text; identity never changes. ${prompt} ${suffix}`,
+        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is ONE locked identity. Copy that character EXACTLY (face, body shape, colors, clothes). Do not invent a second version of the same character. Do not recolor clothes. Then draw a completely NEW full scene: do NOT copy reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose and place may change; identity never changes. ${prompt} ${suffix}`,
         image_urls: referenceImageUrls,
         ...buildFormatInput(EDIT_MODEL, aspectRatio),
       },
@@ -312,53 +313,76 @@ export async function generateSceneImage(
   // Vorige scène-plaat: extra identiteitsanker (volle figuur, dus ook broek/schoenen),
   // zodat kledingkleuren niet per hoofdstuk opnieuw verzonnen worden.
   previousSceneImageUrl?: string | null,
+  heroName?: string,
 ): Promise<ImageResult> {
   // De vaste identiteits-/wereldbeschrijving komt vóóraan en altijd in dezelfde woorden —
   // beeldmodellen hechten meer gewicht aan wat vroeg in de prompt staat, en een letterlijk
   // herhaald "personage-sheet" werkt als een steviger anker dan wanneer het steeds ergens
   // anders (en soms in andere woorden) in de prompt opduikt.
-  const sideCharacterLines = (sceneCharacters ?? [])
-    .filter((c) => c.name.trim() && c.appearance.freeform.trim())
-    .map((c) => `VAST uiterlijk van ${c.name} (nooit herkleuren of herontwerpen): ${c.appearance.freeform}${c.appearance.distinguishingFeature ? ` (kenmerk dat nooit mag ontbreken: ${c.appearance.distinguishingFeature})` : ""}`)
+  const namedSides = (sceneCharacters ?? []).filter((c) => c.name.trim());
+  const sideCharacterLines = namedSides
+    .filter((c) => c.appearance.freeform.trim())
+    .map((c) => `VAST uiterlijk van ${c.name} (één wezen, nooit een tweede versie, nooit herkleuren): ${c.appearance.freeform}${c.appearance.distinguishingFeature ? ` (kenmerk dat nooit mag ontbreken: ${c.appearance.distinguishingFeature})` : ""}`)
     .join(" ");
+  const heroLabel = heroName?.trim() || "de held";
   const heroLine = heroTemporaryAppearance
-    ? `BELANGRIJK, tijdelijke vorm: in DEZE ene illustratie ziet de hoofdpersoon er NIET normaal uit, maar zo: ${heroTemporaryAppearance}. Dit is nog STEEDS hetzelfde personage — er is maar ÉÉN wezen in deze illustratie. Teken NOOIT ook de normale/originele vorm van het personage erbij als los, tweede figuur ernaast; laat die normale vorm hier volledig weg.`
-    : `De hoofdpersoon ziet er zo uit: ${describeCharacterAppearance(appearance)}. ${lockedIdentityRule()}`;
+    ? `BELANGRIJK, tijdelijke vorm: in DEZE ene illustratie ziet ${heroLabel} er NIET normaal uit, maar zo: ${heroTemporaryAppearance}. Dit is nog STEEDS hetzelfde personage — er is maar ÉÉN wezen in deze illustratie. Teken NOOIT ook de normale/originele vorm van het personage erbij als los, tweede figuur ernaast; laat die normale vorm hier volledig weg.`
+    : `De hoofdpersoon ${heroLabel} ziet er zo uit: ${describeCharacterAppearance(appearance)}. ${lockedIdentityRule()}`;
+  const namedCast = [heroLabel, ...namedSides.map((c) => c.name)].join(", ");
+  const oneEachRule = `Teken elk personage precies één keer. Geen tweede robot, geen dubbele held. Alleen deze figuren: ${namedCast}.`;
   const fixedFacts = [
     heroLine,
     sideCharacterLines,
+    oneEachRule,
     world ? `De wereld/omgeving ziet er zo uit: ${describeWorldAppearance(world)}` : "",
   ]
     .filter(Boolean)
     .join(". ");
 
-  // Referentiebeelden voor consistentie. Op het runtime-pad geeft de route hier normaal
-  // ALLEEN het held-portret door (worldReferenceImageUrl null, nevenpersonages zonder
-  // referenceImageUrl) — dat is de bewuste, goedkope keuze: één anker, één call. De extra
-  // parameters blijven bestaan zodat een offline aanroep (scripts/check-image-consistency.ts)
-  // desgewenst ook wereld-/nevenpersonage-ankers als referentie kan meegeven.
-  // Bij een tijdelijke vormverandering laten we het held-portret bewust WEG als referentie
-  // (zie de parameterbeschrijving hierboven) — anders trekt dat beeld het model terug naar
-  // de normale vorm, precies het probleem dat we hier oplossen.
-  const effectivePortraitRef = heroTemporaryAppearance ? null : referencePortraitUrl;
-  const previousSceneRef = heroTemporaryAppearance ? null : previousSceneImageUrl;
-  const sideCharacterReferenceUrls = (sceneCharacters ?? [])
-    .map((c) => c.referenceImageUrl)
-    .filter((u): u is string => Boolean(u));
-  const referenceUrls = [
-    effectivePortraitRef,
-    previousSceneRef,
-    worldReferenceImageUrl,
-    ...sideCharacterReferenceUrls,
-  ].filter((u): u is string => Boolean(u));
+  // Referenties in vaste volgorde, met een nummer in de prompt. Zonder die koppeling
+  // mengt het model twee robots of herontwerpt het dezelfde figuur.
+  const labeledRefs: { url: string; label: string }[] = [];
+  if (!heroTemporaryAppearance && referencePortraitUrl) {
+    labeledRefs.push({
+      url: referencePortraitUrl,
+      label: `${heroLabel} (held) — kopieer gezicht, haar, kleding en kleuren exact`,
+    });
+  }
+  for (const character of namedSides) {
+    if (!character.referenceImageUrl) continue;
+    labeledRefs.push({
+      url: character.referenceImageUrl,
+      label: `${character.name} — kopieer dit wezen exact, teken geen andere versie`,
+    });
+  }
+  if (worldReferenceImageUrl) {
+    labeledRefs.push({
+      url: worldReferenceImageUrl,
+      label: "de wereld/omgeving",
+    });
+  }
+  if (!heroTemporaryAppearance && previousSceneImageUrl) {
+    const hasCharacterRefs = labeledRefs.some((item) => item.label.includes("kopieer"));
+    labeledRefs.push({
+      url: previousSceneImageUrl,
+      label: hasCharacterRefs
+        ? "de vorige scène — alleen sfeer en plek; personage-uiterlijk komt UIT de personage-referenties hierboven, niet uit dit plaatje"
+        : "vorige scène — zelfde personages, nieuwe houding en plek, niemand herontwerpen",
+    });
+  }
+
+  const referenceUrls = labeledRefs.map((item) => item.url);
+  const referenceLegend = labeledRefs
+    .map((item, i) => `Reference image ${i + 1} is ${item.label}.`)
+    .join(" ");
 
   // BEWUST één generatie zonder vision-verificatie: dit zit op het kritieke leespad en elke
   // verify + hergeneratie is een extra dure/trage call. De beste poging wordt gebruikt.
-  const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. De scène mag houding en plek veranderen, niet het uiterlijk. Scène (alleen actie en plek, geen nieuwe kleding): ${imagePrompt}.`;
+  const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. De scène mag houding en plek veranderen, niet het uiterlijk. Scène (alleen actie en plek, geen nieuwe kleding, geen extra personages): ${imagePrompt}.`;
 
   const url =
     referenceUrls.length > 0
-      ? await requestImageFromReference(prompt, referenceUrls, styleHint, "4:3")
+      ? await requestImageFromReference(prompt, referenceUrls, styleHint, "4:3", referenceLegend)
       : await requestImage(prompt, styleHint, "4:3");
   return { url, verified: true };
 }
@@ -465,10 +489,11 @@ export async function generateSideCharacterReferenceImage(
   const featureLine = feature ? ` Het kenmerk dat NOOIT mag ontbreken en duidelijk zichtbaar moet zijn: ${feature}.` : "";
 
   return generateWithVerification(requiredAttributes, `referentiebeeld van nevenpersonage ${character.name}`, async (missing) => {
-    const prompt = `Schoon referentiebeeld van ÉÉN enkel figuur, het hele wezen goed in beeld (geen close-up van alleen een detail), vriendelijke uitstraling, op een neutrale, egale achtergrond zonder verdere scène of andere personages. Dit is ${character.name}. VAST uiterlijk (volg LETTERLIJK, zelfde kleuren, nooit herontwerpen): ${character.appearance.freeform}.${featureLine}${reinforcementNote(missing)}`;
+    const prompt = `Schoon referentiebeeld van ÉÉN enkel figuur, het hele wezen goed in beeld (geen close-up van alleen een detail), vriendelijke uitstraling, op een neutrale, egale achtergrond zonder verdere scène of andere personages. Dit is ${character.name} en niemand anders. VAST uiterlijk (volg LETTERLIJK, zelfde kleuren en vorm, nooit herontwerpen): ${character.appearance.freeform}.${featureLine} Dit is de enige versie van ${character.name}.${reinforcementNote(missing)}`;
 
     if (previousReferenceUrl) {
-      return requestImageFromReference(prompt, [previousReferenceUrl], styleHint, "3:4");
+      const legend = `Reference image 1 is ${character.name} — haal ALLEEN dit wezen eruit, kopieer vorm en kleuren exact, negeer alle andere figuren.`;
+      return requestImageFromReference(prompt, [previousReferenceUrl], styleHint, "3:4", legend);
     }
     return requestImage(prompt, styleHint, "3:4");
   });

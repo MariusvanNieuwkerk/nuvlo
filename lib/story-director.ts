@@ -493,7 +493,7 @@ Lopende samenvatting van het verhaal tot nu toe: ${story.summary}
 
 Vaste wereld-beschrijving (nooit wijzigen, alleen gebruiken): ${describeWorldAppearance(story.bible.worldAppearance) || "(nog niet vastgelegd)"}
 
-Bekende nevenpersonages met hun vaste uiterlijk (nooit een bestaand uiterlijk wijzigen, alleen aanvullen met echt nieuwe personages): ${
+Bekende nevenpersonages met hun vaste uiterlijk (nooit een bestaand uiterlijk wijzigen, geen tweede versie van hetzelfde wezen, alleen aanvullen met écht nieuwe namen): ${
     knownSideCharacters.length
       ? knownSideCharacters.map((c) => `${c.name}: ${c.appearance.freeform} (kenmerk: ${c.appearance.distinguishingFeature})`).join(" | ")
       : "nog geen"

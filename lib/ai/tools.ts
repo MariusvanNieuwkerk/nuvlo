@@ -68,10 +68,14 @@ const SIDE_CHARACTERS_SCHEMA = {
       appearance: {
         type: "object" as const,
         properties: {
-          freeform: { type: "string", description: "Beeldende, vaste uiterlijk-beschrijving (kleur, vorm, kleding) — Nederlands." },
+          freeform: {
+            type: "string",
+            description:
+              "Beeldende, VASTE uiterlijk-beschrijving in het Nederlands: soort wezen, lichaamsvorm, hoofdkleuren én kleding/materiaal. Concreet, niet vaag (slecht: 'een robot'; goed: 'een klein vierkant roestbruin robotje met twee ronde oranje ogen'). Dit uiterlijk mag later NOOIT veranderen.",
+          },
           distinguishingFeature: {
             type: "string",
-            description: "Het ene meest kenmerkende visuele detail van dit nevenpersonage, dat het herkenbaar houdt tussen platen.",
+            description: "Het ene meest kenmerkende visuele detail van dit nevenpersonage, dat het herkenbaar houdt tussen platen (bv. 'twee ronde oranje ogen').",
           },
         },
         required: ["freeform", "distinguishingFeature"],
@@ -89,7 +93,7 @@ const SIDE_CHARACTERS_SCHEMA = {
 const SIDE_CHARACTERS_SCHEMA_FOR_UPDATE = {
   ...SIDE_CHARACTERS_SCHEMA,
   description:
-    "De VOLLEDIGE, bijgewerkte lijst van bekende nevenpersonages. Bestaande personages (zie 'Bekende nevenpersonages' in het bericht): kopieer hun naam en gestructureerde uiterlijk EXACT over, verander nooit een bestaand uiterlijk — anders klopt de nieuwe illustratie niet meer met eerdere platen. Komt er in deze scène een NIEUW nevenpersonage met een duidelijk, tekenbaar uiterlijk bij? Voeg dat toe met een vaste naam en gestructureerd uiterlijk.",
+    "De VOLLEDIGE, bijgewerkte lijst van bekende nevenpersonages. Bestaande personages (zie 'Bekende nevenpersonages' in het bericht): kopieer hun naam en gestructureerde uiterlijk EXACT over, verander nooit een bestaand uiterlijk en verzin NOOIT een tweede versie van hetzelfde wezen (geen extra andere robot naast de bestaande) — anders klopt de nieuwe illustratie niet meer met eerdere platen. Komt er in deze scène een NIEUW nevenpersonage met een duidelijk, tekenbaar uiterlijk bij? Voeg dat toe met een vaste naam en gestructureerd uiterlijk.",
 };
 
 // Optioneel veld, alleen gevuld als de held er in DEZE ene scène ECHT fysiek anders uitziet
@@ -157,7 +161,7 @@ export const START_STORY_TOOL: Anthropic.Tool = {
       imagePrompt: {
         type: "string",
         description:
-          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit de LAATSTE bladzijde van pages hierboven (de cliffhanger — daar wordt de tekening getoond als beloning ná het lezen, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding. VERBODEN: andere kleding, kleuren of kapsel dan het vaste uiterlijk noemen — personages blijven er het hele verhaal hetzelfde uitzien. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. De illustratie-code voegt het exacte uiterlijk van de held en de wereld er zelf al aan toe (niet zelf herhalen), focus dus op de scène-specifieke inhoud van dat ene moment.",
+          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit de LAATSTE bladzijde van pages hierboven (de cliffhanger — daar wordt de tekening getoond als beloning ná het lezen, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding. VERBODEN: andere kleding, kleuren of kapsel dan het vaste uiterlijk noemen — personages blijven er het hele verhaal hetzelfde uitzien. VERBODEN: extra onbenoemde figuren verzinnen (geen tweede robot naast de bestaande). VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. De illustratie-code voegt het exacte uiterlijk van de held en de wereld er zelf al aan toe (niet zelf herhalen), focus dus op de scène-specifieke inhoud van dat ene moment.",
       },
       heroTemporaryAppearance: HERO_TEMPORARY_APPEARANCE_SCHEMA,
       worldAppearance: WORLD_APPEARANCE_SCHEMA,
@@ -219,7 +223,7 @@ export const NEXT_SCENE_TOOL: Anthropic.Tool = {
       imagePrompt: {
         type: "string",
         description:
-          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit de LAATSTE bladzijde van pages hierboven (de cliffhanger — daar wordt de tekening getoond als beloning ná het lezen, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding/nieuwe omgevingsdetails. VERBODEN: andere kleding, kleuren of kapsel dan het vaste uiterlijk noemen — personages blijven er het hele verhaal hetzelfde uitzien. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. Het exacte uiterlijk van de held en de wereld voegt de illustratie-code er zelf al aan toe (niet zelf herhalen), focus dus op wat er op dat ene moment specifiek gebeurt.",
+          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit de LAATSTE bladzijde van pages hierboven (de cliffhanger — daar wordt de tekening getoond als beloning ná het lezen, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding/nieuwe omgevingsdetails. VERBODEN: andere kleding, kleuren of kapsel dan het vaste uiterlijk noemen — personages blijven er het hele verhaal hetzelfde uitzien. VERBODEN: extra onbenoemde figuren verzinnen (geen tweede robot naast de bestaande). VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. Het exacte uiterlijk van de held en de wereld voegt de illustratie-code er zelf al aan toe (niet zelf herhalen), focus dus op wat er op dat ene moment specifiek gebeurt.",
       },
       isFinale: {
         type: "boolean",

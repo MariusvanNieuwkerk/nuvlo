@@ -42,7 +42,7 @@ async function main() {
   const { getStory, getDefaultChild, updateChapterImageAtomic } = await import("@/lib/storage");
   const { generateSceneImage } = await import("@/lib/image");
   const { tryClaimImageQuota, releaseImageQuota } = await import("@/lib/image-usage");
-  const { ensureSceneCharacterReferences } = await import("@/lib/side-character-images");
+  const { ensureSceneCharacterReferences, lastImageShowingCharacter } = await import("@/lib/side-character-images");
 
   const story = await getStory(storyId);
   if (!story) throw new Error("Verhaal niet gevonden.");
@@ -63,11 +63,17 @@ async function main() {
 
   if (!chapter.imageReused) {
     console.log("Referentiebeelden voor nevenpersonages in deze scène ophalen/aanmaken...");
+    const identitySourceByName: Record<string, string> = {};
+    for (const sceneChar of sceneCharactersInScene) {
+      const source = lastImageShowingCharacter(story.chapters, sceneChar.name, chapterN);
+      if (source) identitySourceByName[sceneChar.name.toLowerCase()] = source;
+    }
     const refs = await ensureSceneCharacterReferences(
       child.id,
       bible.sideCharacters,
       sceneCharactersInScene,
       character.imageStyleHint,
+      identitySourceByName,
     );
     updatedBible = { ...bible, sideCharacters: refs.registry };
 
@@ -76,6 +82,11 @@ async function main() {
     console.log("Quota geclaimd:", claimed);
     if (claimed) {
       console.log("fal.ai-aanroep starten (dit kan 10-40s duren)...");
+      const previousSceneUrl =
+        story.chapters
+          .filter((c) => c.n < chapterN && c.imageUrl)
+          .sort((a, b) => a.n - b.n)
+          .at(-1)?.imageUrl ?? null;
       const scene = await generateSceneImage(
         chapter.imagePrompt,
         character.appearance,
@@ -85,6 +96,8 @@ async function main() {
         character.portraitUrl,
         null,
         chapter.heroTemporaryAppearance,
+        previousSceneUrl,
+        story.hero.name,
       );
       console.log("Resultaat:", scene);
       if (scene.url) {
