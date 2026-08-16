@@ -61,6 +61,29 @@ type WizardStep = 1 | 2 | 3 | 4;
 const INPUT_CARD =
   "bg-white/85 dark:bg-white/10 border-2 border-primary/35 shadow-sm focus-visible:border-primary focus-visible:ring-primary/40";
 
+const COMPANION_PREVIEW = 6;
+
+function uniqueCharactersByName(list: SavedCharacter[]): SavedCharacter[] {
+  const byName = new Map<string, SavedCharacter>();
+  for (const character of list) {
+    const key = character.name.trim().toLowerCase();
+    if (!key) continue;
+    const previous = byName.get(key);
+    if (!previous) {
+      byName.set(key, character);
+      continue;
+    }
+    const previousScore = (previous.portraitUrl ? 2 : 0) + (previous.createdAt >= character.createdAt ? 1 : 0);
+    const nextScore = (character.portraitUrl ? 2 : 0) + (character.createdAt > previous.createdAt ? 1 : 0);
+    if (nextScore > previousScore) byName.set(key, character);
+  }
+  return Array.from(byName.values());
+}
+
+function sortCharactersByName(list: SavedCharacter[]): SavedCharacter[] {
+  return [...list].sort((a, b) => a.name.localeCompare(b.name, "nl", { sensitivity: "base" }));
+}
+
 export function HeroForm({
   initialCharacterId,
   initialHeroName,
@@ -109,6 +132,9 @@ export function HeroForm({
   initialAppliedRef.current = initialApplied;
 
   const [selectedSideCharacterIds, setSelectedSideCharacterIds] = useState<string[]>([]);
+  const [companionQuery, setCompanionQuery] = useState("");
+  const [showAllHeroCompanions, setShowAllHeroCompanions] = useState(false);
+  const [showAllFriendCompanions, setShowAllFriendCompanions] = useState(false);
 
   const heroRoster = useMemo(
     () => buildHeroRoster(characters, initialStories),
@@ -243,8 +269,19 @@ export function HeroForm({
 
   const selectedEntry = heroRoster.find((h) => h.id === selectedRosterId) ?? null;
   const selectedCharacterId = selectedEntry?.savedCharacterId ?? null;
-  // Iedereen uit de bibliotheek mag mee, behalve de held van DIT boek.
-  const companionCandidates = characters.filter((c) => c.id !== selectedCharacterId);
+  const companionGroups = useMemo(() => {
+    const unique = uniqueCharactersByName(
+      characters.filter((c) => c.id !== selectedCharacterId),
+    );
+    const query = companionQuery.trim().toLowerCase();
+    const visible = query
+      ? unique.filter((c) => c.name.toLowerCase().includes(query))
+      : unique;
+    return {
+      heroes: sortCharactersByName(visible.filter((c) => c.kind === "hero")),
+      friends: sortCharactersByName(visible.filter((c) => c.kind !== "hero")),
+    };
+  }, [characters, selectedCharacterId, companionQuery]);
 
   const childValid =
     form.authorName.trim().length > 0 && Number(form.age) >= 4 && Number(form.age) <= 14;
@@ -573,20 +610,37 @@ export function HeroForm({
               Tik wie je al kent. Of typ zelf iemand.
             </p>
             {renderLoadStatus()}
-            {companionCandidates.length > 0 && (
-              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-                {companionCandidates.map((c) => (
-                  <CharacterOptionTile
-                    key={c.id}
-                    character={c}
-                    selected={selectedSideCharacterIds.includes(c.id)}
-                    onToggle={() => toggleSideCharacter(c.id)}
-                    onDelete={() => void handleDeleteCharacter(c)}
-                    deleting={deletingCharacterId === c.id}
-                  />
-                ))}
-              </div>
+            {(companionGroups.heroes.length > 0 || companionGroups.friends.length > 0) && (
+              <Input
+                value={companionQuery}
+                onChange={(e) => setCompanionQuery(e.target.value)}
+                placeholder="Zoek een naam"
+                maxLength={40}
+                className={cn("h-11 rounded-xl text-base sm:h-12 sm:text-lg", INPUT_CARD)}
+              />
             )}
+            <CompanionGroup
+              title="Helden"
+              characters={companionGroups.heroes}
+              expanded={showAllHeroCompanions || companionQuery.trim().length > 0}
+              allowCollapse={companionQuery.trim().length === 0}
+              onToggleExpand={() => setShowAllHeroCompanions((v) => !v)}
+              selectedIds={selectedSideCharacterIds}
+              onToggle={toggleSideCharacter}
+              onDelete={(c) => void handleDeleteCharacter(c)}
+              deletingId={deletingCharacterId}
+            />
+            <CompanionGroup
+              title="Vrienden"
+              characters={companionGroups.friends}
+              expanded={showAllFriendCompanions || companionQuery.trim().length > 0}
+              allowCollapse={companionQuery.trim().length === 0}
+              onToggleExpand={() => setShowAllFriendCompanions((v) => !v)}
+              selectedIds={selectedSideCharacterIds}
+              onToggle={toggleSideCharacter}
+              onDelete={(c) => void handleDeleteCharacter(c)}
+              deletingId={deletingCharacterId}
+            />
             <Input
               value={form.companions}
               onChange={(e) => update("companions", e.target.value)}
@@ -767,6 +821,65 @@ function RosterHeroTile({
           {entry.savedCharacterId ? "Held" : "Uit boek"}
         </span>
       </button>
+    </div>
+  );
+}
+
+function CompanionGroup({
+  title,
+  characters,
+  expanded,
+  allowCollapse,
+  onToggleExpand,
+  selectedIds,
+  onToggle,
+  onDelete,
+  deletingId,
+}: {
+  title: string;
+  characters: SavedCharacter[];
+  expanded: boolean;
+  allowCollapse: boolean;
+  onToggleExpand: () => void;
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onDelete: (character: SavedCharacter) => void;
+  deletingId: string | null;
+}) {
+  if (characters.length === 0) return null;
+
+  const selected = characters.filter((c) => selectedIds.includes(c.id));
+  const rest = characters.filter((c) => !selectedIds.includes(c.id));
+  const preview = [...selected, ...rest].slice(0, COMPANION_PREVIEW);
+  const visible = expanded ? characters : preview;
+  const hiddenCount = characters.length - preview.length;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 sm:text-sm">
+        {title}
+      </p>
+      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
+        {visible.map((c) => (
+          <CharacterOptionTile
+            key={c.id}
+            character={c}
+            selected={selectedIds.includes(c.id)}
+            onToggle={() => onToggle(c.id)}
+            onDelete={() => onDelete(c)}
+            deleting={deletingId === c.id}
+          />
+        ))}
+      </div>
+      {allowCollapse && hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="self-start text-sm font-semibold text-primary underline-offset-2 hover:underline"
+        >
+          {expanded ? "Minder tonen" : `Nog ${hiddenCount} erbij`}
+        </button>
+      )}
     </div>
   );
 }
