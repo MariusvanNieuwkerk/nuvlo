@@ -1,4 +1,5 @@
 import type { Chapter, SideCharacter } from "@/lib/types";
+import { characterNamesMatch } from "@/lib/character-identity";
 
 // Alleen figuren die in HET LAATSTE hoofdstuk voor het eerst opduiken, mogen een
 // "opslaan"-knop krijgen. De held nooit. Figuren die al eerder meededen, of al in
@@ -29,11 +30,11 @@ export function newlyIntroducedSideCharacters(
 
   return sideCharacters.filter((character) => {
     if (character.dismissed) return false;
-    const key = character.name.trim().toLowerCase();
-    if (!key || key === heroKey) return false;
-    if (alreadySavedNames.has(key)) return false;
-    if (previous.has(key)) return false;
+    const name = character.name.trim();
+    if (!name || (heroKey && characterNamesMatch(name, heroName ?? ""))) return false;
+    if ([...alreadySavedNames].some((saved) => characterNamesMatch(saved, name))) return false;
+    if ([...previous].some((seen) => characterNamesMatch(seen, name))) return false;
     if (latestSet.size === 0) return false;
-    return latestSet.has(key);
+    return [...latestSet].some((seen) => characterNamesMatch(seen, name));
   });
 }

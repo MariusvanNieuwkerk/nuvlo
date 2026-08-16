@@ -42,9 +42,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   let nextAppearance: unknown = existing.appearance;
   if (typeof appearance === "string") {
+    const written = appearance.trim();
     nextAppearance = {
       ...existing.appearance,
-      freeform: appearance.trim(),
+      freeform: written,
+      distinguishingFeature: written,
     };
   } else if (appearance && typeof appearance === "object") {
     nextAppearance = appearance;

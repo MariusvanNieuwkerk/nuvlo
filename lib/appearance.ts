@@ -55,25 +55,27 @@ function asStringArray(value: unknown): string[] {
 // volledig, veilig CharacterAppearance-object terug.
 export function cleanCharacterAppearance(raw: unknown, fallbackFreeform = ""): CharacterAppearance {
   if (typeof raw === "string") {
+    const written = raw.trim() || fallbackFreeform;
     return {
-      freeform: raw.trim() || fallbackFreeform,
+      freeform: written,
       hair: "",
       outfit: "",
       accessories: [],
       companion: "",
       skinOrFurTone: "",
-      distinguishingFeature: "",
+      distinguishingFeature: written,
     };
   }
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const freeform = asTrimmedString(r.freeform) || fallbackFreeform;
   return {
-    freeform: asTrimmedString(r.freeform) || fallbackFreeform,
+    freeform,
     hair: asTrimmedString(r.hair),
     outfit: asTrimmedString(r.outfit),
     accessories: asStringArray(r.accessories),
     companion: asTrimmedString(r.companion),
     skinOrFurTone: asTrimmedString(r.skinOrFurTone),
-    distinguishingFeature: asTrimmedString(r.distinguishingFeature),
+    distinguishingFeature: asTrimmedString(r.distinguishingFeature) || freeform,
   };
 }
 
@@ -106,7 +108,11 @@ export function cleanSideCharacterAppearance(raw: unknown, fallbackFreeform = ""
 // checken we niet apart — die worden al goed meegenomen door de referentiefoto zelf, en te
 // veel checks maken de verificatie traag/duur zonder veel extra waarde.
 export function requiredCharacterAttributes(appearance: CharacterAppearance): string[] {
-  const attrs = [...appearance.accessories];
+  const attrs: string[] = [];
+  if (appearance.freeform.trim()) attrs.push(appearance.freeform.trim());
+  for (const item of appearance.accessories) {
+    if (item.trim() && !attrs.includes(item.trim())) attrs.push(item.trim());
+  }
   if (appearance.distinguishingFeature && !attrs.includes(appearance.distinguishingFeature)) {
     attrs.push(appearance.distinguishingFeature);
   }
@@ -126,9 +132,12 @@ export function requiredSceneIdentityAttributes(
 ): string[] {
   const hero = heroName?.trim() || "de held";
   const attrs: string[] = [];
+  if (appearance.freeform.trim()) {
+    attrs.push(`${hero} ziet er precies zo uit: ${appearance.freeform}`);
+  }
   if (appearance.hair.trim()) attrs.push(`${hero} heeft dit haar: ${appearance.hair}`);
   if (appearance.outfit.trim()) attrs.push(`${hero} draagt deze kleding: ${appearance.outfit}`);
-  if (appearance.distinguishingFeature.trim()) {
+  if (appearance.distinguishingFeature.trim() && appearance.distinguishingFeature.trim() !== appearance.freeform.trim()) {
     attrs.push(`${hero} heeft dit kenmerk: ${appearance.distinguishingFeature}`);
   }
   for (const character of sceneCharacters) {
@@ -147,8 +156,12 @@ export function requiredSceneIdentityAttributes(
 // prefix+suffix herhaald wordt in lib/image.ts.
 export function describeCharacterAppearance(appearance: CharacterAppearance): string {
   const parts: string[] = [];
-  // Kleding/kleur vooraan: beeldmodellen wegen het begin van de prompt zwaarder, en juist
-  // die kleuren schoven eerder per hoofdstuk. Daarna de rest, als extra anker.
+  // De zin van het kind is de baas — niet een later herschreven veld, en niet het portret.
+  if (appearance.freeform) {
+    parts.push(
+      `GESCHREVEN OMSCHRIJVING (leidend, volg LETTERLIJK, inclusief kleding, broek en schoenen): ${appearance.freeform}`,
+    );
+  }
   if (appearance.outfit) parts.push(`Kleding en kleuren (NOOIT veranderen): ${appearance.outfit}`);
   if (appearance.hair) parts.push(`Haar (NOOIT veranderen): ${appearance.hair}`);
   if (appearance.skinOrFurTone) parts.push(`Huid-/vachtkleur (NOOIT veranderen): ${appearance.skinOrFurTone}`);
@@ -156,7 +169,6 @@ export function describeCharacterAppearance(appearance: CharacterAppearance): st
     parts.push(`Accessoires (VERPLICHT, elk apart en duidelijk zichtbaar tekenen): ${appearance.accessories.join(", ")}`);
   }
   if (appearance.companion) parts.push(`Vast gezelschap, altijd mee te tekenen: ${appearance.companion}`);
-  if (appearance.freeform) parts.push(`Volledige beschrijving: ${appearance.freeform}`);
   const reminder = appearance.distinguishingFeature
     ? ` Het kenmerk dat NOOIT mag ontbreken: ${appearance.distinguishingFeature}.`
     : "";
@@ -165,7 +177,7 @@ export function describeCharacterAppearance(appearance: CharacterAppearance): st
 
 // Extra, korte slotzin voor het beeldmodel: identiteit wint altijd van de scènetekst.
 export function lockedIdentityRule(): string {
-  return "VAST UITERLIJK: zelfde gezicht, haar, kleding en kleuren in ELKE plaat. Als de scène andere kleding of kleuren noemt, negeer dat. Alleen houding, plek en actie mogen veranderen.";
+  return "VAST UITERLIJK: zelfde gezicht, haar, kleding, broek, schoenen en kleuren in ELKE plaat. De geschreven omschrijving wint van de scènetekst. Alleen houding, plek en actie mogen veranderen.";
 }
 
 export function describeWorldAppearance(world: WorldAppearance): string {

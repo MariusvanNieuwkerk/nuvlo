@@ -45,7 +45,7 @@ function HeroPortrait({
           src={hero.portraitUrl}
           alt={hero.name}
           fill
-          className="object-cover object-center"
+          className="object-cover object-top"
           sizes={size === "lg" ? "176px" : "64px"}
         />
       ) : (

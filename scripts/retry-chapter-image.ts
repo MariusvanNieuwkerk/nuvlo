@@ -43,6 +43,7 @@ async function main() {
   const { generateSceneImage } = await import("@/lib/image");
   const { tryClaimImageQuota, releaseImageQuota } = await import("@/lib/image-usage");
   const { ensureSceneCharacterReferences, lastImageShowingCharacter } = await import("@/lib/side-character-images");
+  const { characterNamesMatch } = await import("@/lib/character-identity");
 
   const story = await getStory(storyId);
   if (!story) throw new Error("Verhaal niet gevonden.");
@@ -55,7 +56,7 @@ async function main() {
   const bible = story.bible;
   const character = story.character;
   const sceneCharactersInScene = bible.sideCharacters.filter((c) =>
-    (chapter.sceneCharacterNames ?? []).some((name) => name.toLowerCase() === c.name.toLowerCase()),
+    (chapter.sceneCharacterNames ?? []).some((name) => characterNamesMatch(name, c.name)),
   );
 
   let sceneImageUrl: string | null = chapter.imageUrl;

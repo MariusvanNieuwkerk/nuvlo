@@ -811,7 +811,7 @@ function RosterHeroTile({
               src={entry.portraitUrl}
               alt={entry.name}
               fill
-              className="object-cover object-center"
+              className="object-cover object-top"
               sizes="(max-width: 640px) 64px, 80px"
             />
           ) : (
@@ -938,7 +938,7 @@ function CharacterOptionTile({
               src={character.portraitUrl}
               alt={character.name}
               fill
-              className="object-cover object-center"
+              className="object-cover object-top"
               sizes="(max-width: 640px) 64px, 80px"
             />
           ) : (

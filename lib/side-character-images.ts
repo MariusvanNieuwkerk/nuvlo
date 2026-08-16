@@ -14,6 +14,7 @@
 import "server-only";
 import { generateSideCharacterReferenceImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
+import { characterNamesMatch } from "@/lib/character-identity";
 import type { SideCharacter } from "@/lib/types";
 
 export type EnsureSideCharacterRefsResult = {
@@ -44,7 +45,7 @@ export function lastImageShowingCharacter(
   const match = chapters
     .filter((chapter) => chapter.n < beforeChapterN && chapter.imageUrl)
     .filter((chapter) =>
-      (chapter.sceneCharacterNames ?? []).some((entry) => entry.toLowerCase() === name),
+      (chapter.sceneCharacterNames ?? []).some((entry) => characterNamesMatch(entry, characterName)),
     )
     .sort((a, b) => b.n - a.n)[0];
   return match?.imageUrl ?? null;

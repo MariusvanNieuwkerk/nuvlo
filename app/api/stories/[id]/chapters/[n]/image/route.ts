@@ -9,6 +9,7 @@ import {
 import { generatePortrait, generateSceneImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { ensureSceneCharacterReferences, lastImageShowingCharacter } from "@/lib/side-character-images";
+import { characterNamesMatch } from "@/lib/character-identity";
 
 // Het tekenmodel (fal.ai / nano-banana-2) doet vaak 20–60s over één illustratie. Zonder deze
 // regel kapt Vercel de functie al na de lage standaardlimiet (~10s) af: de fal-call is dan nog
@@ -84,7 +85,7 @@ export async function POST(
 
   // De nevenpersonages die Claude aangaf dat écht in DEZE scène te zien zijn.
   const sceneCharactersInScene = bible.sideCharacters.filter((c) =>
-    (chapter.sceneCharacterNames ?? []).some((name) => name.toLowerCase() === c.name.toLowerCase()),
+    (chapter.sceneCharacterNames ?? []).some((name) => characterNamesMatch(name, c.name)),
   );
 
   // Reused chapter houdt het vorige plaatje; een verse scène begint zonder beeld.

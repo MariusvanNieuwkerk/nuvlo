@@ -13,7 +13,7 @@ import {
 import { startStory } from "@/lib/story-director";
 import { generatePortrait } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
-import { getImageStyle, sameImageStyle } from "@/lib/image-styles";
+import { getImageStyle } from "@/lib/image-styles";
 import { fillHeroDefaults } from "@/lib/hero-defaults";
 import { cleanChildOutline, outlineHasContent } from "@/lib/story-outline";
 import type { Genre, Hero, SideCharacter } from "@/lib/types";
@@ -120,17 +120,15 @@ export async function POST(request: Request) {
   // Stijl hoort bij de held: bestaande held → bibliotheekstijl. Nieuwe held → gekozen tegel.
   const chosenStyle = existingCharacter ? undefined : getImageStyle(styleId);
   const storyStyleHint = existingCharacter?.imageStyleHint ?? chosenStyle?.imageStyleHint;
-  // Vertaal naar het (eenvoudigere) SideCharacter-uiterlijk-formaat van de verhaalbijbel.
-  // Oude portretten in een ándere stijl laten we weg: anders trekken die de nieuwe tekening
-  // terug naar de oude look.
+  // Vertaal naar het SideCharacter-formaat. Het paspoort-plaatje gaat ALTIJD mee —
+  // weggooien omdat de stijl anders is, liet het model een nieuw wezen verzinnen.
   const existingSideCharacters: SideCharacter[] = existingSideSavedCharacters.map((c) => ({
     name: c.name,
     appearance: {
       freeform: c.appearance.freeform,
       distinguishingFeature: c.appearance.distinguishingFeature,
     },
-    referenceImageUrl:
-      c.portraitUrl && sameImageStyle(c.imageStyleHint, storyStyleHint) ? c.portraitUrl : null,
+    referenceImageUrl: c.portraitUrl ?? null,
   }));
 
   // appearance-tekst is alleen verplicht wanneer we geen bestaande held hergebruiken — in

@@ -52,6 +52,7 @@ import {
   describeCharacterAppearance,
   describeWorldAppearance,
   lockedIdentityRule,
+  requiredCharacterAttributes,
   requiredSceneIdentityAttributes,
   type CharacterAppearance,
   type WorldAppearance,
@@ -381,31 +382,22 @@ export async function generateSceneImage(
   });
 }
 
-// Het held-beeld: tegelijk het ronde avatartje (home, boekenplank) én het ANKERBEELD dat bij
-// elke scène-illustratie als referentie meegaat.
-//
-// Dit is een vierkant BUSTE-portret (hoofd + schouders + borst), geen wijde scène en geen
-// gezicht-alleen-close-up. Een scène als anker maakte de cirkels onleesbaar (held te klein).
-// Een gezicht-close-up liet kleding per hoofdstuk opnieuw verzinnen. De buste houdt het
-// gezicht groot in de cirkel én laat outfit/accessoires nog zien voor latere scènes.
-//
-// BELANGRIJK: we gebruiken hier NIET requestImageFromReference. Die helper dwingt een
-// "volledige nieuwe scène" af — precies wat een portret niet mag worden. Had de held al
-// een beeld, dan gaat dat wél mee als identiteits-referentie, maar met een eigen prompt
-// die compositie/landschap van het oude beeld bewust weggooit.
-//
-// "moment" beschrijft kort waar het verhaal nu staat. previousPortraitUrl: had de held al
-// een beeld, dan blijft het hetzelfde personage — anders tekenen we vanaf nul.
+// Het held-beeld: tegelijk het ronde avatartje (home, UI snijdt bovenaan bij) én het
+// PASPOORT dat bij elke scène meegaat. Heel lijf, van hoofd tot schoenen — anders
+// verzint elke tekening opnieuw een broek of sneakers.
 export async function generatePortrait(
   appearance: CharacterAppearance,
   moment: string,
   styleHint: string | undefined,
   previousPortraitUrl?: string | null,
 ): Promise<ImageResult> {
-  const prompt = `Square avatar portrait of a children's-book hero. ONE character only. Tight bust shot from the chest up: head, face, shoulders and chest fill at least 75% of the frame. The face is large, centered, looking toward the viewer, clearly readable in a small circle. Soft plain background (one color or gentle gradient). NO landscape, NO mountains, NO sky vista, NO wide scene, NO other characters, NO full-body shot, NO tiny figure standing in a world. Appearance (follow literally; outfit colors on the chest/shoulders must be clearly visible — this portrait is the identity lock for later scenes): ${describeCharacterAppearance(appearance)}. ${lockedIdentityRule()} Story moment: ${moment}.`;
+  const prompt = `Full-body character sheet of ONE children's-book hero. Head to shoes must be visible. Character large in the frame, standing, facing the viewer, head near the top. Soft plain background. NO landscape, NO other characters, NO wide scene, NO tiny figure. Follow the written description LITERALLY, including pants and shoes. Appearance: ${describeCharacterAppearance(appearance)}. ${lockedIdentityRule()} Story moment: ${moment}.`;
 
-  const url = await requestPortraitImage(prompt, styleHint, previousPortraitUrl);
-  return { url, verified: true };
+  return generateWithVerification(
+    requiredCharacterAttributes(appearance),
+    "het paspoort van de held",
+    async (missing) => requestPortraitImage(`${prompt}${reinforcementNote(missing)}`, styleHint, previousPortraitUrl),
+  );
 }
 
 // Portret-generatie los van requestImageFromReference, omdat die helper altijd "teken een
@@ -421,13 +413,13 @@ async function requestPortraitImage(
   }
 
   const { prefix, suffix } = buildStyleBlock(styleHint);
-  const aspectRatio: FalAspectRatio = "1:1";
+  const aspectRatio: FalAspectRatio = "3:4";
 
   if (previousPortraitUrl && EDIT_MODEL) {
     try {
       const result = await fal.subscribe(EDIT_MODEL, {
         input: {
-          prompt: `${prefix} The reference image is ONLY for this character's identity (face, hair, clothes, colors). Draw a NEW tight square bust portrait of that SAME character. Copy the look exactly. Head, face, shoulders and chest fill the frame. Face large and centered. Soft plain background. Do NOT copy the reference composition, landscape, camera, or scenery. No wide scene, no tiny figure in a landscape, no full-body shot. ${prompt} ${suffix}`,
+          prompt: `${prefix} The reference image is ONLY for this character's identity. Draw a NEW full-body character sheet of that SAME character, head to shoes. Copy the look exactly. If the written description names pants or shoes that are missing from the reference, follow the written description. Soft plain background. No wide scene, no other characters. ${prompt} ${suffix}`,
           image_urls: [previousPortraitUrl],
           ...buildFormatInput(EDIT_MODEL, aspectRatio),
         },
@@ -474,12 +466,8 @@ export async function generateSideCharacterReferenceImage(
   previousReferenceUrl?: string | null,
 ): Promise<ImageResult> {
   const feature = character.appearance.distinguishingFeature.trim();
-  // Bewust GEEN vision-verificatie op nevenpersonage-ankers (lege lijst → geen verify-loop, geen
-  // retries). Een anker hoeft maar globaal te kloppen; de dure verificatie bewaren we voor de
-  // scène-illustratie zelf (daar telt consistentie het meest). Dit scheelt fase B per
-  // nieuw nevenpersonage een vision-call plus mogelijke hergeneraties. Het kenmerk gaat nog wél
-  // nadrukkelijk in de prompt mee, zodat het anker het zoveel mogelijk toont.
-  const requiredAttributes = feature ? [feature] : [];
+  const written = character.appearance.freeform.trim();
+  const requiredAttributes = [written, feature].filter((item, index, all) => item && all.indexOf(item) === index);
   const featureLine = feature ? ` Het kenmerk dat NOOIT mag ontbreken en duidelijk zichtbaar moet zijn: ${feature}.` : "";
 
   return generateWithVerification(requiredAttributes, `referentiebeeld van nevenpersonage ${character.name}`, async (missing) => {

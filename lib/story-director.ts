@@ -31,6 +31,7 @@ import {
   type ChildStoryOutline,
 } from "@/lib/story-outline";
 import { cleanStoryTitle, formatNameInWorld, polishDutchText } from "@/lib/dutch-title";
+import { characterNamesMatch, mergeCharactersByName } from "@/lib/character-identity";
 
 // Eén gedeelde bron voor het richtgetal (zie lib/progress.ts) — zo kunnen de pacing/finale-
 // logica hier en de kindvriendelijke voortgangsbalk nooit uit elkaar lopen.
@@ -286,9 +287,9 @@ function cleanSideCharacters(value: unknown): SideCharacter[] {
 // aangaf dat écht te zien zijn in déze scène — dat voorkomt dat een personage per ongeluk in
 // een illustratie verschijnt waarin het helemaal niet voorkomt.
 function resolveSceneCharacters(registry: SideCharacter[], namesInScene: string[]): SideCharacter[] {
-  const wanted = new Set(namesInScene.map((n) => n.trim().toLowerCase()).filter(Boolean));
-  if (!wanted.size) return [];
-  return registry.filter((c) => wanted.has(c.name.toLowerCase()));
+  const wanted = namesInScene.map((n) => n.trim()).filter(Boolean);
+  if (!wanted.length) return [];
+  return registry.filter((c) => wanted.some((name) => characterNamesMatch(name, c.name)));
 }
 
 // Roept Claude aan met één specifieke tool en dwingt het antwoord daar doorheen —
@@ -422,10 +423,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
   // Zelfde bescherming als in nextScene: de door het kind gekozen, bestaande nevenpersonages
   // winnen altijd van wat Claude teruggeeft (ook als Claude ze per ongeluk net anders
   // verwoordt of vergeet te herhalen) — hun vaste uiterlijk mag nooit verschuiven.
-  const mergedByName = new Map<string, SideCharacter>();
-  for (const c of claudeSideCharacters) mergedByName.set(c.name.toLowerCase(), c);
-  for (const c of existingSideCharacters ?? []) mergedByName.set(c.name.toLowerCase(), c);
-  const sideCharacters = Array.from(mergedByName.values());
+  const sideCharacters = mergeCharactersByName(claudeSideCharacters, existingSideCharacters ?? []);
 
   const title = cleanStoryTitle(
     typeof result.title === "string" && result.title.trim()
@@ -543,10 +541,7 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
   // net anders zou verwoorden — anders kan een personage tussen illustraties toch veranderen.
   // Alleen écht nieuwe namen worden toegevoegd.
   const returnedSideCharacters = cleanSideCharacters(result.sideCharacters);
-  const mergedByName = new Map<string, SideCharacter>();
-  for (const c of returnedSideCharacters) mergedByName.set(c.name.toLowerCase(), c);
-  for (const c of knownSideCharacters) mergedByName.set(c.name.toLowerCase(), c); // bekend uiterlijk overschrijft
-  const sideCharacters = Array.from(mergedByName.values());
+  const sideCharacters = mergeCharactersByName(returnedSideCharacters, knownSideCharacters);
 
   // Wereld-anker: normaal onveranderd (één vaste wereld door het hele boek). Alleen als
   // Claude een echte locatiewissel meldt ÉN een nieuwe wereld-spec meelevert, werken we

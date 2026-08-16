@@ -49,7 +49,7 @@ export function HeroPanel({
           className="reward-reveal flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/10 p-3 text-left sm:gap-4 sm:p-4"
         >
           <span className="relative size-14 shrink-0 overflow-hidden rounded-full ring-2 ring-primary/40 sm:size-16">
-            <Image src={portraitUrl} alt={`${heroName} nu`} fill className="object-cover object-center" />
+            <Image src={portraitUrl} alt={`${heroName} nu`} fill className="object-cover object-top" />
           </span>
           <div className="flex flex-col">
             <p className="flex items-center gap-1.5 font-heading text-sm font-bold text-primary sm:text-base dark:text-primary">
@@ -68,7 +68,7 @@ export function HeroPanel({
       <div className="flex items-center gap-3 sm:gap-4">
         {portraitUrl ? (
           <span className="relative size-12 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/10 sm:size-14">
-            <Image src={portraitUrl} alt={heroName} fill className="object-cover object-center" />
+            <Image src={portraitUrl} alt={heroName} fill className="object-cover object-top" />
           </span>
         ) : null}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
