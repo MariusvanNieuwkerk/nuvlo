@@ -416,8 +416,8 @@ export function HomeHeroView({
             );
           })}
           <Link
-            href="/nieuw-verhaal"
-            aria-label="Nieuwe held"
+            href="/nieuw-personage"
+            aria-label="Nieuw personage"
             className="flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-2xl p-1 opacity-70 transition-all hover:opacity-100 sm:w-20"
           >
             <span className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-primary/40 bg-primary/10 sm:size-16">

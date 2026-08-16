@@ -1,9 +1,11 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
-import { getDefaultChild, listCharacters, saveCharacter } from "@/lib/storage";
+import { getCharacter, getDefaultChild, listCharacters, saveCharacter } from "@/lib/storage";
 import { getStory } from "@/lib/storage";
-import { generateSideCharacterReferenceImage } from "@/lib/image";
+import { generatePortrait, generateSideCharacterReferenceImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
-import { cleanSideCharacterAppearance } from "@/lib/appearance";
+import { cleanCharacterAppearance, cleanSideCharacterAppearance } from "@/lib/appearance";
+import { getImageStyle } from "@/lib/image-styles";
 import type { SavedCharacter } from "@/lib/types";
 
 // POST kan nu een fal.ai-aanroep doen (ankerbeeld voor een nieuw opgeslagen bijfiguur) — net
@@ -38,13 +40,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
 
-  const { name, kind, fromStoryId, appearance, imageStyleHint, portraitUrl, seriesNote, notes } =
+  const { name, kind, fromStoryId, appearance, imageStyleHint, styleId, portraitUrl, seriesNote, notes } =
     body as {
       name?: string;
       kind?: string;
       fromStoryId?: string;
       appearance?: unknown;
       imageStyleHint?: string;
+      styleId?: string;
       portraitUrl?: string | null;
       seriesNote?: string;
       notes?: string;
@@ -60,8 +63,9 @@ export async function POST(request: Request) {
   const child = await getDefaultChild();
 
   // Bronverhaal: kopiëren van appearance + portret + styleHint (de kostenefficiënte route).
+  const chosenStyle = getImageStyle(styleId);
   let resolvedAppearance: unknown = appearance;
-  let resolvedImageStyleHint = imageStyleHint;
+  let resolvedImageStyleHint = chosenStyle?.imageStyleHint ?? imageStyleHint;
   let resolvedPortraitUrl = portraitUrl ?? null;
 
   if (fromStoryId) {
@@ -126,6 +130,45 @@ export async function POST(request: Request) {
     // Als het personage uit een verhaal komt, registreren we dat meteen in de audit-trail.
     sourceStoryIds: fromStoryId ? [fromStoryId] : [],
   });
+
+  // Nieuwe held zonder foto: paspoort op de achtergrond, zodat bewaren snel blijft.
+  if (kind === "hero" && !saved.portraitUrl) {
+    const heroId = saved.id;
+    const childId = child.id;
+    after(async () => {
+      try {
+        if (!(await tryClaimImageQuota(childId))) return;
+        const latest = await getCharacter(heroId);
+        if (!latest || latest.portraitUrl) {
+          await releaseImageQuota(childId);
+          return;
+        }
+        const portrait = await generatePortrait(
+          cleanCharacterAppearance(latest.appearance),
+          "een nieuw personage",
+          latest.imageStyleHint,
+        );
+        if (!portrait.url) {
+          await releaseImageQuota(childId);
+          return;
+        }
+        await saveCharacter({
+          id: latest.id,
+          childId: latest.childId,
+          name: latest.name,
+          kind: latest.kind,
+          appearance: latest.appearance,
+          imageStyleHint: latest.imageStyleHint,
+          portraitUrl: portrait.url,
+          sourceStoryIds: latest.sourceStoryIds,
+          seriesNote: latest.seriesNote,
+          notes: latest.notes,
+        });
+      } catch (err) {
+        console.error("Achtergrond-portret voor nieuwe held mislukt:", err);
+      }
+    });
+  }
 
   return NextResponse.json({ character: saved }, { status: 200 });
 }
