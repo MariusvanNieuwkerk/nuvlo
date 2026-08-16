@@ -83,11 +83,6 @@ async function main() {
     console.log("Quota geclaimd:", claimed);
     if (claimed) {
       console.log("fal.ai-aanroep starten (dit kan 10-40s duren)...");
-      const previousSceneUrl =
-        story.chapters
-          .filter((c) => c.n < chapterN && c.imageUrl)
-          .sort((a, b) => a.n - b.n)
-          .at(-1)?.imageUrl ?? null;
       const scene = await generateSceneImage(
         chapter.imagePrompt,
         character.appearance,
@@ -97,7 +92,7 @@ async function main() {
         character.portraitUrl,
         null,
         chapter.heroTemporaryAppearance,
-        previousSceneUrl,
+        null,
         story.hero.name,
       );
       console.log("Resultaat:", scene);

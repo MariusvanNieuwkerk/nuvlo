@@ -504,8 +504,10 @@ Bekende nevenpersonages met hun vaste uiterlijk (nooit een bestaand uiterlijk wi
   }
 
 Vorige scène: ${(previousChapter?.pages ?? []).join("\n\n")}
+${previousChapter?.imagePrompt ? `Vorige illustratie toonde: ${previousChapter.imagePrompt}` : ""}
 
 Het kind koos (dit kan een van de aangeboden opties zijn, of een eigen, zelf getypt idee): "${choice}"
+Het NIEUWE imagePrompt moet die keuze ZICHTBAAR maken (andere houding, plek in beeld of wie waar staat). Niet opnieuw dezelfde groepspose.
 ${
     story.bible.childOutline && outlineHasContent(story.bible.childOutline)
       ? formatOutlineForPrompt(story.bible.childOutline)

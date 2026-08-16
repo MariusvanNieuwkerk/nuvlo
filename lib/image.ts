@@ -230,7 +230,7 @@ async function requestImageFromReference(
   try {
     const result = await fal.subscribe(EDIT_MODEL, {
       input: {
-        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is ONE locked identity. Copy that character EXACTLY (face, hair, body shape, colors, clothes). Do not invent a second version of the same character. Do not recolor clothes. Do not redesign. Then draw a completely NEW full scene: do NOT copy reference composition, camera or background, and do not return a face close-up if the scene describes something else. Pose and place may change; identity never changes. ${prompt} ${suffix}`,
+        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is a character sheet only. Copy WHO that character is (face, hair, body, clothes, colors). Do not copy pose, camera, grouping, or background from any reference. Draw a completely NEW scene that shows the requested ACTION. Identity never changes; the moment must. ${prompt} ${suffix}`,
         image_urls: referenceImageUrls,
         ...buildFormatInput(EDIT_MODEL, aspectRatio),
       },
@@ -308,8 +308,8 @@ export async function generateSceneImage(
   // het held-portret als referentiebeeld weg — dat portret toont namelijk de NORMALE vorm,
   // en zou het model juist terugtrekken richting die normale vorm.
   heroTemporaryAppearance?: string | null,
-  // Vorige scène-plaat: extra identiteitsanker (volle figuur, dus ook broek/schoenen),
-  // zodat kledingkleuren niet per hoofdstuk opnieuw verzonnen worden.
+  // Bewust niet meer als referentie gebruikt: het vorige plaatje liet het model
+  // dezelfde grot en houding herhalen. Paspoorten houden de figuren vast.
   previousSceneImageUrl?: string | null,
   heroName?: string,
 ): Promise<ImageResult> {
@@ -328,41 +328,40 @@ export async function generateSceneImage(
     : `De hoofdpersoon ${heroLabel} ziet er zo uit: ${describeCharacterAppearance(appearance)}. ${lockedIdentityRule()}`;
   const namedCast = [heroLabel, ...namedSides.map((c) => c.name)].join(", ");
   const oneEachRule = `Teken elk personage precies één keer. Geen tweede robot, geen dubbele held. Alleen deze figuren: ${namedCast}.`;
+  const action = imagePrompt.trim();
+  const actionLine = action
+    ? `TEKEN DIT MOMENT (dit is de scène, niet een herhaling van een eerder plaatje): ${action}`
+    : "";
   const fixedFacts = [
+    actionLine,
     heroLine,
     sideCharacterLines,
     oneEachRule,
-    world ? `De wereld/omgeving ziet er zo uit: ${describeWorldAppearance(world)}` : "",
+    world ? `De wereld/omgeving mag herkenbaar blijven, maar de CAMERA, HOUDING en wie WAAR staat moeten bij dít moment passen: ${describeWorldAppearance(world)}` : "",
   ]
     .filter(Boolean)
     .join(". ");
 
-  // Referenties in vaste volgorde, met een nummer in de prompt. Zonder die koppeling
-  // mengt het model twee robots of herontwerpt het dezelfde figuur.
+  // Alleen paspoorten. previousSceneImageUrl wordt bewust genegeerd: die trok
+  // elke plaat terug naar dezelfde pose.
   const labeledRefs: { url: string; label: string }[] = [];
   if (!heroTemporaryAppearance && referencePortraitUrl) {
     labeledRefs.push({
       url: referencePortraitUrl,
-      label: `${heroLabel} (held) — kopieer gezicht, haar, kleding en kleuren exact`,
+      label: `${heroLabel} (held) — kopieer gezicht, haar, kleding en kleuren exact, niet de houding`,
     });
   }
   for (const character of namedSides) {
     if (!character.referenceImageUrl) continue;
     labeledRefs.push({
       url: character.referenceImageUrl,
-      label: `${character.name} — kopieer dit wezen exact, teken geen andere versie`,
+      label: `${character.name} — kopieer dit wezen exact, teken geen andere versie, nieuwe houding mag`,
     });
   }
   if (worldReferenceImageUrl) {
     labeledRefs.push({
       url: worldReferenceImageUrl,
-      label: "de wereld/omgeving",
-    });
-  }
-  if (!heroTemporaryAppearance && previousSceneImageUrl) {
-    labeledRefs.push({
-      url: previousSceneImageUrl,
-      label: "vorige scène — zelfde personages, nieuwe houding en plek, niemand herontwerpen",
+      label: "de wereld/omgeving — sfeer, geen vaste camerastand",
     });
   }
 
@@ -371,8 +370,11 @@ export async function generateSceneImage(
     .map((item, i) => `Reference image ${i + 1} is ${item.label}.`)
     .join(" ");
 
-  const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret-opdracht — teken een volledige, brede scène die het onderstaande écht laat zien (de omgeving, andere personages, actie, sfeer), geen close-up van alleen het gezicht. De scène mag houding en plek veranderen, niet het uiterlijk. Scène (alleen actie en plek, geen nieuwe kleding, geen extra personages): ${imagePrompt}.`;
-  const identityAttrs = requiredSceneIdentityAttributes(appearance, namedSides, heroLabel);
+  const prompt = `${fixedFacts}. BELANGRIJK: dit is GEEN portret en GEEN kopie van een eerder plaatje — teken een volledige scène waarin de actie hierboven écht te zien is. Uiterlijk blijft vast. Houding, plek in beeld en wie wat doet moeten bij DIT moment horen.`;
+  const identityAttrs = [
+    ...(action ? [`Deze actie is duidelijk te zien: ${action}`] : []),
+    ...requiredSceneIdentityAttributes(appearance, namedSides, heroLabel),
+  ];
 
   return generateWithVerification(identityAttrs, `scène met ${heroLabel}`, async (missing) => {
     const reinforced = `${prompt}${reinforcementNote(missing)}`;

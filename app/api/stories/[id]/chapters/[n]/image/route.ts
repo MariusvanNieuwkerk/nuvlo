@@ -160,12 +160,6 @@ export async function POST(
           }
         }
 
-        const previousSceneUrl =
-          story.chapters
-            .filter((c) => c.n < n && c.imageUrl)
-            .sort((a, b) => a.n - b.n)
-            .at(-1)?.imageUrl ?? null;
-
         const scene = await generateSceneImage(
           chapter.imagePrompt,
           character.appearance,
@@ -175,7 +169,7 @@ export async function POST(
           portraitUrl,
           null,
           chapter.heroTemporaryAppearance,
-          previousSceneUrl,
+          null,
           story.hero.name,
         );
         if (scene.url) {
