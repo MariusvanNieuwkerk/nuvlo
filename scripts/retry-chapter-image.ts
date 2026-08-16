@@ -42,8 +42,8 @@ async function main() {
   const { getStory, getDefaultChild, updateChapterImageAtomic } = await import("@/lib/storage");
   const { generateSceneImage } = await import("@/lib/image");
   const { tryClaimImageQuota, releaseImageQuota } = await import("@/lib/image-usage");
-  const { ensureSceneCharacterReferences, lastImageShowingCharacter } = await import("@/lib/side-character-images");
-  const { characterNamesMatch } = await import("@/lib/character-identity");
+  const { ensureSceneCharacterReferences } = await import("@/lib/side-character-images");
+  const { resolveLockedSceneCharacters } = await import("@/lib/character-identity");
 
   const story = await getStory(storyId);
   if (!story) throw new Error("Verhaal niet gevonden.");
@@ -55,26 +55,21 @@ async function main() {
   const child = await getDefaultChild();
   const bible = story.bible;
   const character = story.character;
-  const sceneCharactersInScene = bible.sideCharacters.filter((c) =>
-    (chapter.sceneCharacterNames ?? []).some((name) => characterNamesMatch(name, c.name)),
-  );
+  const sceneCharactersInScene = resolveLockedSceneCharacters(bible.sideCharacters, {
+    namedByClaude: chapter.sceneCharacterNames ?? [],
+    texts: [...(chapter.pages ?? []), chapter.imagePrompt ?? ""],
+  });
 
   let sceneImageUrl: string | null = chapter.imageUrl;
   let updatedBible = bible;
 
   if (!chapter.imageReused) {
     console.log("Referentiebeelden voor nevenpersonages in deze scène ophalen/aanmaken...");
-    const identitySourceByName: Record<string, string> = {};
-    for (const sceneChar of sceneCharactersInScene) {
-      const source = lastImageShowingCharacter(story.chapters, sceneChar.name, chapterN);
-      if (source) identitySourceByName[sceneChar.name.toLowerCase()] = source;
-    }
     const refs = await ensureSceneCharacterReferences(
       child.id,
       bible.sideCharacters,
       sceneCharactersInScene,
       character.imageStyleHint,
-      identitySourceByName,
     );
     updatedBible = { ...bible, sideCharacters: refs.registry };
 

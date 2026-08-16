@@ -8,8 +8,8 @@ import {
 } from "@/lib/storage";
 import { generatePortrait, generateSceneImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
-import { ensureSceneCharacterReferences, lastImageShowingCharacter } from "@/lib/side-character-images";
-import { characterNamesMatch } from "@/lib/character-identity";
+import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
+import { resolveLockedSceneCharacters } from "@/lib/character-identity";
 
 // Het tekenmodel (fal.ai / nano-banana-2) doet vaak 20–60s over één illustratie. Zonder deze
 // regel kapt Vercel de functie al na de lage standaardlimiet (~10s) af: de fal-call is dan nog
@@ -83,10 +83,12 @@ export async function POST(
   const bible = story.bible;
   const character = story.character;
 
-  // De nevenpersonages die Claude aangaf dat écht in DEZE scène te zien zijn.
-  const sceneCharactersInScene = bible.sideCharacters.filter((c) =>
-    (chapter.sceneCharacterNames ?? []).some((name) => characterNamesMatch(name, c.name)),
-  );
+  // Wie in beeld hoort: Claude's lijst én namen die in de tekst/tekenopdracht staan.
+  // Niet alleen Claude — anders valt het paspoort weg en wordt er een nieuw wezen getekend.
+  const sceneCharactersInScene = resolveLockedSceneCharacters(bible.sideCharacters, {
+    namedByClaude: chapter.sceneCharacterNames ?? [],
+    texts: [...(chapter.pages ?? []), chapter.imagePrompt ?? ""],
+  });
 
   // Reused chapter houdt het vorige plaatje; een verse scène begint zonder beeld.
   let sceneImageUrl: string | null = chapter.imageUrl;
@@ -111,17 +113,11 @@ export async function POST(
     try {
       // Zorg dat elk nevenpersonage in déze scène een ankerbeeld heeft (maakt er hooguit één
       // per nog-onbekend personage aan, met quota-bescherming — zie lib/side-character-images.ts).
-      const identitySourceByName: Record<string, string> = {};
-      for (const sceneChar of sceneCharactersInScene) {
-        const source = lastImageShowingCharacter(story.chapters, sceneChar.name, n);
-        if (source) identitySourceByName[sceneChar.name.toLowerCase()] = source;
-      }
       const refs = await ensureSceneCharacterReferences(
         child.id,
         bible.sideCharacters,
         sceneCharactersInScene,
         character.imageStyleHint,
-        identitySourceByName,
       );
       updatedBible = { ...bible, sideCharacters: refs.registry };
 

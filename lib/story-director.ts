@@ -31,7 +31,7 @@ import {
   type ChildStoryOutline,
 } from "@/lib/story-outline";
 import { cleanStoryTitle, formatNameInWorld, polishDutchText } from "@/lib/dutch-title";
-import { characterNamesMatch, mergeCharactersByName } from "@/lib/character-identity";
+import { lockCharacterRegistry, resolveLockedSceneCharacters } from "@/lib/character-identity";
 
 // Eén gedeelde bron voor het richtgetal (zie lib/progress.ts) — zo kunnen de pacing/finale-
 // logica hier en de kindvriendelijke voortgangsbalk nooit uit elkaar lopen.
@@ -287,13 +287,17 @@ function cleanSideCharacters(value: unknown): SideCharacter[] {
   return Array.from(byName.values());
 }
 
-// Filtert de volledige registry van bekende nevenpersonages naar alleen degenen die Claude
-// aangaf dat écht te zien zijn in déze scène — dat voorkomt dat een personage per ongeluk in
-// een illustratie verschijnt waarin het helemaal niet voorkomt.
-function resolveSceneCharacters(registry: SideCharacter[], namesInScene: string[]): SideCharacter[] {
-  const wanted = namesInScene.map((n) => n.trim()).filter(Boolean);
-  if (!wanted.length) return [];
-  return registry.filter((c) => wanted.some((name) => characterNamesMatch(name, c.name)));
+function resolveSceneCharacters(
+  registry: SideCharacter[],
+  namesInScene: string[],
+  texts: string[] = [],
+  alwaysIncludeNames: string[] = [],
+): SideCharacter[] {
+  return resolveLockedSceneCharacters(registry, {
+    namedByClaude: namesInScene,
+    texts,
+    alwaysIncludeNames,
+  });
 }
 
 // Roept Claude aan met één specifieke tool en dwingt het antwoord daar doorheen —
@@ -369,7 +373,7 @@ ${styleNote}`
   // pas later, maar hoeft ze niet zelf opnieuw te verzinnen.
   const existingSideNote =
     existingSideCharacters && existingSideCharacters.length > 0
-      ? `\n\nDeze nevenpersonages koos het kind zelf. Ze MOETEN in dit verhaal voorkomen (liefst al in hoofdstuk 1). Hun uiterlijk staat VAST en moet je EXACT overnemen in sideCharacters, nooit herschrijven: ${existingSideCharacters
+      ? `\n\nDeze nevenpersonages koos het kind zelf. Ze MOETEN in dit verhaal voorkomen, al in hoofdstuk 1, onder deze EXACTE naam. Geen "jongetje" of "vriendje" als vervanging. Hun uiterlijk staat VAST en moet je EXACT overnemen in sideCharacters, nooit herschrijven: ${existingSideCharacters
           .map((c) => `${c.name} (${c.appearance.freeform}${c.appearance.distinguishingFeature ? `, kenmerk: ${c.appearance.distinguishingFeature}` : ""})`)
           .join(" | ")}`
       : "";
@@ -430,7 +434,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
   // Zelfde bescherming als in nextScene: de door het kind gekozen, bestaande nevenpersonages
   // winnen altijd van wat Claude teruggeeft (ook als Claude ze per ongeluk net anders
   // verwoordt of vergeet te herhalen) — hun vaste uiterlijk mag nooit verschuiven.
-  const sideCharacters = mergeCharactersByName(claudeSideCharacters, existingSideCharacters ?? []);
+  const sideCharacters = lockCharacterRegistry(claudeSideCharacters, existingSideCharacters ?? []);
 
   const title = cleanStoryTitle(
     typeof result.title === "string" && result.title.trim()
@@ -457,7 +461,12 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
     },
     summary: polishDutchText(assertNonEmptyString(result.summary, "summary")),
     chapter,
-    sceneCharacters: resolveSceneCharacters(sideCharacters, cleanStringArray(result.charactersInScene)),
+    sceneCharacters: resolveSceneCharacters(
+      sideCharacters,
+      cleanStringArray(result.charactersInScene),
+      [...chapter.pages, chapter.imagePrompt],
+      (existingSideCharacters ?? []).map((c) => c.name),
+    ),
   };
 }
 
@@ -505,7 +514,7 @@ Lopende samenvatting van het verhaal tot nu toe: ${story.summary}
 
 Vaste wereld-beschrijving (nooit wijzigen, alleen gebruiken): ${describeWorldAppearance(story.bible.worldAppearance) || "(nog niet vastgelegd)"}
 
-Bekende nevenpersonages met hun vaste uiterlijk (nooit een bestaand uiterlijk wijzigen, geen tweede versie van hetzelfde wezen, alleen aanvullen met écht nieuwe namen): ${
+Bekende nevenpersonages met hun vaste uiterlijk (nooit een bestaand uiterlijk wijzigen, geen tweede versie van hetzelfde wezen, geen menselijk kind als vervanging, alleen aanvullen met écht nieuwe namen): ${
     knownSideCharacters.length
       ? knownSideCharacters.map((c) => `${c.name}: ${c.appearance.freeform} (kenmerk: ${c.appearance.distinguishingFeature})`).join(" | ")
       : "nog geen"
@@ -551,7 +560,7 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
   // net anders zou verwoorden — anders kan een personage tussen illustraties toch veranderen.
   // Alleen écht nieuwe namen worden toegevoegd.
   const returnedSideCharacters = cleanSideCharacters(result.sideCharacters);
-  const sideCharacters = mergeCharactersByName(returnedSideCharacters, knownSideCharacters);
+  const sideCharacters = lockCharacterRegistry(returnedSideCharacters, knownSideCharacters);
 
   // Wereld-anker: normaal onveranderd (één vaste wereld door het hele boek). Alleen als
   // Claude een echte locatiewissel meldt ÉN een nieuwe wereld-spec meelevert, werken we
@@ -578,7 +587,11 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
     summary: polishDutchText(assertNonEmptyString(result.summary, "summary")).slice(0, 600),
     bible: updatedBible,
     isFinale,
-    sceneCharacters: resolveSceneCharacters(sideCharacters, cleanStringArray(result.charactersInScene)),
+    sceneCharacters: resolveSceneCharacters(
+      sideCharacters,
+      cleanStringArray(result.charactersInScene),
+      [...chapter.pages, chapter.imagePrompt],
+    ),
     // Bij de finale doet deze vlag er niet meer toe (shouldGenerateFreshImage forceert daar
     // toch al altijd een verse illustratie), maar we nemen Claude's eigen antwoord over.
     visuallyDistinctFromPrevious: Boolean(result.visuallyDistinctFromPrevious),

@@ -320,7 +320,14 @@ export async function generateSceneImage(
   const namedSides = (sceneCharacters ?? []).filter((c) => c.name.trim());
   const sideCharacterLines = namedSides
     .filter((c) => c.appearance.freeform.trim())
-    .map((c) => `VAST uiterlijk van ${c.name} (één wezen, nooit een tweede versie, nooit herkleuren): ${c.appearance.freeform}${c.appearance.distinguishingFeature ? ` (kenmerk dat nooit mag ontbreken: ${c.appearance.distinguishingFeature})` : ""}`)
+    .map((c) => {
+      const look = c.appearance.freeform;
+      const writtenAsHuman = /\b(jongetje|jongen|meisje|kind|kinderen|man|vrouw|mens)\b/i.test(look);
+      const notAStandIn = writtenAsHuman
+        ? ""
+        : ` ${c.name} is GEEN menselijk kind en geen vervangend jongetje. Teken precies dit wezen.`;
+      return `VAST uiterlijk van ${c.name} (één wezen, nooit een tweede versie, nooit herkleuren): ${look}.${notAStandIn}${c.appearance.distinguishingFeature ? ` Kenmerk dat nooit mag ontbreken: ${c.appearance.distinguishingFeature}.` : ""}`;
+    })
     .join(" ");
   const heroLabel = heroName?.trim() || "de held";
   const heroLine = heroTemporaryAppearance
@@ -355,7 +362,7 @@ export async function generateSceneImage(
     if (!character.referenceImageUrl) continue;
     labeledRefs.push({
       url: character.referenceImageUrl,
-      label: `${character.name} — kopieer dit wezen exact, teken geen andere versie, nieuwe houding mag`,
+      label: `${character.name} — kopieer DIT wezen exact, geen menselijk kind tenzij de zin dat zegt, nieuwe houding mag`,
     });
   }
   if (worldReferenceImageUrl) {

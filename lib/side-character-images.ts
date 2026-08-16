@@ -7,14 +7,13 @@
 // tekst als de quota op is". Dat één keer op één plek houden voorkomt dat de twee routes
 // stiekem uit elkaar gaan lopen.
 //
-// De kosten-afweging is bewust: de eerste keer dat een nevenpersonage in beeld komt, kost
-// het anker één extra illustratie. Daarna is dat anker gratis herbruikbaar in elke volgende
-// scène — precies zoals het held-portret en het wereld-anker ook één keer gemaakt worden.
+// Identiteit komt ALLEEN uit de vaste zin + het paspoort. Een vorige scène is geen
+// voorbeeld: daar kan het model een verkeerd wezen hebben getekend.
 
 import "server-only";
 import { generateSideCharacterReferenceImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
-import { characterNamesMatch } from "@/lib/character-identity";
+import { findByCharacterName } from "@/lib/character-identity";
 import type { SideCharacter } from "@/lib/types";
 
 export type EnsureSideCharacterRefsResult = {
@@ -26,61 +25,22 @@ export type EnsureSideCharacterRefsResult = {
   sceneCharacters: SideCharacter[];
 };
 
-// Zorgt dat elk nevenpersonage dat in DEZE scène te zien is een referentiebeeld heeft.
-// Alleen aanroepen wanneer er echt een verse scène-illustratie gemaakt wordt (bij hergebruik
-// van het vorige plaatje hoeft er geen anker gemaakt te worden — dat zou quota verspillen).
-//
-// Bij uitgeputte quota: die ene ankeraanmaak wordt overgeslagen (het personage blijft
-// tekst-only voor nu, geen crash, geen blokkade) en de volgende keer proberen we het weer.
-
-// Laatste plaatje waarop dit personage al te zien was. Gebruikt als identiteitsbron
-// als er nog geen eigen ankerbeeld is — anders verzint het model een tweede robot.
-export function lastImageShowingCharacter(
-  chapters: { n: number; imageUrl: string | null; sceneCharacterNames?: string[] }[],
-  characterName: string,
-  beforeChapterN: number,
-): string | null {
-  const name = characterName.trim().toLowerCase();
-  if (!name) return null;
-  const match = chapters
-    .filter((chapter) => chapter.n < beforeChapterN && chapter.imageUrl)
-    .filter((chapter) =>
-      (chapter.sceneCharacterNames ?? []).some((entry) => characterNamesMatch(entry, characterName)),
-    )
-    .sort((a, b) => b.n - a.n)[0];
-  return match?.imageUrl ?? null;
-}
-
 export async function ensureSceneCharacterReferences(
   childId: string,
   registry: SideCharacter[],
   sceneCharacters: SideCharacter[],
   styleHint: string | undefined,
-  identitySourceByName?: Record<string, string>,
 ): Promise<EnsureSideCharacterRefsResult> {
-  // Kopie van de registry, geïndexeerd op (kleine-letter) naam, zodat we een nieuw anker
-  // meteen op de juiste registry-entry kunnen terugschrijven.
-  const byName = new Map<string, SideCharacter>();
-  for (const c of registry) byName.set(c.name.toLowerCase(), { ...c });
-
+  const copies: SideCharacter[] = registry.map((character) => ({ ...character }));
   const resolvedScene: SideCharacter[] = [];
-  // Personages die nog een anker missen: we claimen eerst SEQUENTIEEL de dag-quota (dat is een
-  // kleine, race-gevoelige file-operatie — parallel zouden twee claims dezelfde vrije plek
-  // kunnen pakken), en genereren daarna het TRAGE deel (de fal.ai-beelden) wél PARALLEL. Dat
-  // is de grote versnelling: verschijnen er drie nevenpersonages, dan worden hun ankers nu
-  // tegelijk gemaakt in plaats van drie keer na elkaar te wachten.
   const toGenerate: SideCharacter[] = [];
 
   for (const sceneChar of sceneCharacters) {
-    const key = sceneChar.name.toLowerCase();
-    const known = byName.get(key) ?? { ...sceneChar };
-    byName.set(key, known);
-    resolvedScene.push(known); // zelfde object-referentie: een straks toegevoegd anker telt hier ook
+    const known = findByCharacterName(copies, sceneChar.name) ?? { ...sceneChar };
+    if (!findByCharacterName(copies, known.name)) copies.push(known);
+    resolvedScene.push(known);
 
-    // Al een anker? Dan niets doen — gewoon hergebruiken.
     if (known.referenceImageUrl) continue;
-
-    // Nog geen anker: quota claimen (mislukt dat, dan blijft dit personage voorlopig tekst-only).
     if (await tryClaimImageQuota(childId)) {
       toGenerate.push(known);
     }
@@ -88,16 +48,14 @@ export async function ensureSceneCharacterReferences(
 
   await Promise.all(
     toGenerate.map(async (known) => {
-      const identitySource = identitySourceByName?.[known.name.toLowerCase()] ?? null;
-      const ref = await generateSideCharacterReferenceImage(known, styleHint, identitySource);
+      const ref = await generateSideCharacterReferenceImage(known, styleHint, null);
       if (ref.url) {
         known.referenceImageUrl = ref.url;
       } else {
-        // Generatie mislukt: quota teruggeven en dit personage voorlopig tekst-only laten.
         await releaseImageQuota(childId);
       }
     }),
   );
 
-  return { registry: Array.from(byName.values()), sceneCharacters: resolvedScene };
+  return { registry: copies, sceneCharacters: resolvedScene };
 }

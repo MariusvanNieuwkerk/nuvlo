@@ -170,7 +170,7 @@ export const START_STORY_TOOL: Anthropic.Tool = {
         type: "array",
         items: { type: "string" },
         description:
-          "Namen (exact zoals in sideCharacters) van nevenpersonages die echt te ZIEN zijn in de illustratie van deze scène. Leeg als alleen de held te zien is.",
+          "EXACTE namen (zoals in sideCharacters) van elk nevenpersonage dat in deze scène te zien is. Staat iemand in de bladzijden, dan hoort die naam hier. Geen 'jongetje' of nieuwe bijnaam. Leeg als alleen de held te zien is.",
       },
     },
     required: [
@@ -250,7 +250,7 @@ export const NEXT_SCENE_TOOL: Anthropic.Tool = {
         type: "array",
         items: { type: "string" },
         description:
-          "Namen (exact zoals in sideCharacters) van nevenpersonages die echt te ZIEN zijn in de illustratie van deze scène. Leeg als alleen de held te zien is.",
+          "EXACTE namen (zoals in sideCharacters) van elk nevenpersonage dat in deze scène te zien is. Staat iemand in de bladzijden, dan hoort die naam hier. Geen 'jongetje' of nieuwe bijnaam. Leeg als alleen de held te zien is.",
       },
     },
     required: [

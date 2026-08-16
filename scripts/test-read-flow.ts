@@ -7,6 +7,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { newlyIntroducedSideCharacters } from "@/lib/new-side-characters";
+import {
+  isGenericCharacterAlias,
+  lockCharacterRegistry,
+  resolveLockedSceneCharacters,
+} from "@/lib/character-identity";
 import type { Chapter, SideCharacter } from "@/lib/types";
 
 async function loadEnvLocal() {
@@ -123,6 +128,28 @@ function runLogicTests() {
     lastLive.join(" → ") === "tekst → tekening → nieuwe-figuren → keuzes",
     `laatste bladzijde moet tekst → tekening → nieuwe-figuren → keuzes zijn, kreeg: ${lastLive.join(" → ")}`,
   );
+
+  const wiebel = side("Wiebel");
+  const locked = lockCharacterRegistry(
+    [side("een jongetje"), { ...wiebel, appearance: { freeform: "fout", distinguishingFeature: "fout" } }],
+    [wiebel],
+  );
+  assert(locked.length === 1 && locked[0].appearance.freeform === "Wiebel uit het testverhaal", "bekende figuur wint, los jongetje verdwijnt");
+  assert(isGenericCharacterAlias("zijn vriendje"), "vriendje is geen nieuwe naam");
+  assert(!isGenericCharacterAlias("Wiebel"), "echte naam blijft een personage");
+
+  const inScene = resolveLockedSceneCharacters([wiebel, side("Pip")], {
+    namedByClaude: [],
+    texts: ["Stark riep naar Wiebel in het bos."],
+  });
+  assert(namesOf(inScene).join() === "Wiebel", `naam in de tekst moet het paspoort meenemen, kreeg: ${namesOf(inScene)}`);
+
+  const forced = resolveLockedSceneCharacters([wiebel], {
+    namedByClaude: [],
+    texts: ["Een vriendje kwam mee."],
+    alwaysIncludeNames: ["Wiebel"],
+  });
+  assert(namesOf(forced).join() === "Wiebel", "gekozen figuur hoort in hoofdstuk 1, ook zonder naam in de zin");
 
   const lastWithoutNew = pageOrder({ isChapterEnd: true, isLast: true, newCharCount: 0 });
   assert(
