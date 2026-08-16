@@ -113,7 +113,7 @@ export const START_STORY_TOOL: Anthropic.Tool = {
     properties: {
       title: {
         type: "string",
-        description: "Een korte, spannende titel voor het verhaal (max. 8 woorden).",
+        description: "Een korte, spannende titel in foutloos Nederlands (max. 8 woorden, geen dubbele woorden zoals 'in in').",
       },
       aktes: {
         type: "array",
@@ -157,7 +157,7 @@ export const START_STORY_TOOL: Anthropic.Tool = {
       imagePrompt: {
         type: "string",
         description:
-          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit pages[0] hierboven (de EERSTE bladzijde — daar wordt de illustratie getoond, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. De illustratie-code voegt het exacte uiterlijk van de held en de wereld er zelf al aan toe (niet zelf herhalen), focus dus op de scène-specifieke inhoud van dat ene moment.",
+          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit de LAATSTE bladzijde van pages hierboven (de cliffhanger — daar wordt de tekening getoond als beloning ná het lezen, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. De illustratie-code voegt het exacte uiterlijk van de held en de wereld er zelf al aan toe (niet zelf herhalen), focus dus op de scène-specifieke inhoud van dat ene moment.",
       },
       heroTemporaryAppearance: HERO_TEMPORARY_APPEARANCE_SCHEMA,
       worldAppearance: WORLD_APPEARANCE_SCHEMA,
@@ -219,7 +219,7 @@ export const NEXT_SCENE_TOOL: Anthropic.Tool = {
       imagePrompt: {
         type: "string",
         description:
-          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit pages[0] hierboven (de EERSTE bladzijde — daar wordt de illustratie getoond, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding/nieuwe omgevingsdetails. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. Het exacte uiterlijk van de held en de wereld voegt de illustratie-code er zelf al aan toe (niet zelf herhalen), focus dus op wat er op dat ene moment specifiek gebeurt.",
+          "Beeldende beschrijving voor een vrolijke, niet-enge kinderboek-illustratie van ÉÉN stilstaand moment uit de LAATSTE bladzijde van pages hierboven (de cliffhanger — daar wordt de tekening getoond als beloning ná het lezen, dus ze moeten bij elkaar passen). Kies het meest tekenbare, spannende moment van die ene bladzijde en beschrijf ALLEEN dat: WAT gebeurt er precies op dat moment, WAAR, welke actie/houding/nieuwe omgevingsdetails. VERBODEN: twee of meer momenten/gebeurtenissen samenvoegen in één beschrijving (bv. 'eerst X, en daarna/in de volgende scène Y') — een illustratie kan maar één bevroren moment tonen; het samenvoegen van meerdere momenten levert een verwarrend plaatje op dat bij geen van beide momenten goed past. Het exacte uiterlijk van de held en de wereld voegt de illustratie-code er zelf al aan toe (niet zelf herhalen), focus dus op wat er op dat ene moment specifiek gebeurt.",
       },
       isFinale: {
         type: "boolean",

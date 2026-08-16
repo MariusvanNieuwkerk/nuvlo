@@ -55,14 +55,14 @@ export function ChoiceButtons({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Er ging iets mis.");
+        throw new Error(data.error ?? "Er is iets misgegaan.");
       }
       // Bewust GEEN setPending(false) hier: het laadscherm blijft staan tot BookPager
       // (na router.refresh()) automatisch naar de nieuwe pagina springt en dit component
       // verdwijnt. Zo geen korte flikkering terug naar de oude keuzeknoppen.
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Er ging iets mis.");
+      setError(err instanceof Error ? err.message : "Er is iets misgegaan.");
       setPending(false);
     }
   }

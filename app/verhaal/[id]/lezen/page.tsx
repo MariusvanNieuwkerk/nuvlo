@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
 import { BookPager } from "@/components/book-pager";
 import { HeroPanel } from "@/components/hero-panel";
-import { SideCharacterSaver } from "@/components/side-character-saver";
 import { EditableStoryTitle } from "@/components/editable-story-title";
 import { getAlreadySavedForStory, getDefaultChild, getStory } from "@/lib/storage";
 import { formatNameInWorld } from "@/lib/dutch-title";
+import { newlyIntroducedSideCharacters } from "@/lib/new-side-characters";
 
 // Altijd vers renderen: het verhaal groeit met elke keuze, dus nooit uit de cache tonen.
 export const dynamic = "force-dynamic";
@@ -21,9 +21,12 @@ export default async function LezenPage({
   if (!story) notFound();
 
   const child = await getDefaultChild();
-  const { heroSaved, sideNames: alreadySavedSideNames } = await getAlreadySavedForStory(
-    child.id,
-    story.id,
+  const { sideNames: alreadySavedSideNames } = await getAlreadySavedForStory(child.id, story.id);
+  const newSideCharacters = newlyIntroducedSideCharacters(
+    story.chapters,
+    story.bible.sideCharacters,
+    alreadySavedSideNames,
+    story.hero.name,
   );
 
   return (
@@ -37,33 +40,16 @@ export default async function LezenPage({
         </h1>
       </div>
 
-      {/* De held zoals het kind hem nu kent (portret + verzameling), plus het eventuele
-          "veranderd sinds gisteren"-moment als de uitgestelde beloning net onthuld is. */}
       <HeroPanel
         storyId={story.id}
         heroName={story.hero.name}
         portraitUrl={story.character.portraitUrl}
         items={story.character.items}
         hasUnseenPortrait={Boolean(story.character.hasUnseenPortrait)}
-        alreadySaved={heroSaved}
       />
 
-      {/* Bekende nevenpersonages — elk met een kleine "Sla op als personage"-knop plus een
-          wegdruk-kruisje. Weggedrukte personages tonen we hier niet meer (maar ze blijven wel
-          in de illustraties van het verhaal), en eenmaal opgeslagen personages ook niet meer
-          (zie getAlreadySavedForStory). */}
-      {(() => {
-        const suggesties = story.bible.sideCharacters.filter(
-          (c) => !c.dismissed && !alreadySavedSideNames.has(c.name.toLowerCase()),
-        );
-        return suggesties.length > 0 ? (
-          <SideCharacterSaver storyId={story.id} sideCharacters={suggesties} />
-        ) : null;
-      })()}
-
-      {/* Begint altijd op de laatste (levende) pagina, maar het kind kan met
-          vorige/volgende terugbladeren naar wat het al gelezen heeft. Keuzes maken kan
-          alleen op die laatste pagina — daarvoor moet je eerst weer "Volgende" tikken. */}
+      {/* Begint op de eerste bladzijde van het laatste hoofdstuk: eerst lezen, daarna
+          tekening, daarna keuzes. Terugbladeren kan altijd. */}
       <BookPager
         chapters={story.chapters}
         initialChapterIndex={story.chapters.length - 1}
@@ -72,6 +58,7 @@ export default async function LezenPage({
         heroName={story.hero.name}
         heroEnemy={story.hero.enemy}
         variant="lezen"
+        newSideCharacters={newSideCharacters}
       />
 
       <Link

@@ -138,7 +138,7 @@ export function HeroForm({
     const timeout = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch("/api/characters", { signal: controller.signal });
-      if (!res.ok) throw new Error("laden mislukte");
+      if (!res.ok) throw new Error("Laden is mislukt.");
       const data: { characters: SavedCharacter[] } = await res.json();
       const options = (data.characters ?? []).slice();
       setCharacters(options);
@@ -209,7 +209,7 @@ export function HeroForm({
     setDeletingCharacterId(c.id);
     try {
       const res = await fetch(`/api/characters/${c.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("verwijderen mislukte");
+      if (!res.ok) throw new Error("Verwijderen is mislukt.");
       setCharacters((prev) => prev.filter((x) => x.id !== c.id));
       setSelectedSideCharacterIds((prev) => prev.filter((x) => x !== c.id));
       if (selectedRosterId === c.id) {
@@ -263,7 +263,7 @@ export function HeroForm({
         setError(
           mode === "existing"
             ? "Kies een held, en vul je naam en leeftijd in."
-            : "Vul je naam, leeftijd, heldennaam en hoe je held eruitziet in.",
+            : "Vul je naam, leeftijd, de naam van je held en hoe je held eruitziet in.",
         );
         return;
       }
@@ -328,7 +328,7 @@ export function HeroForm({
         throw new Error(
           typeof data.error === "string"
             ? data.error
-            : "Het verhaal lukte niet. Tik nog eens op de knop.",
+            : "Het verhaal is niet gelukt. Tik nog eens op de knop.",
         );
       }
       const data = await res.json();
@@ -340,7 +340,7 @@ export function HeroForm({
       router.push(`/verhaal/${data.story.id}/lezen`);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Het verhaal lukte niet. Tik nog eens op de knop.",
+        err instanceof Error ? err.message : "Het verhaal is niet gelukt. Tik nog eens op de knop.",
       );
       setSubmitting(false);
     }
@@ -580,7 +580,7 @@ export function HeroForm({
         <StepSection
           badge={3}
           title="Jouw verhaal"
-          subtitle="Vul in wat je wilt. Wat je opschrijft, gebeurt. De rest verzinnen we."
+          subtitle="Vul in wat je wilt. Wat je opschrijft, gebeurt in het verhaal. De rest verzinnen we."
         >
           <Field label="Wat wil de held?">
             <Input
@@ -600,7 +600,7 @@ export function HeroForm({
               className={cn("h-12 rounded-xl text-base sm:h-14 sm:text-lg", INPUT_CARD)}
             />
           </Field>
-          <Field label="Wie gaat mee, en wat kan die?">
+          <Field label="Wie gaat er mee, en wat kan die?">
             <Input
               value={form.companions}
               onChange={(e) => update("companions", e.target.value)}
@@ -613,7 +613,7 @@ export function HeroForm({
             <Textarea
               value={form.freeform}
               onChange={(e) => update("freeform", e.target.value)}
-              placeholder="Schrijf hier alles wat je nog wilt. Mag ook leeg."
+              placeholder="Schrijf hier alles wat je nog wilt. Dit mag ook leeg blijven."
               maxLength={800}
               className={cn("min-h-[120px] rounded-xl text-base sm:min-h-[140px] sm:text-lg", INPUT_CARD)}
             />

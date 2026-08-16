@@ -54,7 +54,7 @@ export function SideCharacterSaver({
     <section className="flex flex-col gap-2 rounded-2xl border-2 border-primary/35 bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-white/10">
       <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-foreground/50 sm:text-sm">
         <Sparkles className="size-3.5" />
-        Bekende nevenpersonages
+        Nieuw in het verhaal
       </p>
       <ul className="flex flex-col gap-2">
         {visible.map((c) => (

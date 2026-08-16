@@ -53,7 +53,7 @@ export function StoryCardMenu({ story }: { story: Story }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: trimmed }),
       });
-      if (!res.ok) throw new Error("opslaan mislukte");
+      if (!res.ok) throw new Error("Opslaan is mislukt.");
       setOpen(false);
       router.refresh();
     } catch {
@@ -252,7 +252,7 @@ export function StoryCardMenu({ story }: { story: Story }) {
                     story.favorite && "fill-amber-400 text-amber-400",
                   )}
                 />
-                {story.favorite ? "Opgeslagen — zet uit" : "Bewaar dit boek"}
+                {story.favorite ? "Niet meer bewaren" : "Bewaar dit boek"}
               </button>
               <button
                 type="button"

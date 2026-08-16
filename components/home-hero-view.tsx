@@ -115,7 +115,7 @@ export function HomeHeroView({
     const appearance = editAppearance.trim();
     const age = Number(editAge);
     if (!name || !appearance) {
-      setEditError("Vul een naam en hoe de held eruitziet in.");
+      setEditError("Vul de naam in en beschrijf hoe de held eruitziet.");
       return;
     }
     if (!Number.isFinite(age) || age < 4 || age > 14) {
@@ -182,7 +182,7 @@ export function HomeHeroView({
 
   async function deleteActiveHero(hero: HeroRosterEntry) {
     if (!hero.savedCharacterId) {
-      setEditError("Deze held zit alleen in boeken. Verwijder de boeken om hem te laten verdwijnen.");
+      setEditError("Deze held staat alleen in je boeken. Verwijder die boeken als je de held wilt laten verdwijnen.");
       return;
     }
     if (

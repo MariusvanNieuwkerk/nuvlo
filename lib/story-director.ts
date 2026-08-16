@@ -30,7 +30,7 @@ import {
   outlineHasContent,
   type ChildStoryOutline,
 } from "@/lib/story-outline";
-import { cleanStoryTitle, formatNameInWorld } from "@/lib/dutch-title";
+import { cleanStoryTitle, formatNameInWorld, polishDutchText } from "@/lib/dutch-title";
 
 // Eén gedeelde bron voor het richtgetal (zie lib/progress.ts) — zo kunnen de pacing/finale-
 // logica hier en de kindvriendelijke voortgangsbalk nooit uit elkaar lopen.
@@ -226,8 +226,11 @@ function assertNonEmptyString(value: unknown, label: string): string {
 function imagePromptOrFallback(imagePrompt: unknown, pages: unknown): string {
   const direct = typeof imagePrompt === "string" ? imagePrompt.trim() : "";
   if (direct) return direct;
-  const firstPage = Array.isArray(pages) && typeof pages[0] === "string" ? pages[0].trim() : "";
-  const snippet = firstPage.slice(0, 240).replace(/\s+/g, " ");
+  const lastPage =
+    Array.isArray(pages) && pages.length > 0 && typeof pages[pages.length - 1] === "string"
+      ? pages[pages.length - 1].trim()
+      : "";
+  const snippet = lastPage.slice(0, 240).replace(/\s+/g, " ");
   return `Een vrolijke, spannende kinderboek-illustratie van deze scène: ${snippet || "de held beleeft een nieuw avontuur."}`;
 }
 
@@ -249,7 +252,7 @@ function cleanStringArray(value: unknown): string[] {
 // op en eisen minstens één niet-lege bladzijde — anders is er niets te lezen en kan de scène
 // beter met een duidelijke fout falen dan als leeg hoofdstuk opgeslagen te worden.
 function parsePages(value: unknown): string[] {
-  const pages = cleanStringArray(value);
+  const pages = cleanStringArray(value).map(polishDutchText).filter(Boolean);
   if (pages.length === 0) {
     throw new Error("Het verhaal kon niet goed gemaakt worden. Probeer het nog eens.");
   }
@@ -379,9 +382,9 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
     userMessage,
   });
 
-  const choices = cleanStringArray(result.choices);
+  const choices = cleanStringArray(result.choices).map(polishDutchText);
   if (choices.length < 2) {
-    throw new Error("Er ging iets mis bij het bedenken van de keuzes. Probeer het nog eens.");
+    throw new Error("Er is iets misgegaan bij het bedenken van de keuzes. Probeer het nog eens.");
   }
 
   const chapter: Chapter = {
@@ -427,7 +430,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
   return {
     title,
     bible: {
-      aktes: aktes.length ? aktes : [`Het avontuur van ${hero.name} in ${hero.world}.`],
+      aktes: aktes.length ? aktes : [`Het avontuur van ${formatNameInWorld(hero.name, hero.world)}.`],
       openThreads: cleanStringArray(result.openThreads),
       worldAppearance,
       worldReferenceImageUrl: null,
@@ -441,7 +444,7 @@ Verzin een verhaalbijbel (5 aktes volgens de heldenreis, toegespitst op deze hel
       portraitUrl: null,
       pendingPortraitUrl: null,
     },
-    summary: assertNonEmptyString(result.summary, "summary"),
+    summary: polishDutchText(assertNonEmptyString(result.summary, "summary")),
     chapter,
     sceneCharacters: resolveSceneCharacters(sideCharacters, cleanStringArray(result.charactersInScene)),
   };
@@ -513,10 +516,10 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
   });
 
   const isFinale = forceFinale || Boolean(result.isFinale);
-  const choices = isFinale ? [] : cleanStringArray(result.choices);
+  const choices = isFinale ? [] : cleanStringArray(result.choices).map(polishDutchText);
 
   if (!isFinale && choices.length < 2) {
-    throw new Error("Er ging iets mis bij het bedenken van de keuzes. Probeer het nog eens.");
+    throw new Error("Er is iets misgegaan bij het bedenken van de keuzes. Probeer het nog eens.");
   }
 
   const chapter: Chapter = {
@@ -561,7 +564,7 @@ Schrijf de volgende scène als ongeveer 3 leesbladzijden (het veld pages, lengte
 
   return {
     chapter,
-    summary: assertNonEmptyString(result.summary, "summary").slice(0, 600),
+    summary: polishDutchText(assertNonEmptyString(result.summary, "summary")).slice(0, 600),
     bible: updatedBible,
     isFinale,
     sceneCharacters: resolveSceneCharacters(sideCharacters, cleanStringArray(result.charactersInScene)),

@@ -55,7 +55,7 @@ export function EditableStoryTitle({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: trimmed }),
       });
-      if (!res.ok) throw new Error("opslaan mislukte");
+      if (!res.ok) throw new Error("Opslaan is mislukt.");
       setEditing(false);
       router.refresh();
     } catch {

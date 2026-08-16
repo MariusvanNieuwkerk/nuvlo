@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error(err);
-    const message = err instanceof Error ? err.message : "Er ging iets mis bij het maken van het verhaal.";
+    const message = err instanceof Error ? err.message : "Er is iets misgegaan bij het maken van het verhaal.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 

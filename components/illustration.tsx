@@ -84,7 +84,7 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
         <>
           <Sparkles className="float-soft relative size-10 text-primary-foreground/90 sm:size-14" />
           <p className="relative max-w-[85%] text-sm text-white/80 sm:max-w-[70%] sm:text-base">
-            Oeps, het plaatje wilde niet komen.
+            Oeps, het plaatje is niet gelukt.
           </p>
           <button
             type="button"
@@ -101,7 +101,7 @@ export function Illustration({ imageUrl, alt, pending, onManualRetry, className 
           <p className="relative max-w-[85%] text-sm text-white/80 sm:max-w-[70%] sm:text-base">
             {onManualRetry
               ? "Dit duurt nu wat langer dan gewoonlijk… lees rustig verder, of probeer het opnieuw."
-              : "De tekening wordt gemaakt… lees rustig verder, hij verschijnt zo vanzelf!"}
+              : "De tekening wordt gemaakt… Lees rustig verder. Die verschijnt zo vanzelf."}
           </p>
           {onManualRetry && (
             <button

@@ -49,7 +49,7 @@ export function PageShell({
               href="/"
               className="rounded-full bg-foreground/10 px-3.5 py-2 font-heading text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/20 sm:px-4 sm:text-base"
             >
-              Home
+              Naar huis
             </Link>
           )}
         </div>

@@ -8,6 +8,7 @@ import { BookPage } from "@/components/book-page";
 import { Illustration } from "@/components/illustration";
 import { ChoiceButtons } from "@/components/choice-buttons";
 import { PageScrubber } from "@/components/page-scrubber";
+import { SideCharacterSaver, type SideCharacterItem } from "@/components/side-character-saver";
 import type { Chapter } from "@/lib/types";
 
 function clamp(n: number, min: number, max: number): number {
@@ -26,12 +27,15 @@ type BookPagerProps = {
   // "lezen": laatste bladzijde toont keuzeknoppen (of de "boek af"-melding).
   // "boek": laatste bladzijde toont de "boek af"-melding, of een link om verder te lezen.
   variant: "lezen" | "boek";
+  // Alleen figuren die in het laatste hoofdstuk voor het eerst opduiken. Worden getoond
+  // ná de tekening, vóór de keuzes — nooit de held, nooit oude bekenden.
+  newSideCharacters?: SideCharacterItem[];
 };
 
 // Eén platte leesbladzijde. Een hoofdstuk bestaat nu uit ~3 bladzijden (chapter.pages), en we
 // bladeren door ALLE bladzijden van alle hoofdstukken achter elkaar — één bladzijde per keer,
-// net als een echt boek. De illustratie hoort bij het hele hoofdstuk en wordt getoond op de
-// EERSTE bladzijde ervan, als de "beloning" die je verdient door verder te lezen/te kiezen.
+// net als een echt boek. Eerst lezen, daarna op de LAATSTE bladzijde de tekening als beloning,
+// en pas daarna de keuzes.
 type ReadingPage = {
   chapterIndex: number;
   chapter: Chapter;
@@ -64,7 +68,7 @@ function buildReadingPages(chapters: Chapter[]): ReadingPage[] {
 
 // Bladert door alle leesbladzijden van het boek, één per keer, met vorige/volgende-knoppen,
 // swipe en pijltjestoetsen. De illustratie van een hoofdstuk verschijnt als beloning op de
-// eerste bladzijde ervan (met een zachte onthul-animatie, zie .reward-reveal in globals.css).
+// laatste bladzijde ervan (met een zachte onthul-animatie, zie .reward-reveal in globals.css).
 // Alles wat onder de bladzijde verschijnt (keuzeknoppen, "boek af"-melding) leeft hier binnen,
 // zodat we geen functies als props vanuit een server component hoeven door te geven (dat mag
 // niet in React Server Components).
@@ -76,6 +80,7 @@ export function BookPager({
   heroName,
   heroEnemy,
   variant,
+  newSideCharacters = [],
 }: BookPagerProps) {
   const router = useRouter();
   const pages = useMemo(() => buildReadingPages(chapters), [chapters]);
@@ -228,8 +233,8 @@ export function BookPager({
 
   // Nadat een keuze is gemaakt, ververst de server-component de data (router.refresh() in
   // ChoiceButtons) — dan komt hier een langere chapters-lijst binnen. We springen dan naar de
-  // EERSTE bladzijde van het nieuwe hoofdstuk, zodat de onthulde beloning-illustratie én de
-  // nieuwe leestekst vanzelf in beeld komen (het kind hoeft niet zelf "Volgende" te zoeken).
+  // EERSTE bladzijde van het nieuwe hoofdstuk, zodat het kind eerst weer leest. De tekening
+  // en de keuzes komen pas op de laatste bladzijde.
   useEffect(() => {
     if (chapters.length > prevChapterCount.current) {
       setIndex(firstPageOfChapter(chapters.length - 1));
@@ -272,10 +277,19 @@ export function BookPager({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* De beloning: de illustratie van dit hoofdstuk, alleen op de eerste bladzijde. De key
-          op hoofdstuk-niveau zorgt dat de onthul-animatie opnieuw speelt telkens als je een
-          (ander) hoofdstuk binnenkomt — bv. na een keuze, of bij terugbladeren. */}
-      {current.isChapterStart && (
+      <BookPage label={`Hoofdstuk ${current.chapter.n}`}>{current.text}</BookPage>
+
+      {/* De gemaakte keuze tonen we onder de LAATSTE bladzijde van een hoofdstuk (daar hoort ze
+          bij), niet onder elke tussenbladzijde. */}
+      {current.isChapterEnd && current.chapter.chosen && (
+        <p className="rounded-xl bg-foreground/5 px-4 py-2.5 text-sm text-foreground/70 sm:text-base">
+          <span className="font-semibold text-foreground/90">Gekozen: </span>
+          {current.chapter.chosen}
+        </p>
+      )}
+
+      {/* Beloning ná het lezen: de tekening hoort bij de laatste bladzijde, vlak vóór de keuzes. */}
+      {current.isChapterEnd && (
         <div
           key={`reward-${current.chapterIndex}-${current.chapter.imageUrl ? "img" : "pending"}`}
           className="reward-reveal mx-auto w-full max-w-2xl"
@@ -298,17 +312,6 @@ export function BookPager({
             alt={`Illustratie van hoofdstuk ${current.chapter.n}`}
           />
         </div>
-      )}
-
-      <BookPage label={`Hoofdstuk ${current.chapter.n}`}>{current.text}</BookPage>
-
-      {/* De gemaakte keuze tonen we onder de LAATSTE bladzijde van een hoofdstuk (daar hoort ze
-          bij), niet onder elke tussenbladzijde. */}
-      {current.isChapterEnd && current.chapter.chosen && (
-        <p className="rounded-xl bg-foreground/5 px-4 py-2.5 text-sm text-foreground/70 sm:text-base">
-          <span className="font-semibold text-foreground/90">Gekozen: </span>
-          {current.chapter.chosen}
-        </p>
       )}
 
       {/* Blader-balk: bewust STICKY onderin het scherm (i.p.v. los onder de tekst) — bij een
@@ -356,6 +359,11 @@ export function BookPager({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Nieuwe figuren pas ná de tekening, nooit de held. Alleen op de levende laatste bladzijde. */}
+      {isLast && variant === "lezen" && newSideCharacters.length > 0 && (
+        <SideCharacterSaver storyId={storyId} sideCharacters={newSideCharacters} />
       )}
 
       {/* Keuzes/finale verschijnen alleen op de allerlaatste bladzijde van het boek — dat is de

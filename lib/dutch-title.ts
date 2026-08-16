@@ -1,4 +1,4 @@
-// Kleine schoonmaak voor titels en "naam in wereld"-zinnen.
+// Schoonmaak voor titels, "naam in wereld"-zinnen en slordige herhaling in AI-tekst.
 // Kinderen typen de wereld soms als "in de bomenstad"; dan mag er niet nóg een "in" bij.
 
 export function formatNameInWorld(name: string, world: string): string {
@@ -10,12 +10,19 @@ export function formatNameInWorld(name: string, world: string): string {
   return `${n} in ${w}`;
 }
 
-export function cleanStoryTitle(title: string): string {
-  return title
-    .trim()
-    .replace(/\s+/g, " ")
+export function polishDutchText(text: string): string {
+  return text
+    .replace(/[ \t]+/g, " ")
     .replace(/\bin in\b/gi, "in")
     .replace(/\bop op\b/gi, "op")
     .replace(/\bvan van\b/gi, "van")
-    .replace(/\bde de\b/gi, "de");
+    .replace(/\bde de\b/gi, "de")
+    .replace(/\bhet het\b/gi, "het")
+    .replace(/\been een\b/gi, "een")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .trim();
+}
+
+export function cleanStoryTitle(title: string): string {
+  return polishDutchText(title);
 }

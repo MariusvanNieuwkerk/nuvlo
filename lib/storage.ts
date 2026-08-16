@@ -18,6 +18,7 @@ import {
   cleanWorldAppearance,
 } from "@/lib/appearance";
 import { cleanChildOutline, outlineHasContent } from "@/lib/story-outline";
+import { cleanStoryTitle } from "@/lib/dutch-title";
 
 // Eén gedeelde service-role client. Wordt lui gemaakt bij de eerste aanroep; als de env-
 // vars ontbreken geven we een duidelijke fout (server-start crasht dan niet, alleen de
@@ -455,7 +456,7 @@ export async function setStoryFavorite(id: string, favorite: boolean): Promise<S
 // titel niet lekker klinkt. Een lege/whitespace-only titel wordt genegeerd (nooit een boek
 // zonder titel op de boekenplank).
 export async function updateStoryTitle(id: string, title: string): Promise<Story | null> {
-  const trimmed = title.trim();
+  const trimmed = cleanStoryTitle(title);
   if (!trimmed) return null;
   const { data, error } = await client()
     .from("stories")
@@ -601,22 +602,16 @@ export async function listCharacters(childId: string = SEED_CHILD.id): Promise<S
   return (data as CharacterRow[]).map(rowToCharacter);
 }
 
-// Voor de "Sla op als personage"-knoppen op de boek-/leespagina: welke held/bijfiguren van DIT
-// verhaal staan al in de bibliotheek? `sourceStoryIds` wordt zowel gezet bij het opslaan vanuit
-// een boek (POST /api/characters) als bij het hergebruiken van een bestaand personage bij het
-// aanmaken van een nieuw verhaal (registerStoryForCharacter) — dus deze check dekt beide
-// gevallen. Zonder deze check kwam "Sla op" telkens terug na een refresh/volgend hoofdstuk,
-// ook als het personage al lang opgeslagen was (de knop onthield dat alleen lokaal in de
-// browser, niet op de server).
+// Welke bijfiguren staan al in de bibliotheek? Dan geen "opslaan"-knop meer, ook niet als
+// ze uit een eerder boek komen en hier opnieuw meedoen.
 export async function getAlreadySavedForStory(
   childId: string,
-  storyId: string,
+  _storyId: string,
 ): Promise<{ heroSaved: boolean; sideNames: Set<string> }> {
   const characters = await listCharacters(childId);
-  const forThisStory = characters.filter((c) => c.sourceStoryIds.includes(storyId));
   return {
-    heroSaved: forThisStory.some((c) => c.kind === "hero"),
-    sideNames: new Set(forThisStory.filter((c) => c.kind === "side").map((c) => c.name.toLowerCase())),
+    heroSaved: characters.some((c) => c.kind === "hero"),
+    sideNames: new Set(characters.filter((c) => c.kind === "side").map((c) => c.name.toLowerCase())),
   };
 }
 

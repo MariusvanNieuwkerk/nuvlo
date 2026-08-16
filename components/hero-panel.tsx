@@ -3,29 +3,25 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, Backpack } from "lucide-react";
-import { SaveCharacterButton } from "@/components/save-character-button";
 
 // Toont de held zoals het kind hem NU kent: het huidige portret, de verzamelde voorwerpen, en
 // — als het portret sinds de vorige sessie veranderd is — één keer een warm "kijk, [held] is
 // veranderd sinds gisteren"-moment. Dat maakt de uitgestelde beloning (het pending-portret dat
 // pas de volgende sessie zichtbaar wordt) eindelijk echt voelbaar: een reden om terug te komen.
+// Geen "opslaan"-knop hier: de held is al de hoofdfiguur. Alleen nieuwe bijfiguren uit het
+// verhaal mogen bewaard worden (zie SideCharacterSaver).
 export function HeroPanel({
   storyId,
   heroName,
   portraitUrl,
   items,
   hasUnseenPortrait,
-  alreadySaved = false,
 }: {
   storyId: string;
   heroName: string;
   portraitUrl: string | null;
   items: string[];
   hasUnseenPortrait: boolean;
-  // True als deze held al in de personagens-bibliotheek staat (bv. hergebruikt, of eerder al
-  // met "Sla op" bewaard) — dan tonen we de knop niet meer. Zonder deze check kwam "Sla op"
-  // steeds terug na een refresh/volgend hoofdstuk, ook als het personage al lang opgeslagen was.
-  alreadySaved?: boolean;
 }) {
   // Lokaal onthouden of we het "veranderd"-moment tonen. We starten met de serverwaarde en
   // laten hem staan zolang het component leeft, ook nadat we de server "gezien" gemeld hebben —
@@ -83,18 +79,9 @@ export function HeroPanel({
               <span className="truncate">Verzameld: {items.join(", ")}</span>
             </p>
           ) : (
-            <p className="text-xs text-foreground/50 sm:text-sm">Nog niks verzameld — lees verder!</p>
+            <p className="text-xs text-foreground/50 sm:text-sm">Nog niets verzameld — lees verder!</p>
           )}
         </div>
-        {storyId && !alreadySaved && (
-          <SaveCharacterButton
-            storyId={storyId}
-            kind="hero"
-            name={heroName}
-            label="Sla op"
-            size="sm"
-          />
-        )}
       </div>
     </div>
   );

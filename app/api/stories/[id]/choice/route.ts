@@ -73,7 +73,7 @@ export async function POST(
         sceneResult = await nextScene({ story, choice, age: readingAge });
       } catch (err) {
         console.error(err);
-        const message = err instanceof Error ? err.message : "Er ging iets mis bij het verhaal.";
+        const message = err instanceof Error ? err.message : "Er is iets misgegaan bij het verhaal.";
         throw new HttpError(message, 502);
       }
 
@@ -113,6 +113,6 @@ export async function POST(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error(err);
-    return NextResponse.json({ error: "Er ging iets mis." }, { status: 500 });
+    return NextResponse.json({ error: "Er is iets misgegaan." }, { status: 500 });
   }
 }
