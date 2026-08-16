@@ -582,7 +582,7 @@ export function HeroForm({
           title="Jouw verhaal"
           subtitle="Vul in wat je wilt. Wat je opschrijft, gebeurt in het verhaal. De rest verzinnen we."
         >
-          <Field label="Wat wil de held?">
+          <Field label={`Wat wil ${form.name.trim() || "de held"}?`}>
             <Input
               value={form.goal}
               onChange={(e) => update("goal", e.target.value)}
