@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   let resolvedAppearance: unknown = appearance;
   let resolvedImageStyleHint = chosenStyle?.imageStyleHint ?? imageStyleHint;
   let resolvedPortraitUrl = portraitUrl ?? null;
-  let resolvedSkills = typeof skills === "string" && skills.trim() ? skills.trim().slice(0, 200) : undefined;
+  const resolvedSkills = typeof skills === "string" && skills.trim() ? skills.trim().slice(0, 200) : undefined;
 
   if (fromStoryId) {
     const story = await getStory(fromStoryId);
