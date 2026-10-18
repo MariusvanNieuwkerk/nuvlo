@@ -1,6 +1,7 @@
 import { PageShell } from "@/components/page-shell";
 import { HeroForm } from "@/components/hero-form";
-import { getDefaultChild, listStories } from "@/lib/storage";
+import { requirePageReader } from "@/lib/reader";
+import { listStories } from "@/lib/storage";
 
 // Server-side lezen van ?held=ID / ?naam=... en doorgeven als prop — zo blijft de
 // client-component eenvoudig (geen useSearchParams/Suspense nodig).
@@ -12,7 +13,8 @@ export default async function NieuwVerhaalPage({
   const { held, naam } = await searchParams;
   const initialCharacterId = held && held.trim().length > 0 ? held.trim() : undefined;
   const initialHeroName = naam && naam.trim().length > 0 ? naam.trim() : undefined;
-  const [child, stories] = await Promise.all([getDefaultChild(), listStories()]);
+  const { child } = await requirePageReader();
+  const stories = await listStories(child.id);
 
   return (
     <PageShell size="narrow">

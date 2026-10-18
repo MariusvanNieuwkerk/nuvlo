@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiReader } from "@/lib/reader";
 import { deleteCharacter, getCharacter, saveCharacter } from "@/lib/storage";
 
 // DELETE /api/characters/[id] → verwijdert een opgeslagen personage uit de bibliotheek.
@@ -6,12 +7,14 @@ import { deleteCharacter, getCharacter, saveCharacter } from "@/lib/storage";
 // bibliotheek-entry weg is. Dat is bewust: een opgeslagen personage is een sjabloon, geen
 // referentie die verhalen nodig hebben om te blijven bestaan.
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
   const { id } = await params;
-  const existing = await getCharacter(id);
+  const existing = await getCharacter(id, reader.child.id);
   if (!existing) {
     return NextResponse.json({ error: "Personage niet gevonden." }, { status: 404 });
   }
-  const ok = await deleteCharacter(id);
+  const ok = await deleteCharacter(id, reader.child.id);
   if (!ok) {
     return NextResponse.json({ error: "Personage niet gevonden." }, { status: 404 });
   }
@@ -23,8 +26,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 // volgend boek. Body: { name?, appearance?, skills? } — appearance mag een string (freeform) of
 // een object zijn. skills mag leeg zijn om het veld te wissen.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
   const { id } = await params;
-  const existing = await getCharacter(id);
+  const existing = await getCharacter(id, reader.child.id);
   if (!existing) {
     return NextResponse.json({ error: "Personage niet gevonden." }, { status: 404 });
   }
@@ -58,7 +63,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const saved = await saveCharacter({
     id: existing.id,
-    childId: existing.childId,
+    childId: reader.child.id,
     name: nextName,
     kind: existing.kind,
     appearance: nextAppearance,

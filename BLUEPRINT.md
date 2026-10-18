@@ -50,11 +50,12 @@ Kernbeloften aan het kind:
 | Tekst-AI | **Anthropic Claude** (`ANTHROPIC_MODEL`, default `claude-sonnet-5`) via **tool-use** | Gestructureerde, altijd-geldige JSON terug (geen losse tekst parsen). |
 | Beeld-AI | **fal.ai**, model **Nano Banana 2** (`fal-ai/nano-banana-2`) | Scène-composer: zelfde personage, nieuwe compositie. Lite is bewust niet de default (zie §6). |
 | Database | **Supabase (Postgres)** | Managed Postgres met Row Level Security, plus `jsonb`-kolommen voor de flexibele verhaalstructuur. |
+| Login | **Supabase Auth** | Alleen de ouder heeft een account (e-mail en wachtwoord). Kinderen hebben geen login. |
 | Hosting | **Vercel** | Automatische deploy vanaf GitHub `main`, serverless functions voor de API-routes. |
 | Versiebeheer | **GitHub** (`MariusvanNieuwkerk/nuvlo`) | — |
 
 Belangrijkste dependencies (`package.json`): `@anthropic-ai/sdk`, `@fal-ai/client`,
-`@supabase/supabase-js`, `next`, `react`/`react-dom` 19, `lucide-react` (iconen),
+`@supabase/supabase-js`, `@supabase/ssr`, `next`, `react`/`react-dom` 19, `lucide-react` (iconen),
 `@base-ui/react` (headless UI-primitives onder `components/ui`).
 
 ## 3. Architectuur op hoofdlijnen
@@ -84,6 +85,11 @@ personage opslaan, een titel aanpassen) via `fetch()` naar de eigen API-routes, 
 `router.refresh()` aan om de server-data opnieuw te tonen. Er is dus geen apart client-side
 state-management (Redux/Zustand) nodig — de server is de bron van waarheid.
 
+Wie er leest, staat niet in de browser als bewijs. De ouder logt in via Supabase Auth.
+Het gekozen kind staat in een HttpOnly-cookie (`nuvlo_child`). Elke pagina en API-route
+controleert daarna in de database of dat kind bij die ouder hoort, en of het boek of
+personage bij dat kind hoort (`lib/reader.ts`, `lib/access.ts`). Zie §13.
+
 ## 4. Datamodel (`lib/types.ts`)
 
 Alles draait om drie kernbegrippen:
@@ -94,6 +100,8 @@ Alles draait om drie kernbegrippen:
   de illustratie (of de status daarvan), en een paar interne velden voor de AI-beeldlogica.
 - **`SavedCharacter`** — een held of nevenpersonage dat losstaat van één specifiek boek, in de
   "personagebibliotheek" van het kind, herbruikbaar over meerdere boeken heen.
+- **`Child`** — een kindprofiel: naam, leesleeftijd, en `familyId` (het ouderaccount).
+  `familyId` leeg betekent: nog van niemand. Dat zijn de boeken van vóór de accounts.
 
 ```
 Story
@@ -195,9 +203,21 @@ de code vasthoudt**, niet uit wat Claude per hoofdstuk opnieuw verzint:
 2. **Geschreven zin is de baas.** `appearance.freeform` (inclusief broek en schoenen) gaat
    letterlijk mee. Losse velden vullen aan. Claude mag een bekende appearance niet herschrijven
    (`lockCharacterRegistry`).
-3. **Vision-check + 1 herkansing** op het leespad. `generateWithVerification` toetst of held én
-   bijfiguren (én de gekozen actie) zichtbaar zijn. Mislukt het, dan één retry. Het verhaal
-   stopt nooit: de beste poging wordt getoond.
+3. **Kenmerk-check, zonder tweede tekening.** `generateWithVerification` toetst of de
+   gevraagde kenmerken zichtbaar zijn en schrijft de uitslag in de log. Een gemiste
+   antenne of een te strenge regel laat het plaatje niet opnieuw tekenen: dat werd
+   dubbel zo duur en herstelde de fout niet. Per scène is er één tekening. Lukt de
+   teken-aanroep technisch niet, dan blijft het verhaal leesbaar zonder extra poging.
+4. **Paspoort-vergelijking, alleen meten.** Na het opslaan beschrijft een goedkoop
+   kijk-model eerst de nieuwe tekening zónder het paspoort, en elk paspoort zónder de
+   nieuwe tekening (`observeSceneIdentity`). Daarna pas vergelijkt het de teksten.
+   Zo kan het de paspoortfiguur niet aanzien voor de nieuwe tekening. Een andere
+   houding, blik of camerahoek is geen fout. Een ander kind of een andere robot wel.
+   De uitslag is `passed`, `failed` of `unknown`. Een storing is `unknown`, niet “goed”.
+   Deze score start geen nieuwe tekening. Het kind wacht er niet op. Logregel:
+   `nuvlo-identity-shadow` (geen namen). Langere test:
+   `scripts/check-identity-ten.ts` schrijft tien scènes plus expres verkeerde figuren
+   naar `output/identity-ten/`. Eerst `blind.html`, daarna `ai.html`.
 
 **Paspoort = heel lijf** (`generatePortrait`, 3:4). Hoofd tot schoenen, rechtop, zachte
 achtergrond. De ronde avatars op home snijden bovenaan bij (`object-top`). Een close-up of
@@ -231,6 +251,16 @@ Lite is bewust niet de default: slechtere identiteit. Daglimiet per kind via
 offline tests. Oude hoofdstuk-plaatjes worden niet herschreven.
 
 ## 7. Belangrijkste user flows
+
+### Inloggen en kiezen wie leest (`app/inloggen`, `app/wie`)
+1. De ouder logt in of maakt een account (e-mail + wachtwoord).
+2. Scherm **Wie gaat er lezen?**: grote naamknoppen. Een nieuw kind is naam + leeftijd.
+3. Daarna ziet dat kind alleen de eigen boeken en personages.
+4. **Iemand anders** gaat terug naar dat scherm. Binnen het gezin mag je wisselen zonder pincode.
+5. **Ouder uitloggen** staat onderaan het keuzescherm.
+
+Een nieuw account krijgt de oude boeken niet. Alleen de beheerder
+(`NUVLO_ADMIN_EMAIL`) ziet op dit scherm de knop om die boeken één keer te koppelen.
 
 ### Een nieuwe held maken (`app/nieuw-personage/page.tsx` → `components/new-character-form.tsx`)
 Home “+” onder Andere helden opent **geen** nieuw verhaal, maar deze pagina:
@@ -286,7 +316,7 @@ Vier tabellen in het `public`-schema, allemaal met **Row Level Security** aan:
 
 | Tabel | Doel | Belangrijke kolommen |
 |---|---|---|
-| `children` | Eén rij per "profiel" (momenteel één gedeeld kind-profiel per installatie) | `id`, `name`, `age` |
+| `children` | Eén rij per kindprofiel, gekoppeld aan één ouder | `id`, `name`, `age`, `family_id` (leeg = nog van niemand) |
 | `stories` | Eén rij per boek | `child_id`, `title`, `hero`/`character`/`bible`/`chapters` (allemaal `jsonb`), `status`, `author_name`, `author_age`, `favorite`, `cover_url` |
 | `characters` | Personagebibliotheek (held of bijfiguur) | `child_id`, `kind` (`hero`/`side`), `appearance` (`jsonb`), `portrait_url`, `image_style_hint`, `skills`, `source_story_ids[]` |
 | `image_usage` | Dagelijkse beeld-quota per kind | `child_id`, `date`, `count` — primary key `(child_id, date)` |
@@ -310,8 +340,19 @@ onmogelijk te maken (twee gelijktijdige requests kunnen nooit dezelfde rij dubbe
   onthulmoment.
 - `register_story_for_character` — audit-trail: welke boeken hebben dit personage gebruikt.
 
-Alle toegang loopt via `lib/storage.ts` (Supabase service-role key, server-only — nooit naar de
-browser) en helpers als `lib/image-usage.ts` en `lib/side-character-images.ts`.
+De service-role key in `lib/storage.ts` omzeilt die regels, dus elke pagina en API-route
+geeft zelf een al gecontroleerd kind-id mee. De database is de tweede grendel, voor als
+iemand de anon-key rechtstreeks gebruikt:
+
+- een ouder ziet alleen kinderen met `family_id =` het eigen account
+- boeken, personages en beeldtelling alleen als ze bij zo'n kind horen
+- een kind zonder gezin is voor niemand zichtbaar
+
+Een directe boek-url van een ander gezin geeft 404. Zonder login geeft een API-route 401.
+Ingelogd maar zonder geldig kind: 403, of het scherm Wie gaat er lezen?
+
+Migratie: `supabase/migrations/20261018143000_family_profiles.sql`.
+Eenmalig koppelen: knop op `/wie` of `scripts/claim-library.ts`. Nooit bij aanmelden.
 
 ## 9. AI-integratie in detail
 
@@ -368,17 +409,16 @@ Merkkleuren volgen het **wolk-boek-logo** (cream + diep teal):
 
 ## 12. Bekende afwegingen & valkuilen (voor toekomstig werk)
 
-- **Eén gedeeld kind-profiel (nu).** `children`-tabel heeft momenteel effectief altijd maar één
-  rij (`getDefaultChild`/`updateDefaultChild` in `lib/storage.ts`) — er is nog geen multi-kind-
-  of login-systeem. `authorName`/`authorAge` per boek bestaan wél al los daarvan (zie §4).
-  Het bedoelde model voor later staat in §13.
+- **Gezin staat live, betalen nog niet.** Ouderaccount + meerdere kindprofielen zijn gebouwd
+  (§13). `authorName`/`authorAge` blijven per boek (zie §4). Een pincode en een abonnement
+  zijn bewust nog niet gebouwd.
 - **iOS Safari is een structurele aandachtspunt.** Cascade layers (`@layer`, Tailwind v4),
   `oklch`-kleuren en `background-attachment: fixed` gaven eerder concrete, zichtbare bugs op
   oudere iPads. `postcss-cascade-layers` en sRGB-fallbacks vangen dit nu op; puur `oklch` zonder
   fallback blijft een risico bij nieuwe kleuren.
 - **Kosten vs. kwaliteit is een steeds terugkerende knop.** Beeldmodel (`IMAGE_MODEL`), of een
-  illustratie hergebruikt wordt (`MAX_CONSECUTIVE_IMAGE_SKIPS`), en de vision-verify-retry
-  (nu 1x op het leespad) zijn plekken waar bewust gekozen is voor kwaliteit. Dat kan bij
+  illustratie hergebruikt wordt (`MAX_CONSECUTIVE_IMAGE_SKIPS`), en de beeldcontrole
+  (één tekening, geen automatische tweede; de paspoortmeting telt alleen) zijn plekken waar bewust gekozen is voor kwaliteit. Dat kan bij
   schaal weer heroverwogen worden. Zie `.env.example`.
 - **`jsonb`-double-encoding is een keer eerder misgegaan.** Bij een RPC-aanroep MOET een
   JS-object direct doorgegeven worden (niet `JSON.stringify`'d) — anders slaat Supabase een
@@ -388,47 +428,41 @@ Merkkleuren volgen het **wolk-boek-logo** (cream + diep teal):
 - **Alle Vercel-functies hebben `maxDuration = 60`** (Hobby-plan-maximum) op elke route die AI
   aanroept — zonder die regel kapt Vercel serverless functions na de standaard ~10s af.
 
-## 13. Accounts, kind-profielen & gezin-abonnement (toekomst)
+## 13. Accounts en kindprofielen
 
-Nog **niet gebouwd**. Dit is het vaste productmodel voor wanneer Nuvlo accounts en betalen krijgt —
-makkelijk voor kinderen, veilig voor ouders, eenvoudig te begrijpen.
+Stap 1 en 2 zijn gebouwd. Betalen en een pincode nog niet.
 
 ### Hoofdregel
 
-**De ouder logt in. Het kind tikt op zichzelf. Het gezin betaalt.**
+**De ouder logt in. Het kind tikt op zichzelf.**
 
-Het kind heeft **geen e-mail** nodig en geen eigen account met wachtwoord.
+Het kind heeft geen e-mail en geen wachtwoord. Binnen hetzelfde gezin mogen kinderen
+bewust van profiel wisselen. Bij normaal gebruik zien ze alleen hun eigen boeken.
 
 ### Rollen
 
 | Wie | Wat |
 |---|---|
-| **Ouder** | Échte login (e-mail/wachtwoord, of Apple/Google). Instellingen, betalen, annuleren, toestemming voor delen. |
-| **Kind-profiel** | Alleen kiezen via portret/naam op het startscherm. Eigen helden, boeken en leesniveau. Geen e-mail. |
-| **Gezin** | Één abonnement (bv. Stripe) dat bij het ouder-account hoort, met ruimte voor meerdere kind-profielen. |
+| **Ouder** | Login met e-mail en wachtwoord (Supabase Auth). |
+| **Kind-profiel** | Naam en leeftijd. Eigen helden, boeken en leesniveau. Geen e-mail. |
+| **Gezin** | Eén ouderaccount, meerdere kinderen. Een abonnement komt later. |
 
-### Wat we bewust níet doen
+### Veiligheid die nu aan staat
 
-- Kind-login met e-mail (veel kinderen hebben die niet; privacy/AVG-risico)
-- Apart account of abonnement per kind (onnodig duur en complex)
-- Apart account per held (helden horen onder een kind-profiel)
-- Alleen “dit apparaat onthouden” zonder ouder-account (breekt bij nieuw apparaat en betalen)
+- HttpOnly-cookie voor het actieve kind. De browser-id alleen is geen bewijs.
+- Elke pagina en API-route controleert ouder én eigenaar van kind, boek en personage.
+- Ook de tekenroute en de routes die een boek openen, een titel wijzigen of een personage wissen.
+- Een boek van een ander gezin is via een directe url niet te openen (404).
+- Oude boeken blijven `family_id` leeg tot de beheerder ze koppelt. Het eerste nieuwe account krijgt ze niet.
+- Geen openbare kindprofielen. Geen pincode. Geen betaalscherm.
 
-### Veiligheid
+### Nog niet gebouwd
 
-- Geen openbare kind-profielen, geen vrije kind-kind-chat
-- Delen alleen met oudertoestemming
-- Zo min mogelijk persoonsgegevens van het kind
-- Optioneel later: ouder-PIN om van kind-profiel te wisselen of instellingen te openen op een gedeelde iPad
+3. Gezin-abonnement (Stripe) op het ouderaccount
+4. Ouder-pincode, voor als wisselen tussen kinderen later op slot moet
 
-### Bouwvolgorde (pas als product dit nodig heeft)
-
-1. Ouder-auth (bijv. Supabase Auth) + één kind-profiel gekoppeld aan dat account  
-2. Meerdere kind-profielen + wissel-scherm (“wie ben jij?”)  
-3. Gezin-abonnement (Stripe) op het ouder-account  
-4. Ouder-PIN / ouder-instellingen  
-
-Tot die tijd blijft de app zoals nu: één gedeeld kind-profiel zonder login (zie §12).
+Plaatjes van oude boeken staan nog op de publieke links van fal.ai. De Nuvlo-pagina's
+geven die links niet meer aan een ander gezin. De kale fal-link zelf is geen Nuvlo-url.
 
 ## 14. Toekomstplan: Curiosity-Driven Reading
 
@@ -487,7 +521,11 @@ en gemaakt"*, niet een oneindige stroom content.
 - *Personage-slot* (`lib/character-identity.ts`): paspoort + geschreven zin voor iedereen;
   geen vorige scène als voorbeeld; gekozen bijfiguren mee in hoofdstuk 1.
 - *Actie-eerst in de tekening*: de keuze moet zichtbaar zijn, niet dezelfde grot-pose.
-- *Vision-check op het leespad* (1 herkansing) voor held, bijfiguren en actie.
+- *Kenmerk-check zonder tweede tekening*: de oude retry kostte een extra plaat zonder
+  de fout te herstellen. De check blijft in de log.
+- *Paspoort-vergelijking als meting* (`lib/ai/identity-report.ts`): elk plaatje eerst
+  apart beschrijven, daarna vergelijken. Een ander kind mag niet als de held worden
+  goedgekeurd. Start nog geen extra tekening. Test: `scripts/check-identity-ten.ts`.
 - *Merk refresh*: cream + teal logo/thema (§10).
 - *Minimale leessignaal-meting (v1)*: twee nieuwe kolommen op `stories`
   (`last_read_at`, `read_session_count`), bijgewerkt via de atomaire RPC `record_story_opened`
@@ -526,7 +564,9 @@ niet verslavende social mechanics. Zie ook §13 voor het account-/gezin-model.
 | Merk / thema / lettertype | `app/globals.css`, `app/layout.tsx`, `public/nuvlo-logo.png`, §10 hierboven |
 | Eenmalige reparatie-/testscripts | `scripts/*.ts` (draaien via `NODE_OPTIONS="--conditions=react-server" npx tsx scripts/...`) |
 | Leessignaal-meting / productrichting | `lib/storage.ts` (`recordStoryOpened`), `app/api/stories/[id]/opened/route.ts`, §14 hierboven |
-| Accounts / gezin / abonnement (toekomst) | §13 hierboven |
+| Wie mag dit boek zien | `lib/access.ts`, `lib/reader.ts`, `middleware.ts`, `app/inloggen`, `app/wie` |
+| Oude boeken één keer koppelen | `lib/claim-library.ts`, `scripts/claim-library.ts`, §13 |
+| Accounts / gezin | §13 hierboven |
 | Lange-termijnvisie (universum) | §16 hierboven |
 
 ## 16. Lange-termijnvisie — The Nuvlo Universe

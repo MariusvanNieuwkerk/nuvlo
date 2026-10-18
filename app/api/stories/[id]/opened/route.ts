@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiReader } from "@/lib/reader";
 import { recordStoryOpened } from "@/lib/storage";
 
 // Minimale leessignaal-meting: de lees-/boekpagina roept dit één keer aan zodra het kind een
@@ -9,7 +10,9 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
   const { id } = await params;
-  await recordStoryOpened(id);
+  await recordStoryOpened(id, reader.child.id);
   return NextResponse.json({ ok: true });
 }

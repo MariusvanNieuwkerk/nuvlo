@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiReader } from "@/lib/reader";
 import { dismissSideCharacter } from "@/lib/storage";
 
 // Drukt één nevenpersonage weg uit de "Sla op als personage"-suggestielijst. Verwacht een
@@ -8,12 +9,14 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const name = body && typeof body === "object" ? (body as { name?: unknown }).name : null;
   if (typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Naam ontbreekt." }, { status: 400 });
   }
-  await dismissSideCharacter(id, name);
+  await dismissSideCharacter(id, reader.child.id, name);
   return NextResponse.json({ ok: true });
 }

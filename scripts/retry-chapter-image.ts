@@ -39,20 +39,20 @@ async function main() {
 
   await loadEnvLocal();
 
-  const { getStory, getDefaultChild, updateChapterImageAtomic } = await import("@/lib/storage");
+  const { getStoryForMaintenance, updateChapterImageAtomic } = await import("@/lib/storage");
   const { generateSceneImage } = await import("@/lib/image");
   const { tryClaimImageQuota, releaseImageQuota } = await import("@/lib/image-usage");
   const { ensureSceneCharacterReferences } = await import("@/lib/side-character-images");
   const { resolveLockedSceneCharacters } = await import("@/lib/character-identity");
 
-  const story = await getStory(storyId);
+  const story = await getStoryForMaintenance(storyId);
   if (!story) throw new Error("Verhaal niet gevonden.");
   const chapter = story.chapters.find((c) => c.n === chapterN);
   if (!chapter) throw new Error(`Hoofdstuk ${chapterN} niet gevonden.`);
 
   console.log(`Hoofdstuk ${chapterN}: imagePending=${chapter.imagePending}, imageUrl=${chapter.imageUrl}, imageReused=${chapter.imageReused}`);
 
-  const child = await getDefaultChild();
+  const child = { id: story.childId };
   const bible = story.bible;
   const character = story.character;
   const sceneCharactersInScene = resolveLockedSceneCharacters(bible.sideCharacters, {
@@ -100,7 +100,7 @@ async function main() {
   }
 
   console.log("Wegschrijven...");
-  const updated = await updateChapterImageAtomic(storyId, chapterN, sceneImageUrl, updatedBible);
+  const updated = await updateChapterImageAtomic(storyId, story.childId, chapterN, sceneImageUrl, updatedBible);
   const updatedChapter = updated?.chapters.find((c) => c.n === chapterN);
   console.log("Klaar. Nieuwe staat:", {
     imagePending: updatedChapter?.imagePending,

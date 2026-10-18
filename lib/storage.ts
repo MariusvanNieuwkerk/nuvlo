@@ -1,7 +1,8 @@
-// Supabase-opslaglaag. Dezelfde publieke API als de oude JSON-file versie, zodat de rest
-// van de app niets merkt van de migratie. Leest/schrijft via de service_role-key server-side
-// (RLS staat aan op alle tabellen, maar service_role omzeilt dat — de app gebruikt geen anon-
-// key, dus dit is veilig zolang dit bestand server-only blijft, zie "server-only" hierboven).
+// Supabase-opslaglaag. Leest/schrijft via de service_role-key server-side.
+// Die sleutel omzeilt de gezinsregels in de database. Daarom moet elke functie die
+// een pagina of API-route aanroept zelf een kind-id meekrijgen dat al gecontroleerd is
+// (lib/reader.ts). Een id uit de browser is nooit genoeg.
+// Functies met "ForMaintenance" zijn alleen voor lokale scripts, niet voor de site.
 //
 // Kritieke concurrentie-patronen (vroeger lib/locks.ts) zijn vervangen door atomaire
 // conditionele UPDATE's in Postgres, die werken op meerdere server-instanties (Vercel
@@ -262,40 +263,111 @@ export function newId(): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Children (één "default" kind voorlopig — geen auth/RLS-policy per kind, KIS).
+// Kinderen. Elk kind hoort bij hooguit één ouderaccount (family_id).
+// family_id null = oude bibliotheek, nog van niemand.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function getDefaultChild(): Promise<Child> {
-  const { data, error } = await client()
-    .from("children")
-    .select("id, name, age")
-    .eq("id", SEED_CHILD.id)
-    .maybeSingle();
-  if (error || !data) {
-    // Fallback: seed-child in-memory. Garandeert dat de app draait ook als de rij
-    // (nog) niet bestaat — de seed-migratie had hem al moeten aanmaken.
-    return SEED_CHILD;
-  }
-  return { id: data.id, name: data.name, age: data.age };
+const MAX_CHILDREN_PER_FAMILY = 8;
+
+type ChildRow = { id: string; name: string; age: number; family_id: string | null };
+
+function rowToChild(row: ChildRow): Child {
+  return { id: row.id, name: row.name, age: row.age, familyId: row.family_id };
 }
 
-// Werkt de laatst gebruikte naam + leeftijd bij op de ene "default child"-rij. Dit is puur
-// een handig laatst-gebruikt-geheugen (bv. voor een toekomstig voor-ingevuld formulier) —
-// de ECHTE bron van waarheid per boek is nu story.authorName/authorAge (zie createStory),
-// niet meer deze globale rij. Zo werkt het ook goed als er meerdere kinderen om de beurt
-// boeken maken: elk boek onthoudt zijn eigen auteur, ook als deze globale rij overschreven
-// wordt door het volgende kind.
-export async function updateDefaultChild(name: string, age: number): Promise<Child> {
-  const sb = client();
-  const { data, error } = await sb
+export async function getChildById(id: string): Promise<Child | null> {
+  const { data, error } = await client()
     .from("children")
-    .upsert({ id: SEED_CHILD.id, name: name.trim() || SEED_CHILD.name, age }, { onConflict: "id" })
-    .select("id, name, age")
-    .single();
-  if (error || !data) {
-    return { ...SEED_CHILD, name: name.trim() || SEED_CHILD.name, age };
+    .select("id, name, age, family_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return rowToChild(data as ChildRow);
+}
+
+export async function listChildrenForFamily(familyId: string): Promise<Child[]> {
+  if (!familyId) return [];
+  const { data, error } = await client()
+    .from("children")
+    .select("id, name, age, family_id")
+    .eq("family_id", familyId)
+    .order("name", { ascending: true });
+  if (error || !data) return [];
+  return (data as ChildRow[]).map(rowToChild);
+}
+
+export async function createChildForFamily(
+  familyId: string,
+  name: string,
+  age: number,
+): Promise<Child> {
+  const trimmed = name.trim().slice(0, 40);
+  if (!familyId || !trimmed) throw new Error("Vul een naam in.");
+  if (age < 4 || age > 14) throw new Error("Leeftijd moet tussen 4 en 14 zijn.");
+  const existing = await listChildrenForFamily(familyId);
+  if (existing.length >= MAX_CHILDREN_PER_FAMILY) {
+    throw new Error("Dit gezin heeft al het maximum aantal kinderen.");
   }
-  return { id: data.id, name: data.name, age: data.age };
+  const { data, error } = await client()
+    .from("children")
+    .insert({ id: newId(), name: trimmed, age, family_id: familyId })
+    .select("id, name, age, family_id")
+    .single();
+  if (error || !data) throw new Error("Kon het kind niet opslaan.");
+  return rowToChild(data as ChildRow);
+}
+
+export async function updateChildProfile(
+  childId: string,
+  familyId: string,
+  input: { name: string; age: number },
+): Promise<Child | null> {
+  const trimmed = input.name.trim().slice(0, 40);
+  if (!trimmed || input.age < 4 || input.age > 14) return null;
+  const { data, error } = await client()
+    .from("children")
+    .update({ name: trimmed, age: input.age })
+    .eq("id", childId)
+    .eq("family_id", familyId)
+    .select("id, name, age, family_id")
+    .maybeSingle();
+  if (error || !data) return null;
+  return rowToChild(data as ChildRow);
+}
+
+// Hangt ALLEEN kinderen zonder gezin aan dit account. Kinderen die al een gezin
+// hebben, blijven daar. Aanmelden mag dit niet aanroepen — alleen lib/claim-library.ts
+// en het lokale beheerscript, ná de e-mailcontrole.
+export async function claimUnassignedChildren(familyId: string): Promise<{
+  children: number;
+  stories: number;
+  characters: number;
+}> {
+  if (!familyId) throw new Error("Geen gezin.");
+  const { data, error } = await client()
+    .from("children")
+    .update({ family_id: familyId })
+    .is("family_id", null)
+    .select("id");
+  if (error) throw new Error("Koppelen is mislukt.");
+  const ids = (data ?? []).map((row) => String((row as { id: string }).id));
+  if (ids.length === 0) return { children: 0, stories: 0, characters: 0 };
+  const [stories, characters] = await Promise.all([
+    client().from("stories").select("id", { count: "exact", head: true }).in("child_id", ids),
+    client().from("characters").select("id", { count: "exact", head: true }).in("child_id", ids),
+  ]);
+  return {
+    children: ids.length,
+    stories: stories.count ?? 0,
+    characters: characters.count ?? 0,
+  };
+}
+
+// Alleen voor lokale scripts die de oorspronkelijke bibliotheek nog moeten kunnen vinden.
+// De website gebruikt dit niet.
+export async function getDefaultChild(): Promise<Child> {
+  const child = await getChildById(SEED_CHILD.id);
+  return child ?? SEED_CHILD;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,10 +420,12 @@ async function persistRevealIfDue(story: Story): Promise<Story> {
   return story;
 }
 
-export async function listStories(): Promise<Story[]> {
+export async function listStories(childId: string): Promise<Story[]> {
+  if (!childId) return [];
   const { data, error } = await client()
     .from("stories")
     .select("*")
+    .eq("child_id", childId)
     .order("favorite", { ascending: false })
     .order("updated_at", { ascending: false });
   if (error || !data) return [];
@@ -368,11 +442,13 @@ export async function listStories(): Promise<Story[]> {
   return stories;
 }
 
-export async function getStory(id: string): Promise<Story | null> {
+export async function getStory(id: string, childId: string): Promise<Story | null> {
+  if (!id || !childId) return null;
   const { data, error } = await client()
     .from("stories")
     .select("*")
     .eq("id", id)
+    .eq("child_id", childId)
     .maybeSingle();
   if (error || !data) return null;
   const story = rowToStory(data as StoryRow);
@@ -383,7 +459,9 @@ export async function getStory(id: string): Promise<Story | null> {
   return revealed;
 }
 
-export async function markPortraitSeen(id: string): Promise<void> {
+export async function markPortraitSeen(id: string, childId: string): Promise<void> {
+  const story = await getStory(id, childId);
+  if (!story) return;
   // Eén atomair jsonb_set op hasUnseenPortrait=false. Idempotent.
   await client().rpc("mark_portrait_seen", { p_story_id: id });
 }
@@ -395,7 +473,9 @@ export async function markPortraitSeen(id: string): Promise<void> {
 // scherm toont dit — puur voor toekomstige productvragen als "komt een kind zelf terug?".
 // Faalt de aanroep (netwerkhikje), dan is dat geen ramp: de aanroeper (book-pager.tsx) vangt
 // dat stil af, dit mag de leeservaring nooit blokkeren of vertragen.
-export async function recordStoryOpened(id: string): Promise<void> {
+export async function recordStoryOpened(id: string, childId: string): Promise<void> {
+  const story = await getStory(id, childId);
+  if (!story) return;
   await client().rpc("record_story_opened", { p_story_id: id });
 }
 
@@ -403,13 +483,16 @@ export async function recordStoryOpened(id: string): Promise<void> {
 // op het juiste element in bible.sideCharacters). Eén atomair jsonb_set op het element met de
 // gegeven naam; verandert NIETS aan de rest van het verhaal, en het personage blijft in de
 // illustraties (die lezen de volledige lijst). Idempotent — meermaals wegdrukken kan geen kwaad.
-export async function dismissSideCharacter(id: string, name: string): Promise<void> {
+export async function dismissSideCharacter(id: string, childId: string, name: string): Promise<void> {
+  const story = await getStory(id, childId);
+  if (!story) return;
   await client().rpc("dismiss_side_character", { p_story_id: id, p_name: name });
 }
 
 export async function createStory(
   story: Omit<Story, "id" | "createdAt" | "updatedAt">,
 ): Promise<Story> {
+  if (!story.childId) throw new Error("Verhaal hoort bij een kind.");
   const now = new Date().toISOString();
   const full: Story = { ...story, id: newId(), createdAt: now, updatedAt: now };
   const { data, error } = await client()
@@ -430,6 +513,7 @@ export async function saveStory(story: Story): Promise<Story> {
     .from("stories")
     .update({ ...storyToRow(story), updated_at: new Date().toISOString() })
     .eq("id", story.id)
+    .eq("child_id", story.childId)
     .select("*")
     .single();
   if (error || !data) {
@@ -438,20 +522,28 @@ export async function saveStory(story: Story): Promise<Story> {
   return rowToStory(data as StoryRow);
 }
 
-export async function deleteStory(id: string): Promise<boolean> {
+export async function deleteStory(id: string, childId: string): Promise<boolean> {
+  if (!childId) return false;
   const { error, count } = await client()
     .from("stories")
     .delete({ count: "exact" })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("child_id", childId);
   if (error) return false;
   return (count ?? 0) > 0;
 }
 
-export async function setStoryFavorite(id: string, favorite: boolean): Promise<Story | null> {
+export async function setStoryFavorite(
+  id: string,
+  childId: string,
+  favorite: boolean,
+): Promise<Story | null> {
+  if (!childId) return null;
   const { data, error } = await client()
     .from("stories")
     .update({ favorite, updated_at: new Date().toISOString() })
     .eq("id", id)
+    .eq("child_id", childId)
     .select("*")
     .maybeSingle();
   if (error || !data) return null;
@@ -461,13 +553,18 @@ export async function setStoryFavorite(id: string, favorite: boolean): Promise<S
 // Laat het kind de titel van een boek achteraf aanpassen — bv. omdat Claude's verzonnen
 // titel niet lekker klinkt. Een lege/whitespace-only titel wordt genegeerd (nooit een boek
 // zonder titel op de boekenplank).
-export async function updateStoryTitle(id: string, title: string): Promise<Story | null> {
+export async function updateStoryTitle(
+  id: string,
+  childId: string,
+  title: string,
+): Promise<Story | null> {
   const trimmed = cleanStoryTitle(title);
-  if (!trimmed) return null;
+  if (!trimmed || !childId) return null;
   const { data, error } = await client()
     .from("stories")
     .update({ title: trimmed, updated_at: new Date().toISOString() })
     .eq("id", id)
+    .eq("child_id", childId)
     .select("*")
     .maybeSingle();
   if (error || !data) return null;
@@ -491,12 +588,13 @@ export async function updateStoryTitle(id: string, title: string): Promise<Story
 // faalde (0 rijen) is `updated=false` en bevat `story` de meest-vers gelezen staat.
 export async function updateStoryIfLastChapterOpen(
   id: string,
+  childId: string,
   fromChapterN: number | null,
   mutator: (current: Story) => Story | Promise<Story>,
 ): Promise<{ story: Story | null; updated: boolean }> {
   // Lees de verse staat voor de mutator (de mutator kan zware AI-logica bevatten en moet
   // op de Èchte laatste staat werken, niet op een verouderde kopie).
-  const current = await getStory(id);
+  const current = await getStory(id, childId);
   if (!current) return { story: null, updated: false };
 
   const lastChapter = current.chapters[current.chapters.length - 1];
@@ -508,6 +606,7 @@ export async function updateStoryIfLastChapterOpen(
   }
 
   const mutated = await mutator(current);
+  if (mutated.childId !== childId) return { story: null, updated: false };
 
   // Atomaire conditionele UPDATE: alleen schrijven als het laatste hoofdstuk intussen
   // nog steeds geen chosen heeft (i.e. niemand anders was ons voor).
@@ -535,15 +634,19 @@ export async function updateStoryIfLastChapterOpen(
 
   if (!data || data.length === 0) {
     // 0 rijen: iemand anders was net voor. Geef de huidige staat terug.
-    const fresh = await getStory(id);
+    const fresh = await getStory(id, childId);
     return { story: fresh, updated: false };
   }
 
   // RPC geeft TABLE(out_row jsonb) terug — data[0].out_row is de verse rij als jsonb.
   const outRow = (data as { out_row: StoryRow }[])[0]?.out_row;
-  if (outRow) return { story: rowToStory(outRow), updated: true };
+  if (outRow) {
+    const story = rowToStory(outRow);
+    if (story.childId !== childId) return { story: null, updated: false };
+    return { story, updated: true };
+  }
   // Onverwachte vorm: herlees.
-  const fresh = await getStory(id);
+  const fresh = await getStory(id, childId);
   return { story: fresh, updated: true };
 }
 
@@ -554,6 +657,7 @@ export async function updateStoryIfLastChapterOpen(
 // sneller en is de staat al correct).
 export async function updateChapterImageAtomic(
   id: string,
+  childId: string,
   n: number,
   imageUrl: string | null,
   // Optioneel: alleen meegeven als er tijdens deze aanroep ook nieuwe nevenpersonage-
@@ -562,6 +666,8 @@ export async function updateChapterImageAtomic(
   // gaat als een andere instantie tegelijk iets anders aan het verhaal schrijft.
   bible?: StoryBible,
 ): Promise<Story | null> {
+  const owned = await getStory(id, childId);
+  if (!owned) return null;
   const { data, error } = await client().rpc("update_chapter_image_atomic", {
     p_story_id: id,
     p_chapter_n: n,
@@ -570,18 +676,26 @@ export async function updateChapterImageAtomic(
   });
   if (error || !data || data.length === 0) {
     // Of de RPC faalde, of 0 rijen (al niet meer pending). Herlees de huidige staat.
-    return await getStory(id);
+    return await getStory(id, childId);
   }
   const outRow = (data as { out_row: StoryRow }[])[0]?.out_row;
-  if (outRow) return rowToStory(outRow);
-  return await getStory(id);
+  if (outRow) {
+    const story = rowToStory(outRow);
+    if (story.childId !== childId) return null;
+    return story;
+  }
+  return await getStory(id, childId);
 }
 
 // Zet een mislukte scène opnieuw op "wordt getekend" zodat fase B nog eens mag lopen.
 // Alleen als er nog GEEN imageUrl is — een bestaande tekening nooit opnieuw laten betalen.
 // Gebruikt door de "Probeer opnieuw"-knop op de lege-plaatjes-placeholder.
-export async function reopenChapterImagePending(id: string, n: number): Promise<Story | null> {
-  const story = await getStory(id);
+export async function reopenChapterImagePending(
+  id: string,
+  childId: string,
+  n: number,
+): Promise<Story | null> {
+  const story = await getStory(id, childId);
   if (!story) return null;
   const idx = story.chapters.findIndex((c) => c.n === n);
   if (idx === -1) return null;
@@ -597,7 +711,8 @@ export async function reopenChapterImagePending(id: string, n: number): Promise<
 // Personages-bibliotheek (characters-tabel).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function listCharacters(childId: string = SEED_CHILD.id): Promise<SavedCharacter[]> {
+export async function listCharacters(childId: string): Promise<SavedCharacter[]> {
+  if (!childId) return [];
   const { data, error } = await client()
     .from("characters")
     .select("*")
@@ -621,11 +736,13 @@ export async function getAlreadySavedForStory(
   };
 }
 
-export async function getCharacter(id: string): Promise<SavedCharacter | null> {
+export async function getCharacter(id: string, childId: string): Promise<SavedCharacter | null> {
+  if (!id || !childId) return null;
   const { data, error } = await client()
     .from("characters")
     .select("*")
     .eq("id", id)
+    .eq("child_id", childId)
     .maybeSingle();
   if (error || !data) return null;
   return rowToCharacter(data as CharacterRow);
@@ -647,10 +764,21 @@ export type SaveCharacterInput = {
 // Upsert op id. Atomaar in Postgres (één INSERT ... ON CONFLICT DO UPDATE) — geen lock
 // nodig, twee gelijktijdige saves van hetzelfde id leiden niet tot twee rijen.
 export async function saveCharacter(input: SaveCharacterInput & { id?: string }): Promise<SavedCharacter> {
+  if (!input.childId) throw new Error("Personage hoort bij een kind.");
   const id = input.id ?? newId();
+  if (input.id) {
+    const { data: existing } = await client()
+      .from("characters")
+      .select("child_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (existing && existing.child_id !== input.childId) {
+      throw new Error("Personage hoort bij een ander profiel.");
+    }
+  }
   const base: SavedCharacter = {
     id,
-    childId: input.childId ?? SEED_CHILD.id,
+    childId: input.childId,
     name: input.name.trim(),
     kind: input.kind,
     appearance: cleanCharacterAppearance(input.appearance, ""),
@@ -678,18 +806,27 @@ export async function saveCharacter(input: SaveCharacterInput & { id?: string })
 
 // Atomaire array-append: voegt storyId toe aan source_story_ids als het er nog niet in
 // staat (idempotent). Werkt op meerdere instanties — geen read-modify-write race.
-export async function registerStoryForCharacter(characterId: string, storyId: string): Promise<void> {
+export async function registerStoryForCharacter(
+  characterId: string,
+  storyId: string,
+  childId: string,
+): Promise<void> {
+  const character = await getCharacter(characterId, childId);
+  const story = await getStory(storyId, childId);
+  if (!character || !story) return;
   await client().rpc("register_story_for_character", {
     p_character_id: characterId,
     p_story_id: storyId,
   });
 }
 
-export async function deleteCharacter(id: string): Promise<boolean> {
+export async function deleteCharacter(id: string, childId: string): Promise<boolean> {
+  if (!childId) return false;
   const { error, count } = await client()
     .from("characters")
     .delete({ count: "exact" })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("child_id", childId);
   if (error) return false;
   return (count ?? 0) > 0;
 }
@@ -698,4 +835,26 @@ export async function deleteCharacter(id: string): Promise<boolean> {
 // Backward-compat: SEED_STORIES wordt nog steeds geïmporteerd door de migratie/seed-
 // code (zie scripts/seed-supabase.ts). Houd de export hier beschikbaar.
 // ─────────────────────────────────────────────────────────────────────────────
+// Alle verhalen of personages, ongeacht het gezin. Alleen lokale onderhoudsscripts.
+export async function listAllStoriesForMaintenance(): Promise<Story[]> {
+  const { data, error } = await client()
+    .from("stories")
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (error || !data) return [];
+  return (data as StoryRow[]).map(rowToStory);
+}
+
+export async function getStoryForMaintenance(id: string): Promise<Story | null> {
+  const { data, error } = await client().from("stories").select("*").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  return rowToStory(data as StoryRow);
+}
+
+export async function listAllCharactersForMaintenance(): Promise<SavedCharacter[]> {
+  const { data, error } = await client().from("characters").select("*").order("name", { ascending: true });
+  if (error || !data) return [];
+  return (data as CharacterRow[]).map(rowToCharacter);
+}
+
 export { SEED_STORIES, SEED_CHILD };

@@ -33,10 +33,10 @@ async function loadEnvLocal() {
 async function main() {
   await loadEnvLocal();
 
-  const { listCharacters, saveCharacter } = await import("@/lib/storage");
+  const { listAllCharactersForMaintenance, saveCharacter } = await import("@/lib/storage");
   const { generateSideCharacterReferenceImage } = await import("@/lib/image");
 
-  const characters = await listCharacters();
+  const characters = await listAllCharactersForMaintenance();
   const targets = characters.filter((c) => c.kind === "side" && !c.portraitUrl);
 
   if (targets.length === 0) {

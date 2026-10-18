@@ -28,15 +28,16 @@ async function main() {
   await loadEnvLocal();
 
   const { generatePortrait } = await import("@/lib/image");
-  const { listCharacters, saveCharacter, listStories, saveStory } = await import("@/lib/storage");
+  const { listAllCharactersForMaintenance, saveCharacter, listAllStoriesForMaintenance, saveStory } =
+    await import("@/lib/storage");
 
-  const heroes = (await listCharacters()).filter((c) => c.kind === "hero");
+  const heroes = (await listAllCharactersForMaintenance()).filter((c) => c.kind === "hero");
   if (heroes.length === 0) {
     console.error("Geen opgeslagen helden gevonden.");
     process.exit(1);
   }
 
-  const stories = await listStories();
+  const stories = await listAllStoriesForMaintenance();
   const oldToNew = new Map<string, string>();
 
   for (const hero of heroes) {

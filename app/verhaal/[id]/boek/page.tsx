@@ -3,6 +3,7 @@ import { PageShell } from "@/components/page-shell";
 import { BookPager } from "@/components/book-pager";
 import { HeroPanel } from "@/components/hero-panel";
 import { EditableStoryTitle } from "@/components/editable-story-title";
+import { requirePageReader } from "@/lib/reader";
 import { getStory } from "@/lib/storage";
 
 // Altijd vers renderen: het verhaal groeit met elke keuze, dus nooit uit de cache tonen.
@@ -14,7 +15,8 @@ export default async function MijnBoekPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const story = await getStory(id);
+  const { child } = await requirePageReader();
+  const story = await getStory(id, child.id);
   if (!story) notFound();
 
   return (

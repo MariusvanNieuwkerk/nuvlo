@@ -14,10 +14,12 @@ const MAX_WIDTH = {
 export function PageShell({
   children,
   showHomeLink = true,
+  showReaderSwitch = true,
   size = "wide",
 }: {
   children: ReactNode;
   showHomeLink?: boolean;
+  showReaderSwitch?: boolean;
   size?: keyof typeof MAX_WIDTH;
 }) {
   return (
@@ -28,22 +30,34 @@ export function PageShell({
       )}
     >
       <header className="flex items-center justify-between py-5 sm:py-7">
-        {/* Logo was 32-36px — te klein om als "merk" te herkennen. Ruim verdubbeld. */}
-        <Link href="/" className="flex items-center gap-2.5 sm:gap-3">
+        <Link href="/" className="flex items-center">
           <Image
             src="/nuvlo-logo.png"
             alt="Nuvlo"
-            width={112}
-            height={80}
-            className="h-12 w-auto object-contain sm:h-14"
+            width={865}
+            height={271}
+            className="h-12 w-auto object-contain dark:hidden sm:h-14"
             priority
           />
-          <span className="font-heading text-2xl font-extrabold text-foreground sm:text-3xl">
-            Nuvlo
-          </span>
+          <Image
+            src="/nuvlo-logo-night.png"
+            alt="Nuvlo"
+            width={865}
+            height={271}
+            className="hidden h-12 w-auto object-contain dark:block sm:h-14"
+            priority
+          />
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
+          {showReaderSwitch && (
+            <Link
+              href="/wie"
+              className="rounded-full bg-primary px-3.5 py-2 font-heading text-sm font-semibold text-primary-foreground sm:px-4 sm:text-base"
+            >
+              Iemand anders
+            </Link>
+          )}
           {showHomeLink && (
             <Link
               href="/"

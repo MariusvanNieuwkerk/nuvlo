@@ -1,6 +1,7 @@
 import { PageShell } from "@/components/page-shell";
 import { HomeHeroView } from "@/components/home-hero-view";
-import { getDefaultChild, listCharacters, listStories } from "@/lib/storage";
+import { requirePageReader } from "@/lib/reader";
+import { listCharacters, listStories } from "@/lib/storage";
 
 // Altijd vers renderen: de home leest live uit Supabase. Zonder dit prerendert
 // Next de pagina bij de build, waardoor verwijderde/nieuwe boeken pas na een redeploy
@@ -11,10 +12,10 @@ export const dynamic = "force-dynamic";
 // en een simpele wissel naar andere helden. Beheer (bewerken/verwijderen) gebeurt
 // vanaf het grote held-portret.
 export default async function HomePage() {
-  const [stories, characters, child] = await Promise.all([
-    listStories(),
-    listCharacters(),
-    getDefaultChild(),
+  const { child } = await requirePageReader();
+  const [stories, characters] = await Promise.all([
+    listStories(child.id),
+    listCharacters(child.id),
   ]);
 
   return (

@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
+import { requireApiReader } from "@/lib/reader";
 import { deleteStory, setStoryFavorite, updateStoryTitle } from "@/lib/storage";
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
   const { id } = await params;
-  const removed = await deleteStory(id);
+  const removed = await deleteStory(id, reader.child.id);
   if (!removed) {
     return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
   }
@@ -17,6 +20,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const { favorite, title } = (body as { favorite?: unknown; title?: unknown } | null) ?? {};
@@ -29,13 +34,13 @@ export async function PATCH(
   // elkaar niet, dus we passen alleen toe wat er echt meegegeven is.
   let story = null;
   if (typeof favorite === "boolean") {
-    story = await setStoryFavorite(id, favorite);
+    story = await setStoryFavorite(id, reader.child.id, favorite);
   }
   if (typeof title === "string") {
     if (!title.trim()) {
       return NextResponse.json({ error: "Geef het boek een titel." }, { status: 400 });
     }
-    story = await updateStoryTitle(id, title);
+    story = await updateStoryTitle(id, reader.child.id, title);
   }
 
   if (!story) {

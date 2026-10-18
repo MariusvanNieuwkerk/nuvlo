@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { NextResponse } from "next/server";
-import { getCharacter, getDefaultChild, listCharacters, saveCharacter } from "@/lib/storage";
+import { requireApiReader } from "@/lib/reader";
+import { getCharacter, listCharacters, saveCharacter } from "@/lib/storage";
 import { getStory } from "@/lib/storage";
 import { generatePortrait, generateSideCharacterReferenceImage } from "@/lib/image";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
@@ -16,8 +17,9 @@ export const maxDuration = 60;
 // ingelogde (default) kind. Wordt gebruikt door de "Mijn personages"-sectie op Home en door
 // het held-formulier (kies een bestaande held).
 export async function GET() {
-  const child = await getDefaultChild();
-  const characters = await listCharacters(child.id);
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
+  const characters = await listCharacters(reader.child.id);
   return NextResponse.json({ characters });
 }
 
@@ -61,7 +63,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ongeldig soort personage." }, { status: 400 });
   }
 
-  const child = await getDefaultChild();
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
+  const { child } = reader;
 
   // Bronverhaal: kopiëren van appearance + portret + styleHint (de kostenefficiënte route).
   const chosenStyle = getImageStyle(styleId);
@@ -71,7 +75,7 @@ export async function POST(request: Request) {
   const resolvedSkills = typeof skills === "string" && skills.trim() ? skills.trim().slice(0, 200) : undefined;
 
   if (fromStoryId) {
-    const story = await getStory(fromStoryId);
+    const story = await getStory(fromStoryId, child.id);
     if (!story) {
       return NextResponse.json({ error: "Bronverhaal niet gevonden." }, { status: 404 });
     }
@@ -141,7 +145,7 @@ export async function POST(request: Request) {
     after(async () => {
       try {
         if (!(await tryClaimImageQuota(childId))) return;
-        const latest = await getCharacter(heroId);
+        const latest = await getCharacter(heroId, childId);
         if (!latest || latest.portraitUrl) {
           await releaseImageQuota(childId);
           return;

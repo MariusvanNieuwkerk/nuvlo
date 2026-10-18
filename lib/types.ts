@@ -24,6 +24,8 @@ export type Child = {
   id: string;
   name: string;
   age: number; // stuurt het leesniveau (AVI-achtig)
+  // null = nog niet gekoppeld. Zo'n profiel hoort bij geen enkel ouderaccount.
+  familyId: string | null;
 };
 
 export type Hero = {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDefaultChild, updateStoryIfLastChapterOpen } from "@/lib/storage";
+import { requireApiReader } from "@/lib/reader";
+import { updateStoryIfLastChapterOpen } from "@/lib/storage";
 import { nextScene, shouldGenerateFreshImage } from "@/lib/story-director";
 
 // Fase A genereert de nieuwe hoofdstuktekst met het taalmodel (Anthropic). Dat kan 10–20s duren;
@@ -27,6 +28,8 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   // Kan een van de aangeboden opties zijn, of een eigen getypt idee ("Verzin het zelf!") —
@@ -50,7 +53,7 @@ export async function POST(
   // serverless met meerdere instanties — twee gelijktijdige keuzes voor hetzelfde verhaal
   // leiden tot precies één nieuw hoofdstuk; de tweede aanvraag krijgt de verse staat terug.
   try {
-    const result = await updateStoryIfLastChapterOpen(id, fromChapterN, async (story) => {
+    const result = await updateStoryIfLastChapterOpen(id, reader.child.id, fromChapterN, async (story) => {
       if (story.status === "klaar") {
         throw new HttpError("Dit boek is al af.", 400);
       }
@@ -66,7 +69,7 @@ export async function POST(
       // "laatst gebruikte" leeftijd, want dat kan een ander kind zijn als er om de beurt
       // boeken gemaakt worden. Terugval op de globale rij alleen voor oudere boeken van
       // vóór authorAge bestond.
-      const readingAge = story.authorAge ?? (await getDefaultChild()).age;
+      const readingAge = story.authorAge ?? reader.child.age;
 
       let sceneResult;
       try {

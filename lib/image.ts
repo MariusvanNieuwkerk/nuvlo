@@ -15,13 +15,11 @@
 //    hieronder ALLE kenmerken apart en verplicht opsommen in de prompt — niets kan meer
 //    stilletjes verdwijnen in één lange zin.
 //
-// 2) GENEREREN + VERIFIËREN (zie lib/ai/vision-verify.ts) — elke generatie is niet langer
-//    fire-and-forget. Na het genereren checken we met een snel vision-model of de
-//    harde-eisen-checklist (accessoires, het kenmerkende detail) écht op de afbeelding
-//    staat. Zo niet, dan proberen we het tot 2x opnieuw met een aangescherpte prompt die
-//    precies benoemt wat er de vorige keer ontbrak. Dit is de feedback-loop die er eerst
-//    niet was — zonder deze loop bleef elke modelwissel een gok, en kwam een regressie
-//    alleen via een klacht weken later aan het licht.
+// 2) GENEREREN + VERIFIËREN (zie lib/ai/vision-verify.ts) — na het tekenen checkt een
+//    snel vision-model of de gevraagde kenmerken erop staan. De uitslag wordt gelogd.
+//    Een tweede tekening op basis van die check staat uit: die maakte scènes dubbel zo
+//    duur zonder de fout te herstellen. Een mislukte teken-aanroep zelf (geen URL)
+//    blijft één poging, zonder extra rondje.
 //
 // BEELDCONSISTENTIE — referentiebeelden (KOSTEN-AFWEGING):
 // Puur tekst-naar-plaatje (elke illustratie los) is niet betrouwbaar genoeg: hetzelfde
@@ -122,12 +120,10 @@ function buildFormatInput(model: string, aspectRatio: FalAspectRatio): Record<st
   return { image_size: IMAGE_SIZE_BY_RATIO[aspectRatio], num_images: 1 };
 }
 
-// Maximaal aantal HERgeneraties na een mislukte verificatie (dus max. 2 pogingen in totaal).
-// Bewust laag gehouden: dit zit op het kritieke pad van de achtergrond-illustratie (fase B),
-// en elke extra poging is een volledige fal.ai-generatie + vision-check erbij — dat tikt snel
-// aan tot minuten. Eén herkansing vangt een eenmalige misser op; snelheid gaat nu voor een
-// laatste procentje trefzekerheid (het verhaal wordt hier sowieso nooit door geblokkeerd).
-const MAX_VERIFICATION_RETRIES = 1;
+// Tweede tekening op basis van de kenmerk-check staat uit. De check zelf blijft,
+// zodat de log laat zien wat er miste. Een technische misser (geen plaatje terug)
+// krijgt ook geen extra poging: dat was al zo.
+const MAX_VERIFICATION_RETRIES = 0;
 
 // Beeldmodellen volgen een expliciete, Engelse kunststijl-term veel sterker dan een
 // Nederlandse omschrijving als "blokkerig" — die wordt anders al snel platgewalst tot een
@@ -171,10 +167,15 @@ function ensureConfigured(): boolean {
 }
 
 // Resultaat van een generatiepoging: naast de URL geven we ook mee of de harde-eisen-
-// checklist daadwerkelijk bevestigd is. `verified` is puur informatief/debugbaar (zie
-// CharacterSheet.portraitVerificationFailed / Chapter.imageVerificationFailed) — we
-// blokkeren een verhaal NOOIT op een mislukte verificatie, de beste poging wordt gebruikt.
-export type ImageResult = { url: string | null; verified: boolean };
+// checklist daadwerkelijk bevestigd is. `verified` gaat alleen over die kenmerken
+// (petje, kleding), niet over "zelfde gezicht". Die vergelijking met het paspoort
+// wordt apart gelogd en start hier geen extra tekening.
+// `attempts` is het aantal tekenpogingen (1 of 2).
+export type ImageResult = { url: string | null; verified: boolean; attempts: number };
+
+export function currentImageModels(): { textToImage: string; edit: string } {
+  return { textToImage: T2I_MODEL, edit: EDIT_MODEL || T2I_MODEL };
+}
 
 async function requestImage(
   prompt: string,
@@ -243,37 +244,26 @@ async function requestImageFromReference(
   }
 }
 
-// De generatie-en-verificatie-loop: na het tekenen checkt een vision-model of de figuren
-// nog hetzelfde uitzien. Zo niet: één herkansing. Zit weer op het leespad — kwaliteit
-// van herkenbare personages weegt zwaarder dan de extra call.
+// Eén tekening, daarna de kenmerk-check. De uitslag wordt gelogd en bewaard op het
+// resultaat. Er volgt geen tweede tekening. Een lege URL (technische misser) stopt
+// meteen, net als eerder. De paspoort-vergelijking zit hier niet in.
 async function generateWithVerification(
   requiredAttributes: string[],
   subjectLabel: string,
   attempt: (missingFromLastTry: string[]) => Promise<string | null>,
 ): Promise<ImageResult> {
-  let lastUrl: string | null = null;
-  let missing: string[] = [];
+  const url = await attempt([]);
+  if (!url) return { url: null, verified: false, attempts: 1 };
+  if (requiredAttributes.length === 0) return { url, verified: true, attempts: 1 };
 
-  for (let tryN = 0; tryN <= MAX_VERIFICATION_RETRIES; tryN++) {
-    const url = await attempt(missing);
-    if (!url) return { url: lastUrl, verified: false };
-    lastUrl = url;
+  const check = await verifyImageAttributes(url, requiredAttributes, subjectLabel);
+  if (check.attributesPresent) return { url, verified: true, attempts: 1 };
 
-    if (requiredAttributes.length === 0) return { url, verified: true };
-
-    const check = await verifyImageAttributes(url, requiredAttributes, subjectLabel);
-    if (check.attributesPresent) return { url, verified: true };
-
-    missing = check.missing.length ? check.missing : requiredAttributes;
-    console.warn(
-      `Beeldverificatie: kenmerken ontbraken bij "${subjectLabel}" (poging ${tryN + 1}/${MAX_VERIFICATION_RETRIES + 1}): ${missing.join(", ")}`,
-    );
-  }
-
+  const missing = check.missing.length ? check.missing : requiredAttributes;
   console.warn(
-    `Beeldverificatie: na ${MAX_VERIFICATION_RETRIES + 1} pogingen nog steeds ontbrekende kenmerken bij "${subjectLabel}" — beste poging wordt toch gebruikt (verhaal wordt hier nooit door geblokkeerd).`,
+    `Beeldverificatie: kenmerken ontbraken bij "${subjectLabel}" (geen tweede tekening, retries=${MAX_VERIFICATION_RETRIES}): ${missing.join(", ")}`,
   );
-  return { url: lastUrl, verified: false };
+  return { url, verified: false, attempts: 1 };
 }
 
 function reinforcementNote(missing: string[]): string {
@@ -519,5 +509,5 @@ export async function generateCoverImage(
     referenceUrls.length > 0
       ? await requestImageFromReference(prompt, referenceUrls, styleHint, "3:4")
       : await requestImage(prompt, styleHint, "3:4");
-  return { url, verified: true };
+  return { url, verified: true, attempts: 1 };
 }

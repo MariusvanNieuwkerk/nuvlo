@@ -1,7 +1,9 @@
 import { PageShell } from "@/components/page-shell";
 import { NewCharacterForm } from "@/components/new-character-form";
+import { requirePageReader } from "@/lib/reader";
 
-export default function NieuwPersonagePage() {
+export default async function NieuwPersonagePage() {
+  await requirePageReader();
   return (
     <PageShell size="narrow">
       <div className="flex flex-col gap-1 sm:gap-2">

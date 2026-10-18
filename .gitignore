@@ -44,3 +44,6 @@ next-env.d.ts
 # lokale opslag (fase 1+4) — data/stories.json en data/image-usage.json worden
 # automatisch aangemaakt
 /data/
+
+# lokale uitkomst van de identiteitstest (plaatjes + blinde kijkpagina)
+/output/

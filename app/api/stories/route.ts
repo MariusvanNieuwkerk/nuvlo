@@ -1,14 +1,13 @@
 import { after } from "next/server";
 import { NextResponse } from "next/server";
+import { requireApiReader } from "@/lib/reader";
 import {
   createStory,
   getCharacter,
-  getDefaultChild,
   getStory,
   registerStoryForCharacter,
   saveCharacter,
   saveStory,
-  updateDefaultChild,
 } from "@/lib/storage";
 import { startStory } from "@/lib/story-director";
 import { generatePortrait } from "@/lib/image";
@@ -32,6 +31,10 @@ const VALID_GENRES: Genre[] = [
 ];
 
 export async function POST(request: Request) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
+  const { child } = reader;
+
   const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object") {
@@ -78,8 +81,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const child = await getDefaultChild();
-  await updateDefaultChild(authorName, age);
+  // De naam en leeftijd op het formulier horen bij dit boek.
+  // Het kindprofiel zelf wordt hier niet hernoemd, en oude boeken worden niet gekoppeld.
 
   // Hergebruik-route: een bestaande held uit de personagens-bibliotheek. We laden het
   // opgeslagen personage en geven appearance + styleHint mee aan startStory — dan verzint
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
   // wat een fal-call scheelt (het tegoed is krap).
   let existingCharacter: Awaited<ReturnType<typeof getCharacter>> = null;
   if (existingCharacterId) {
-    existingCharacter = await getCharacter(existingCharacterId);
+    existingCharacter = await getCharacter(existingCharacterId, child.id);
     if (!existingCharacter) {
       return NextResponse.json(
         { error: "Gekozen personage niet gevonden." },
@@ -116,7 +119,7 @@ export async function POST(request: Request) {
     new Set((existingSideCharacterIds ?? []).filter((id) => id && id !== existingCharacterId)),
   );
   const existingSideSavedCharacters = (
-    await Promise.all(sideCharacterIds.map((id) => getCharacter(id)))
+    await Promise.all(sideCharacterIds.map((id) => getCharacter(id, child.id)))
   ).filter((c): c is NonNullable<typeof c> => Boolean(c));
   // Stijl hoort bij de held: bestaande held → bibliotheekstijl. Nieuwe held → gekozen tegel.
   const chosenStyle = existingCharacter ? undefined : getImageStyle(styleId);
@@ -199,7 +202,7 @@ export async function POST(request: Request) {
   // Audit-trail bijwerken: dit verhaal gebruikt nu de opgeslagen held, en/of de gekozen
   // bijfiguren. Idempotent — een per ongeluk dubbele aanroep voegt het storyId maar één keer toe.
   if (existingCharacter) {
-    await registerStoryForCharacter(existingCharacter.id, story.id);
+    await registerStoryForCharacter(existingCharacter.id, story.id, child.id);
   }
   let newHeroId: string | null = null;
   if (!existingCharacter) {
@@ -215,7 +218,7 @@ export async function POST(request: Request) {
     });
     newHeroId = savedHero.id;
   }
-  await Promise.all(sideCharacterIds.map((id) => registerStoryForCharacter(id, story.id)));
+  await Promise.all(sideCharacterIds.map((id) => registerStoryForCharacter(id, story.id, child.id)));
 
   // Portret van een nieuwe held ná het antwoord, zodat starten niet weer vastloopt.
   if (!story.character.portraitUrl) {
@@ -225,7 +228,7 @@ export async function POST(request: Request) {
     after(async () => {
       try {
         if (!(await tryClaimImageQuota(childId))) return;
-        const fresh = await getStory(storyId);
+        const fresh = await getStory(storyId, childId);
         if (!fresh || fresh.character.portraitUrl) {
           await releaseImageQuota(childId);
           return;
@@ -239,14 +242,14 @@ export async function POST(request: Request) {
           await releaseImageQuota(childId);
           return;
         }
-        const latest = await getStory(storyId);
+        const latest = await getStory(storyId, childId);
         if (!latest) return;
         await saveStory({
           ...latest,
           character: { ...latest.character, portraitUrl: portrait.url },
         });
         if (heroIdToUpdate) {
-          const savedHero = await getCharacter(heroIdToUpdate);
+          const savedHero = await getCharacter(heroIdToUpdate, childId);
           if (savedHero && !savedHero.portraitUrl) {
             await saveCharacter({
               id: savedHero.id,

@@ -13,6 +13,15 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient } from "@/lib/ai/client";
+import {
+  buildIdentityPrompt,
+  enforceLookSources,
+  finishIdentityReport,
+  identityStatusFromCharacters,
+  unknownIdentityReport,
+  type IdentitySlot,
+  type SceneIdentityReport,
+} from "@/lib/ai/identity-report";
 
 // Een klein, snel model is hier bewust: dit is een goedkope controle-stap die vaak
 // aangeroepen wordt (elke illustratie, tot 3x), niet het dure verhaal-model. Instelbaar
@@ -24,10 +33,14 @@ export type AttributeCheck = {
   missing: string[];
 };
 
-// Verificatie is een vangnet, geen harde poort: als de aanroep zelf mislukt of een
-// onverwacht antwoord geeft, gaan we ervan uit dat het WEL goed is. Zo kan een storing in
-// deze extra controle-stap nooit een verhaal blokkeren dat verder prima werkt.
+// Verificatie van losse kenmerken (petje, kleding) is een vangnet, geen harde poort.
+// Als déze aanroep mislukt, gaan we ervan uit dat het kenmerk er wél is. Dat houdt de
+// bestaande herkansing rustig: een storing start geen extra tekening.
+// De nieuwere identiteitsmeting (observeSceneIdentity) doet dit bewust NIET. Die zegt
+// bij een storing "unknown", en start nooit een tekening.
 const ASSUME_OK: AttributeCheck = { attributesPresent: true, missing: [] };
+
+const IDENTITY_TIMEOUT_MS = 8_000;
 
 export async function verifyImageAttributes(
   imageUrl: string,
@@ -78,4 +91,183 @@ export async function verifyImageAttributes(
     console.warn("Beeldverificatie-aanroep mislukt (telt niet als fout, we gaan uit van OK):", err);
     return ASSUME_OK;
   }
+}
+
+type UsageSum = { input: number; output: number };
+
+// Eén plaatje per keer. Zo kan het model het paspoort niet aanzien voor de nieuwe tekening.
+async function describeOneImage(
+  client: Anthropic,
+  imageUrl: string,
+  question: string,
+  usage: UsageSum,
+): Promise<string | null> {
+  const response = await client.messages.create(
+    {
+      model: VISION_MODEL,
+      max_tokens: 300,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "image", source: { type: "url", url: imageUrl } },
+            { type: "text", text: question },
+          ],
+        },
+      ],
+    },
+    { timeout: IDENTITY_TIMEOUT_MS, maxRetries: 0 },
+  );
+  usage.input += response.usage?.input_tokens ?? 0;
+  usage.output += response.usage?.output_tokens ?? 0;
+  const text = response.content.find((block): block is Anthropic.TextBlock => block.type === "text");
+  const value = text?.text.trim() ?? "";
+  return value || null;
+}
+
+// Vergelijkt de scène met elk paspoort. Loggen en meten, niet opnieuw tekenen.
+// Eerst wordt elk plaatje apart beschreven. Pas daarna volgt de vergelijking, zonder
+// de platen nog een keer naast elkaar te leggen.
+export async function observeSceneIdentity(input: {
+  sceneUrl: string;
+  action: string;
+  styleHint?: string;
+  slots: IdentitySlot[];
+}): Promise<SceneIdentityReport> {
+  const started = Date.now();
+  const comparable = input.slots.filter((slot) => slot.passportUrl);
+  if (!input.sceneUrl || comparable.length === 0) {
+    return unknownIdentityReport({
+      slots: input.slots,
+      model: VISION_MODEL,
+      durationMs: Date.now() - started,
+      error: input.sceneUrl ? "geen paspoort om mee te vergelijken" : "geen scène",
+    });
+  }
+
+  const client = getAnthropicClient();
+  const usage: UsageSum = { input: 0, output: 0 };
+
+  try {
+    const sceneDescription = await describeOneImage(
+      client,
+      input.sceneUrl,
+      "Beschrijf alleen de figuren op DIT ene plaatje. Per figuur: soort (jongen, meisje, robot of iets anders), haarkleur of lichaamskleur, en kleding of opvallende onderdelen. Verzin niets. Noem geen paspoort.",
+      usage,
+    );
+    if (!sceneDescription) {
+      return unknownIdentityReport({
+        slots: input.slots,
+        model: VISION_MODEL,
+        durationMs: Date.now() - started,
+        error: "nieuwe tekening niet beschreven",
+      });
+    }
+
+    const passportDescriptions: { slot: string; text: string }[] = [];
+    for (const slot of comparable) {
+      const text = await describeOneImage(
+        client,
+        slot.passportUrl as string,
+        `Beschrijf alleen dit ene paspoort van ${slot.slot}. Soort, haarkleur of lichaamskleur, en kleding of opvallende onderdelen. Verzin niets.`,
+        usage,
+      );
+      passportDescriptions.push({ slot: slot.slot, text: text ?? "" });
+    }
+
+    const response = await client.messages.create(
+      {
+        model: VISION_MODEL,
+        max_tokens: 700,
+        messages: [
+          {
+            role: "user",
+            content: buildIdentityPrompt({
+              action: input.action,
+              slots: comparable.map((slot) => slot.slot),
+              styleHint: input.styleHint,
+              sceneDescription,
+              passportDescriptions,
+            }),
+          },
+        ],
+      },
+      { timeout: IDENTITY_TIMEOUT_MS, maxRetries: 0 },
+    );
+    usage.input += response.usage?.input_tokens ?? 0;
+    usage.output += response.usage?.output_tokens ?? 0;
+    const textBlock = response.content.find(
+      (block): block is Anthropic.TextBlock => block.type === "text",
+    );
+    const report = finishIdentityReport({
+      slots: input.slots,
+      rawText: textBlock?.text ?? "",
+      model: VISION_MODEL,
+      durationMs: Date.now() - started,
+      inputTokens: usage.input,
+      outputTokens: usage.output,
+    });
+    const characters = enforceLookSources({
+      characters: report.characters,
+      sceneDescription,
+      passportDescriptions: Object.fromEntries(passportDescriptions.map((item) => [item.slot, item.text])),
+    });
+    return {
+      ...report,
+      sceneDescription,
+      characters,
+      status: report.error ? "unknown" : identityStatusFromCharacters(characters),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "controle mislukt";
+    console.warn("Identiteitsmeting mislukt (unknown, geen nieuwe tekening):", message);
+    return unknownIdentityReport({
+      slots: input.slots,
+      model: VISION_MODEL,
+      durationMs: Date.now() - started,
+      error: message.slice(0, 200),
+    });
+  }
+}
+
+// Eén logregel zonder namen. De score verandert de tekening niet.
+export function identityShadowLog(input: {
+  storyId: string;
+  chapterN: number;
+  textToImageModel: string;
+  editModel: string;
+  attempts: number;
+  attributeVerified: boolean;
+  report: SceneIdentityReport;
+}): string {
+  return JSON.stringify({
+    kind: "nuvlo-identity-shadow",
+    storyId: input.storyId,
+    chapterN: input.chapterN,
+    textToImageModel: input.textToImageModel,
+    editModel: input.editModel,
+    attempts: input.attempts,
+    attributeVerified: input.attributeVerified,
+    identityStatus: input.report.status,
+    actionShown: input.report.actionShown,
+    styleMatches: input.report.styleMatches,
+    visionModel: input.report.model,
+    durationMs: input.report.durationMs,
+    inputTokens: input.report.inputTokens,
+    outputTokens: input.report.outputTokens,
+    influencesRetry: false,
+    error: input.report.error ?? null,
+    characters: input.report.characters.map((character) => ({
+      slot: character.slot,
+      verdict: character.verdict,
+      sameCharacter: character.sameCharacter,
+      face: character.face,
+      hair: character.hair,
+      body: character.body,
+      clothes: character.clothes,
+      style: character.style,
+      sceneLook: character.sceneLook,
+      passportLook: character.passportLook,
+    })),
+  });
 }

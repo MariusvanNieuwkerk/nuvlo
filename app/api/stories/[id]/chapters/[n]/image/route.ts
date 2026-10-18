@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { requireApiReader } from "@/lib/reader";
 import {
-  getDefaultChild,
   getStory,
   reopenChapterImagePending,
   saveStory,
   updateChapterImageAtomic,
 } from "@/lib/storage";
-import { generatePortrait, generateSceneImage } from "@/lib/image";
+import { currentImageModels, generatePortrait, generateSceneImage } from "@/lib/image";
+import { identityShadowLog, observeSceneIdentity } from "@/lib/ai/vision-verify";
+import { buildSceneIdentitySlots } from "@/lib/ai/identity-report";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
 import { ensureSceneCharacterReferences } from "@/lib/side-character-images";
 import { resolveLockedSceneCharacters } from "@/lib/character-identity";
@@ -41,6 +43,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; n: string }> },
 ) {
+  const reader = await requireApiReader();
+  if (!reader.ok) return reader.response;
+  const { child } = reader;
+
   const { id, n: nRaw } = await params;
   const n = Number(nRaw);
   if (!Number.isInteger(n)) {
@@ -50,7 +56,7 @@ export async function POST(
   const body = await request.json().catch(() => null);
   const force = Boolean(body && typeof body === "object" && (body as { force?: unknown }).force);
 
-  let story = await getStory(id);
+  let story = await getStory(id, child.id);
   if (!story) {
     return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
   }
@@ -64,7 +70,7 @@ export async function POST(
 
   // Handmatige retry: scène opnieuw in de wachtrij zetten als er nog geen plaatje is.
   if (force && !chapter.imageUrl && !chapter.imagePending) {
-    const reopened = await reopenChapterImagePending(id, n);
+    const reopened = await reopenChapterImagePending(id, child.id, n);
     if (!reopened) {
       return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
     }
@@ -79,7 +85,6 @@ export async function POST(
     return NextResponse.json({ story });
   }
 
-  const child = await getDefaultChild();
   const bible = story.bible;
   const character = story.character;
 
@@ -92,6 +97,17 @@ export async function POST(
 
   // Reused chapter houdt het vorige plaatje; een verse scène begint zonder beeld.
   let sceneImageUrl: string | null = chapter.imageUrl;
+  // Alleen gevuld als er deze keer écht een nieuwe tekening is. De identiteitsmeting
+  // draait dáárna, en mag de tekening niet tegenhouden of opnieuw laten maken.
+  let identityShadow: {
+    action: string;
+    styleHint: string;
+    compareHero: boolean;
+    heroPassportUrl: string | null;
+    sidePassportUrls: (string | null)[];
+    attempts: number;
+    attributeVerified: boolean;
+  } | null = null;
   // Alleen ingevuld als er tijdens deze aanroep echt teken-werk gebeurde — dan slaan we de
   // (mogelijk met een nieuw nevenpersonage-anker bijgewerkte) bible mee op.
   let updatedBible: typeof bible | undefined;
@@ -131,7 +147,7 @@ export async function POST(
         // gebruiken.
         let portraitUrl = character.portraitUrl;
         if (!portraitUrl && !chapter.heroTemporaryAppearance) {
-          const latest = await getStory(id);
+          const latest = await getStory(id, child.id);
           portraitUrl = latest?.character.portraitUrl ?? null;
           if (!portraitUrl && latest) {
             const portrait = await generatePortrait(
@@ -140,7 +156,7 @@ export async function POST(
               latest.character.imageStyleHint,
             );
             if (portrait.url) {
-              const afterPortrait = await getStory(id);
+              const afterPortrait = await getStory(id, child.id);
               if (afterPortrait?.character.portraitUrl) {
                 portraitUrl = afterPortrait.character.portraitUrl;
               } else if (afterPortrait) {
@@ -170,6 +186,15 @@ export async function POST(
         );
         if (scene.url) {
           sceneImageUrl = scene.url;
+          identityShadow = {
+            action: chapter.imagePrompt,
+            styleHint: character.imageStyleHint,
+            compareHero: !chapter.heroTemporaryAppearance,
+            heroPassportUrl: portraitUrl,
+            sidePassportUrls: refs.sceneCharacters.map((person) => person.referenceImageUrl),
+            attempts: scene.attempts,
+            attributeVerified: scene.verified,
+          };
         } else {
           await releaseImageQuota(child.id);
           quotaClaimedForScene = false;
@@ -186,7 +211,7 @@ export async function POST(
 
   // Atomaire write-back: alleen schrijven als het hoofdstuk intussen nog imagePending=true
   // heeft (iemand anders was ons net voor → 0 rijen → verse staat teruglezen en tonen).
-  let updated = await updateChapterImageAtomic(id, n, sceneImageUrl, updatedBible);
+  let updated = await updateChapterImageAtomic(id, child.id, n, sceneImageUrl, updatedBible);
   if (!updated) {
     return NextResponse.json({ error: "Verhaal niet gevonden." }, { status: 404 });
   }
@@ -194,5 +219,41 @@ export async function POST(
   if (n === 1 && sceneImageUrl && !updated.coverUrl) {
     updated = await saveStory({ ...updated, coverUrl: sceneImageUrl });
   }
+
+  // Pas meten als het plaatje al is opgeslagen. De kind-response wacht hier niet op.
+  // Een storing wordt "unknown" en start geen tweede tekening (stap D staat uit).
+  if (sceneImageUrl && identityShadow) {
+    const snapshot = identityShadow;
+    const models = currentImageModels();
+    const sceneUrl = sceneImageUrl;
+    after(async () => {
+      try {
+        const report = await observeSceneIdentity({
+          sceneUrl,
+          action: snapshot.action,
+          styleHint: snapshot.styleHint,
+          slots: buildSceneIdentitySlots({
+            heroPassportUrl: snapshot.heroPassportUrl,
+            compareHero: snapshot.compareHero,
+            sidePassportUrls: snapshot.sidePassportUrls,
+          }),
+        });
+        console.info(
+          identityShadowLog({
+            storyId: id,
+            chapterN: n,
+            textToImageModel: models.textToImage,
+            editModel: models.edit,
+            attempts: snapshot.attempts,
+            attributeVerified: snapshot.attributeVerified,
+            report,
+          }),
+        );
+      } catch (err) {
+        console.warn("Identiteitsmeting overgeslagen:", err instanceof Error ? err.message : err);
+      }
+    });
+  }
+
   return NextResponse.json({ story: updated });
 }

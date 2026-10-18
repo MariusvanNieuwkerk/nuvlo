@@ -7,6 +7,7 @@ export const SEED_CHILD: Child = {
   id: "kind-1",
   name: "Lezer",
   age: 8,
+  familyId: null,
 };
 
 export const SEED_STORIES: Story[] = [
