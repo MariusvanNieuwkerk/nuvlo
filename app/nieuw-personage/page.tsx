@@ -2,6 +2,8 @@ import { PageShell } from "@/components/page-shell";
 import { NewCharacterForm } from "@/components/new-character-form";
 import { requirePageReader } from "@/lib/reader";
 
+export const dynamic = "force-dynamic";
+
 export default async function NieuwPersonagePage() {
   await requirePageReader();
   return (

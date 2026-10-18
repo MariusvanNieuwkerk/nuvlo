@@ -3,6 +3,8 @@ import { HeroForm } from "@/components/hero-form";
 import { requirePageReader } from "@/lib/reader";
 import { listStories } from "@/lib/storage";
 
+export const dynamic = "force-dynamic";
+
 // Server-side lezen van ?held=ID / ?naam=... en doorgeven als prop — zo blijft de
 // client-component eenvoudig (geen useSearchParams/Suspense nodig).
 export default async function NieuwVerhaalPage({
