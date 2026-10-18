@@ -433,6 +433,73 @@
 
 /* Losse selectors (met hogere specificiteit dan .book-page) zodat de hoeken van een
    opengeslagen boek-spread netjes recht tegen elkaar aan sluiten. */
+/* Telefoon: logo links, dag/nacht rechtsboven, daaronder twee even grote knoppen.
+   Vanaf iPad-mini (744px) weer één rij, met de dag/nacht-knop als laatste rechts. */
+.nuvlo-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.75rem;
+  padding-block: 1rem;
+}
+.nuvlo-header-logo {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+}
+.nuvlo-header-toggle {
+  grid-column: 2;
+  grid-row: 1;
+}
+.nuvlo-header-logo img {
+  height: 2.5rem;
+  width: auto;
+}
+.nuvlo-header-actions {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  gap: 0.5rem;
+}
+.nuvlo-header-actions > a {
+  flex: 1 1 0;
+}
+
+@media (min-width: 744px) {
+  .nuvlo-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block: 1.75rem;
+  }
+  .nuvlo-header-logo,
+  .nuvlo-header-toggle,
+  .nuvlo-header-actions {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .nuvlo-header-logo {
+    margin-right: auto;
+  }
+  .nuvlo-header-logo img {
+    height: 3.5rem;
+  }
+  .nuvlo-header-actions {
+    order: 1;
+    width: auto;
+    gap: 0.75rem;
+  }
+  .nuvlo-header-actions > a {
+    flex: none;
+  }
+  .nuvlo-header-toggle {
+    order: 2;
+  }
+}
+
 @media (min-width: 1024px) {
   .book-page.spread-left {
     border-top-right-radius: 0;

@@ -29,14 +29,14 @@ export function PageShell({
         MAX_WIDTH[size],
       )}
     >
-      <header className="flex items-center justify-between py-5 sm:py-7">
-        <Link href="/" className="flex items-center">
+      <header className="nuvlo-header">
+        <Link href="/" className="nuvlo-header-logo">
           <Image
             src="/nuvlo-logo.png"
             alt="Nuvlo"
             width={865}
             height={271}
-            className="h-12 w-auto object-contain dark:hidden sm:h-14"
+            className="w-auto object-contain dark:hidden"
             priority
           />
           <Image
@@ -44,28 +44,32 @@ export function PageShell({
             alt="Nuvlo"
             width={865}
             height={271}
-            className="hidden h-12 w-auto object-contain dark:block sm:h-14"
+            className="hidden w-auto object-contain dark:block"
             priority
           />
         </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
+        {(showReaderSwitch || showHomeLink) && (
+          <div className="nuvlo-header-actions">
+            {showReaderSwitch && (
+              <Link
+                href="/wie"
+                className="flex items-center justify-center whitespace-nowrap rounded-full bg-primary px-3 py-2 text-center font-heading text-sm font-semibold text-primary-foreground sm:px-4 sm:text-base"
+              >
+                Iemand anders
+              </Link>
+            )}
+            {showHomeLink && (
+              <Link
+                href="/"
+                className="flex items-center justify-center whitespace-nowrap rounded-full border border-foreground bg-transparent px-3 py-2 text-center font-heading text-sm font-semibold text-foreground sm:px-4 sm:text-base"
+              >
+                Naar huis
+              </Link>
+            )}
+          </div>
+        )}
+        <div className="nuvlo-header-toggle">
           <ThemeToggle />
-          {showReaderSwitch && (
-            <Link
-              href="/wie"
-              className="rounded-full bg-primary px-3.5 py-2 font-heading text-sm font-semibold text-primary-foreground sm:px-4 sm:text-base"
-            >
-              Iemand anders
-            </Link>
-          )}
-          {showHomeLink && (
-            <Link
-              href="/"
-              className="rounded-full bg-foreground/10 px-3.5 py-2 font-heading text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/20 sm:px-4 sm:text-base"
-            >
-              Naar huis
-            </Link>
-          )}
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-6 sm:gap-8">{children}</main>
