@@ -246,9 +246,10 @@ Drie correcties die blijven:
 Lite is bewust niet de default: slechtere identiteit. Daglimiet per kind via
 `claim_image_quota` (§8). Kwaliteit weegt nu zwaarder dan een paar cent.
 
-**Nog open:** de wereld heeft op het leespad geen ankerbeeld (alleen tekst;
-`worldReferenceImageUrl` gaat als `null` mee). `generateWorldReferenceImage` bestaat voor
-offline tests. Oude hoofdstuk-plaatjes worden niet herschreven.
+**Wereld-anker.** De eerste tekening van een plek maakt één leeg omgevingsplaatje
+(`worldReferenceImageUrl`). Elke volgende scène in die plek krijgt dat plaatje mee,
+samen met de paspoorten van de figuren. Een echte locatiewissel maakt een nieuw
+anker. Oude hoofdstuk-plaatjes worden niet herschreven.
 
 ## 7. Belangrijkste user flows
 

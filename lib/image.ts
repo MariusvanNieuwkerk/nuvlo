@@ -31,10 +31,10 @@
 // - NEVENPERSONAGES: elk personage dat in déze scène te zien is krijgt eenmalig een eigen
 //   ankerbeeld (zie lib/side-character-images.ts, quota-beschermd) dat daarna gratis in elke
 //   volgende scène hergebruikt wordt.
-// - WERELD: GEEN ankerbeeld op het runtime-pad (de route geeft hier null door) — de omgeving
-//   gaat alleen als TEKST mee. generateWorldReferenceImage bestaat nog wel, maar wordt
-//   uitsluitend offline gebruikt (scripts/check-image-consistency.ts). Dit is de plek om te
-//   kijken als omgevingen tussen hoofdstukken blijven schuiven.
+// - WERELD: één ankerbeeld per plek (bible.worldReferenceImageUrl). De lees-route maakt
+//   dat één keer, meteen vóór de eerste scène van die plek, en geeft het daarna bij elke
+//   scène mee. Een echte locatiewissel zet de url op null; dan komt er een nieuw anker.
+//   Het vorige hoofdstuk-plaatje gaat NIET mee: dat liet de houding vastplakken.
 //
 // Model-keuze: we gebruikten eerst fal-ai/flux-pro/kontext voor de beeld-naar-beeld stap.
 // Kontext is een lokaal PIXEL-EDIT-model — gemaakt voor kleine, gerichte aanpassingen in
@@ -231,7 +231,7 @@ async function requestImageFromReference(
   try {
     const result = await fal.subscribe(EDIT_MODEL, {
       input: {
-        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Each numbered reference is a character sheet only. Copy WHO that character is (face, hair, body, clothes, colors). Do not copy pose, camera, grouping, or background from any reference. Draw a completely NEW scene that shows the requested ACTION. Identity never changes; the moment must. ${prompt} ${suffix}`,
+        prompt: `${prefix} ${referenceLegend ? `${referenceLegend} ` : ""}Follow the reference legend. A character reference: copy that character's face, hair, body, clothes and colors exactly. Do not copy their pose or empty backdrop. A world reference: keep the SAME kind of place, the same colors and the same landmark. Only the camera may change. Draw the new action below. Do not invent a different place or a different outfit. ${prompt} ${suffix}`,
         image_urls: referenceImageUrls,
         ...buildFormatInput(EDIT_MODEL, aspectRatio),
       },
@@ -334,7 +334,9 @@ export async function generateSceneImage(
     heroLine,
     sideCharacterLines,
     oneEachRule,
-    world ? `De wereld/omgeving mag herkenbaar blijven, maar de CAMERA, HOUDING en wie WAAR staat moeten bij dít moment passen: ${describeWorldAppearance(world)}` : "",
+    world
+      ? `VASTE PLEK: dit is nog steeds dezelfde omgeving. Zelfde soort plek, zelfde kleuren, zelfde herkenningspunt. Alleen de camera, de houding en wat er gebeurt horen bij dít moment. ${describeWorldAppearance(world)}`
+      : "",
   ]
     .filter(Boolean)
     .join(". ");
@@ -358,7 +360,7 @@ export async function generateSceneImage(
   if (worldReferenceImageUrl) {
     labeledRefs.push({
       url: worldReferenceImageUrl,
-      label: "de wereld/omgeving — sfeer, geen vaste camerastand",
+      label: "de wereld — kopieer DEZELFDE plek: soort omgeving, kleuren en herkenningspunt. Niet de camerastand",
     });
   }
 

@@ -6,7 +6,7 @@ import {
   saveStory,
   updateChapterImageAtomic,
 } from "@/lib/storage";
-import { currentImageModels, generatePortrait, generateSceneImage } from "@/lib/image";
+import { currentImageModels, generatePortrait, generateSceneImage, generateWorldReferenceImage } from "@/lib/image";
 import { identityShadowLog, observeSceneIdentity } from "@/lib/ai/vision-verify";
 import { buildSceneIdentitySlots } from "@/lib/ai/identity-report";
 import { tryClaimImageQuota, releaseImageQuota } from "@/lib/image-usage";
@@ -139,6 +139,8 @@ export async function POST(
 
       // Harde daglimiet: is de quota op, dan claimt dit niets, doen we GEEN fal-call en blijft
       // sceneImageUrl null → de lees-UI toont de "geen tekening"-placeholder.
+      // De scène claimt éérst. Het wereldplaatje is een extra tekening en mag de
+      // scène van het kind niet wegkapen als er nog maar één plek over is.
       quotaClaimedForScene = await tryClaimImageQuota(child.id);
       if (quotaClaimedForScene) {
         // Zonder portret verzint elke scène nieuwe kledingkleuren. Het portret wordt bij
@@ -172,6 +174,24 @@ export async function POST(
           }
         }
 
+        // Eén leeg wereldplaatje per plek. Daarna gaat datzelfde plaatje mee met elke
+        // scène, zodat het decor niet elke keer opnieuw wordt verzonnen. Het vorige
+        // hoofdstuk-plaatje blijft weg: dat plakte de houding vast.
+        let worldReferenceImageUrl = updatedBible.worldReferenceImageUrl;
+        const worldLook = updatedBible.worldAppearance;
+        const worldHasLook = Boolean(
+          worldLook.freeform || worldLook.setting || worldLook.landmark || worldLook.paletteAndAtmosphere,
+        );
+        if (!worldReferenceImageUrl && worldHasLook && (await tryClaimImageQuota(child.id))) {
+          const worldImage = await generateWorldReferenceImage(worldLook, character.imageStyleHint);
+          if (worldImage.url) {
+            worldReferenceImageUrl = worldImage.url;
+            updatedBible = { ...updatedBible, worldReferenceImageUrl };
+          } else {
+            await releaseImageQuota(child.id);
+          }
+        }
+
         const scene = await generateSceneImage(
           chapter.imagePrompt,
           character.appearance,
@@ -179,7 +199,7 @@ export async function POST(
           bible.worldAppearance,
           refs.sceneCharacters,
           portraitUrl,
-          null,
+          worldReferenceImageUrl,
           chapter.heroTemporaryAppearance,
           null,
           story.hero.name,
